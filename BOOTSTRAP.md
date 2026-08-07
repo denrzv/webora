@@ -1,48 +1,44 @@
 # Bootstrap — remaining manual steps
 
-The `FOUND-*` scaffolding is in place, but a few steps could not be completed automatically because
-the session that generated this repo had write-side git, `chmod`, and settings-file operations
-blocked by a permission control. None of them are complicated; all of them are one-time.
+The `FOUND-*` scaffolding is in place. The session that first generated it had write-side git,
+`chmod`, and settings-file operations blocked by a permission control, so several steps were left
+manual; a later session restored the files into `denrzv/webora` and completed the ones it could.
 
-Do these in order. Everything after step 1 is verifiable.
+Status of each step is marked below. What remains is genuinely manual — it needs credentials, an
+Android SDK, or a deliberate choice about granting tool permissions.
 
-## 1. Rename the GitHub repository
+## 1. Repository name — ✅ done, no action
 
-This repo is `denrzv/skinsite`. It should be **`denrzv/webora`** — every identifier inside it
-already says Webora (`applicationId app.webora.browser`, Gradle root project `Webora`).
+The original bootstrap landed in `denrzv/skinsite` because attaching `denrzv/webora` was blocked,
+and step 1 used to be "rename the repo on GitHub". That is moot: the files now live in
+**`denrzv/webora`** directly, and `denrzv/skinsite` never received a commit. Nothing to rename,
+nothing to migrate.
 
-GitHub → Settings → Repository name → `webora`. GitHub keeps redirects for the old name, so existing
-clones and remotes continue to work. The empty `denrzv/webora` repo must be deleted or renamed first,
-since the name is taken.
+## 2. Generate the Gradle wrapper — ✅ done
 
-Then update your local remote:
-
-```bash
-git remote set-url origin https://github.com/denrzv/webora
-```
-
-## 2. Generate the Gradle wrapper
-
-`gradle/wrapper/gradle-wrapper.properties` is committed, but the `gradlew` scripts and
-`gradle-wrapper.jar` are not — generating them requires running Gradle.
+`gradlew`, `gradlew.bat` and `gradle/wrapper/` are committed. Recorded here because the version
+number is a trap worth remembering:
 
 ```bash
-gradle wrapper --gradle-version 9.1.0
+gradle wrapper --gradle-version 9.3.1
 chmod +x gradlew
 ```
 
-Nothing builds until this is done; CI expects `./gradlew` to exist.
+**9.3.1, not 9.1.0.** AGP 9.1.0 refuses to apply on anything older —
+`Failed to apply plugin 'com.android.internal.version-check': Minimum supported Gradle
+version is 9.3.1`. The AGP version and the Gradle version are unrelated numbers that
+happen to look alike.
 
-## 3. Make the scripts executable
+## 3. Make the scripts executable — ✅ done
+
+`scripts/*.sh` and `gradlew` are committed mode `100755`. If you ever add a script, the second line
+is the one that matters — without it the bit is not recorded in git and CI checkouts get a
+non-executable file:
 
 ```bash
-chmod +x scripts/*.sh
-git update-index --chmod=+x scripts/*.sh
+chmod +x scripts/new-script.sh
+git update-index --chmod=+x scripts/new-script.sh
 ```
-
-The second line matters: without it the executable bit is not recorded in git and CI checkouts get
-non-executable scripts. (`scripts/pre-commit-check.sh` is invoked as `bash scripts/...` everywhere,
-so this is belt-and-braces — but the hooks call the scripts directly.)
 
 ## 4. Install the Claude Code settings
 

@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -88,8 +90,10 @@ android {
 fun resolveSigning(key: String): String? =
     System.getenv(key)
         ?: providers.gradleProperty(key).orNull
+        // `java` is the JavaPluginExtension accessor inside a build script, so the
+        // `java.util` package name is shadowed — Properties must be imported.
         ?: runCatching {
-            java.util.Properties().apply {
+            Properties().apply {
                 rootProject.file("local.properties").inputStream().use { load(it) }
             }.getProperty(key)
         }.getOrNull()

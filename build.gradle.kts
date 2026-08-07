@@ -18,4 +18,16 @@ subprojects {
         basePath = rootDir.absolutePath
         baseline = file("$rootDir/config/detekt/baseline.xml")
     }
+
+    // Detekt runs on its own embedded Kotlin compiler, whose --jvm-target ceiling is
+    // lower than the build toolchain's. Left unset it inherits the toolchain's 25 and
+    // fails with "Invalid value (25) passed to --jvm-target". Pin it to the module's
+    // bytecode target instead — the third place the 21 from CLAUDE.md § Java version
+    // has to be stated, and the one that is easiest to forget.
+    tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
+        jvmTarget = "21"
+    }
+    tasks.withType<io.gitlab.arturbosch.detekt.DetektCreateBaselineTask>().configureEach {
+        jvmTarget = "21"
+    }
 }
