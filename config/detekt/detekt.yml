@@ -1,0 +1,86 @@
+build:
+  maxIssues: 0
+
+config:
+  validation: true
+  # A deprecated rule name becomes a warning, and a warning becomes a build failure.
+  # That is intentional: silently-ignored config is how a gate stops being a gate.
+  warningsAsErrors: true
+
+complexity:
+  active: true
+  LongMethod:
+    active: true
+    threshold: 40
+  LongParameterList:
+    active: true
+    functionThreshold: 6
+    constructorThreshold: 7
+  NestedBlockDepth:
+    active: true
+    threshold: 4
+  # NOT `ComplexMethod` — that name is deprecated, and with warningsAsErrors it
+  # fails the entire run rather than the rule.
+  CyclomaticComplexMethod:
+    active: true
+    threshold: 10
+  CognitiveComplexMethod:
+    active: true
+    threshold: 15
+  TooManyFunctions:
+    active: true
+    thresholdInFiles: 20
+    thresholdInClasses: 20
+    thresholdInInterfaces: 20
+    thresholdInObjects: 20
+    thresholdInEnums: 20
+
+naming:
+  active: true
+  FunctionNaming:
+    active: true
+    # Compose requires PascalCase composables; without this every @Composable trips.
+    ignoreAnnotated: ['Composable']
+  TopLevelPropertyNaming:
+    active: true
+
+style:
+  active: true
+  MagicNumber:
+    active: true
+    ignoreNumbers: ['-1', '0', '1', '2']
+    ignoreHashCodeFunction: true
+    ignorePropertyDeclaration: true
+    ignoreAnnotation: true
+    ignoreEnums: true
+  ForbiddenComment:
+    active: true
+    comments:
+      - reason: 'TODOs must carry a ticket id.'
+        value: 'TODO:'
+  MaxLineLength:
+    active: true
+    maxLineLength: 120
+  ReturnCount:
+    active: true
+    max: 4
+
+exceptions:
+  active: true
+  TooGenericExceptionCaught:
+    active: true
+  SwallowedException:
+    active: true
+
+coroutines:
+  active: true
+  GlobalCoroutineUsage:
+    active: true
+  RedundantSuspendModifier:
+    active: true
+
+potential-bugs:
+  active: true
+
+performance:
+  active: true

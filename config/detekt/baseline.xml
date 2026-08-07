@@ -1,0 +1,11 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <!--
+    Empty on purpose. The baseline exists for pre-existing debt inherited from a
+    migration; this project starts clean, so anything that appears here later is a
+    deliberate, reviewed exception with a ticket. Burning down a baseline is its
+    own ticket, never a side effect of unrelated work.
+  -->
+  <CurrentIssues/>
+</SmellBaseline>

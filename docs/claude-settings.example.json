@@ -1,0 +1,30 @@
+// Copy to .claude/settings.json — I could not write that path directly, because
+// a session safety control guards files that grant tool permissions. Applying it
+// is a deliberate choice for you to make, not one for me to make silently.
+//
+// (Strip these comments; settings.json must be valid JSON.)
+{
+  "permissions": {
+    "allow": [
+      "Bash(./gradlew:*)",
+      "Bash(bash scripts/*.sh)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          { "type": "command", "command": "bash scripts/session-start.sh" }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          { "type": "command", "command": "bash scripts/gate-pretool.sh" }
+        ]
+      }
+    ]
+  }
+}

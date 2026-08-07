@@ -1,0 +1,27 @@
+# Copy to .pre-commit-config.yaml at the repo root.
+#
+# I could not write that path directly — a session safety control guards files
+# that define executable hooks. Installing it is your call, not mine to make
+# silently. After copying: `pipx install pre-commit && pre-commit install`.
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks
+        args: ["detect", "--redact"]
+
+  - repo: https://github.com/koalaman/shellcheck-precommit
+    rev: v0.10.0
+    hooks:
+      - id: shellcheck
+        files: ^scripts/.*\.sh$
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-yaml
+      - id: check-json
+        exclude: ^docs/claude-settings\.example\.json$
+      - id: check-added-large-files

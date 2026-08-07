@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+jobs:
+  guardrails:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pipx install pre-commit
+      - run: pre-commit run --all-files
+
+  core:
+    # :siteskin-core must build and test with NO Android SDK. This job installs no
+    # SDK on purpose — if a maintainer ever adds an Android dependency to core,
+    # this job is what catches it, and the failure is unambiguous.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: gradle/actions/setup-gradle@v4
+      - run: chmod +x ./gradlew
+      - name: siteskin-core tests (no Android SDK)
+        env:
+          ANDROID_HOME: ''
+          ANDROID_SDK_ROOT: ''
+        run: ./gradlew :siteskin-core:check :siteskin-lint:test
+
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+      - run: chmod +x ./gradlew
+      - run: ./gradlew test
+      # assembleDebug is the task that actually runs D8. compileDebugKotlin passing
+      # proves nothing about whether the chosen jvmTarget can be dexed.
+      - run: ./gradlew :app:assembleDebug
+      - run: ./gradlew :app:lintDebug
+
+  detekt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+      - run: chmod +x ./gradlew
+      # Unconditional. Never guard this behind a `tasks --all | grep detekt` check —
+      # that pattern lets an unwired plugin masquerade as a passing gate.
+      - run: ./gradlew detekt

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Local-testing variant only. Permits cleartext HTTP so the browser can be pointed
+  at a demo server running on a laptop. The relaxation lives entirely in this source
+  set, so it is unreachable from `release` and cannot be committed into it by
+  accident. Never distribute this APK.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application
+        android:usesCleartextTraffic="true"
+        tools:replace="android:usesCleartextTraffic" />
+
+</manifest>

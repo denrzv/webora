@@ -1,0 +1,14 @@
+title = "Webora gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Build output, local config, and demo fixtures"
+paths = [
+  '''.*/build/.*''',
+  '''^build/.*''',
+  '''^local\.properties$''',
+  # Fixture manifests contain deliberately fake phone numbers and URLs.
+  '''^spec/fixtures/.*''',
+]
