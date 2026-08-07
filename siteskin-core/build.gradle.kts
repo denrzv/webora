@@ -36,6 +36,22 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    // Test-only on purpose: the schema validator must not reach the compile classpath,
+    // where assertNoAndroidDependencies inspects it and where it would be dexed into
+    // the APK. The browser never validates against JSON Schema at runtime — the schema
+    // is a contract for site owners, and the security layer is hand-written Kotlin.
+    testImplementation(libs.json.schema.validator)
+}
+
+tasks.named<Test>("test") {
+    // The conformance corpus lives at the repo root, not in module resources. It is
+    // shared with :siteskin-lint and with denrzv/bloom-flowers, and it is a published
+    // artifact in its own right — a second implementer is meant to be able to consume
+    // it without a Gradle build. Declared as an input so editing a fixture reruns the
+    // tests instead of hitting an up-to-date check.
+    val specDir = rootProject.layout.projectDirectory.dir("spec")
+    inputs.dir(specDir).withPropertyName("specCorpus")
+    systemProperty("siteskin.spec.dir", specDir.asFile.absolutePath)
 }
 
 // Resolved at execution time but captured as a Provider at configuration time: holding

@@ -1,0 +1,37 @@
+{
+  "registryVersion": "1.0",
+  "schemaVersion": "1.0",
+  "note": "The diagnostic registry for SiteSkin Manifest 1.0. Machine-readable so the conformance corpus can assert that every code has at least one fixture and every fixture code is registered. A code with no fixture does not exist.",
+  "layers": {
+    "transport": "Enforced on the response before the body is parsed.",
+    "parse": "Enforced while turning bytes into JSON.",
+    "version": "Enforced on schemaVersion after parsing, before schema validation. Separate from 'schema' because siteskin-1.0.schema.json validates the version *format* only and does not pin the major, so an unsupported major is a policy rejection rather than a structural one.",
+    "schema": "Enforced by siteskin-1.0.schema.json. Structural validity only.",
+    "security": "Enforced by the security validator. Not expressible in JSON Schema — these rules depend on the serving origin, which the schema does not know."
+  },
+  "dispositions": {
+    "reject": "The whole manifest is discarded and the browser stays in regular mode.",
+    "drop-item": "The offending element is removed; the rest of the manifest still applies.",
+    "warn": "Nothing is removed; the diagnostic is recorded for the developer inspector."
+  },
+  "diagnostics": [
+    {
+      "code": "SS-E-SIZE-EXCEEDED",
+      "layer": "transport",
+      "disposition": "reject",
+      "summary": "Manifest body exceeds 128 KB. Enforced before parsing, so an oversized payload is never fully read into memory."
+    },
+    {
+      "code": "SS-E-PARSE",
+      "layer": "parse",
+      "disposition": "reject",
+      "summary": "Response body is not valid JSON."
+    },
+    {
+      "code": "SS-E-VERSION-UNSUPPORTED",
+      "layer": "version",
+      "disposition": "reject",
+      "summary": "schemaVersion declares a major version this implementation does not understand. Silently reinterpreting an unknown format is how a security boundary becomes a guess."
+    }
+  ]
+}

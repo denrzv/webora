@@ -1,0 +1,11 @@
+{
+  "origin": "https://bloomflowers.example",
+  "note": "Truncated mid-document: braces are never closed. The body does not parse, so no later layer ever sees it. Declared non-parsing via `parses`, which the corpus test asserts rather than assumes.",
+  "parses": false,
+  "diagnostics": [
+    {
+      "code": "SS-E-PARSE",
+      "disposition": "reject"
+    }
+  ]
+}

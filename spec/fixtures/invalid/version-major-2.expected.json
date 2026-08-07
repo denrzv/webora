@@ -1,0 +1,11 @@
+{
+  "origin": "https://bloomflowers.example",
+  "note": "An unknown MAJOR version rejects the whole manifest. Structurally this document is fine — it passes siteskin-1.0.schema.json, which validates the version format but deliberately does not pin the major — so the rejection is a policy decision at the version layer, not a schema failure.",
+  "diagnostics": [
+    {
+      "code": "SS-E-VERSION-UNSUPPORTED",
+      "disposition": "reject",
+      "pointer": "/schemaVersion"
+    }
+  ]
+}

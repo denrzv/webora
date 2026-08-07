@@ -35,7 +35,26 @@ did not happen.
 
 ## Tasks
 
-- [ ] **TASK-1: Corpus harness, diagnostic registry, transport and parse fixtures**
+- [x] **TASK-1: Corpus harness, diagnostic registry, transport and parse fixtures**
+  - **Done.** `:siteskin-core:test` 13 tests green (10 corpus + 3 pre-existing),
+    `:siteskin-core:detekt` green, both with `ANDROID_HOME`/`ANDROID_SDK_ROOT` unset. Core subset
+    gate only — no Android SDK on this container.
+  - *Deviation:* the plan named three layers (`schema` / `security` / `transport`); the registry
+    ships **five** — `transport`, `parse`, `version`, `schema`, `security`. `parse` and `version`
+    were folded into the others in the plan, which does not survive contact with the fixtures:
+    `siteskin-1.0.schema.json` validates the *format* of `schemaVersion` but deliberately does not
+    pin the major, so a `2.0` manifest passes the schema and is rejected by policy. Collapsing
+    `version` into `schema` would have forced either a wrong code or a schema that pins the major
+    and cannot be reused for 1.x.
+  - *Deviation:* `io.github.optimumcode:json-schema-validator` **0.5.1** confirmed to support draft
+    2020-12 — verified empirically by `jsonSchemaValidatorSupportsDraft2020_12`, which is committed
+    rather than run once and forgotten, so a future version bump that drops 2020-12 fails there
+    instead of obscurely inside a corpus assertion. No fallback to networknt needed.
+  - *Added beyond the task:* `corpusIsDiscovered`. Every other test in the class is a "for all
+    fixtures" assertion and passes vacuously against an empty list, so a broken `siteskin.spec.dir`
+    would have turned the whole suite green while asserting nothing. Also
+    `fixtureDispositionsMatchTheRegistry`, `validFixturesDeclareNoRejection` and
+    `invalidFixturesDeclareAtLeastOneDiagnostic`, which close the same class of hole.
   - New: `spec/diagnostics.json` — registry format (`code`, `layer`, `disposition`, `summary`),
     seeded with `SS-E-SIZE-EXCEEDED`, `SS-E-PARSE`, `SS-E-VERSION-UNSUPPORTED` only
   - New: `spec/fixtures/invalid/oversized.{json,expected.json}` (~129 KB of padding — committed,

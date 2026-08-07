@@ -1,0 +1,10 @@
+{
+  "origin": "https://bloomflowers.example",
+  "note": "132,097 bytes against a 128 KB (131,072 byte) limit. Committed at full size rather than generated at test time: a generated fixture would leave a third-party implementer without the case, which defeats the point of shipping a corpus. Note this body is valid JSON and would pass siteskin-1.0.schema.json — the size guard runs before parsing, so the payload is rejected without ever being interpreted. The padding lives in an unknown field precisely because its content is irrelevant.",
+  "diagnostics": [
+    {
+      "code": "SS-E-SIZE-EXCEEDED",
+      "disposition": "reject"
+    }
+  ]
+}
