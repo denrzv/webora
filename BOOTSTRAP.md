@@ -63,36 +63,54 @@ pipx install pre-commit && pre-commit install
 Same reasoning: it defines executable hooks. CI's `guardrails` job runs `pre-commit run --all-files`
 and will fail until the file exists at the root.
 
-## 6. Verify the toolchain
+## 6. Verify the toolchain — 🟡 partly done
 
 ```bash
-# Core is Android-free — this must pass with no SDK installed at all.
+# ✅ PASSES. Core is Android-free — verified on a container with no SDK at all.
 ANDROID_HOME= ANDROID_SDK_ROOT= ./gradlew :siteskin-core:check
 
-# This is the task that actually runs D8. See CLAUDE.md § Java version.
+# ✅ PASSES, all three modules, still with no SDK — :app configures and lints fine
+# without one; only assembling needs it.
+ANDROID_HOME= ANDROID_SDK_ROOT= ./gradlew detekt :siteskin-lint:build
+
+# ❌ NOT YET RUN — needs an Android SDK. This is the task that actually runs D8.
+# See CLAUDE.md § Java version.
 ./gradlew :app:assembleDebug
 
-./gradlew detekt
+# ❌ NOT YET RUN — needs gitleaks, shellcheck and an SDK for the `test` step.
 bash scripts/pre-commit-check.sh
 ```
 
-If `assembleDebug` fails on the bytecode target, drop `jvmTarget` and `sourceCompatibility` /
-`targetCompatibility` from 21 to 17 in `app/build.gradle.kts` and
-`siteskin-core/build.gradle.kts`, and record the outcome in the `FOUND-002` tasklist. Java 21 is
-the expected ceiling but Google publishes no explicit D8 maximum, so it is an empirical result.
+**The toolchain 25 / `jvmTarget` 21 combination is still unproven**, because only `assembleDebug`
+invokes D8 and no session has had an SDK yet. Run it first in any session that has one. If it fails
+on the bytecode target, drop `jvmTarget` and `sourceCompatibility` / `targetCompatibility` from 21
+to 17 in `app/build.gradle.kts` and `siteskin-core/build.gradle.kts` — and note there is now a
+**third** place the number appears: `tasks.withType<Detekt>().jvmTarget` in the root
+`build.gradle.kts`. Record the working combination in the `FOUND-002` tasklist. Java 21 is the
+expected ceiling but Google publishes no explicit D8 maximum, so it is an empirical result.
 
-## 7. Prove the gates are real
+## 7. Prove the gates are real — ✅ done, both
 
-Both of these are worth doing once. A gate you have never seen fail is indistinguishable from a
-gate that does nothing.
+A gate you have never seen fail is indistinguishable from a gate that does nothing. Both were run
+with a negative control; re-run them after any change to the gate machinery itself.
 
-**Detekt:** add a throwaway file with a deliberate violation (a method with cyclomatic complexity
-over 10 is easiest), confirm `./gradlew detekt` fails, delete it.
+**Detekt** — added a throwaway function at cyclomatic complexity 13, threshold 10:
 
-**Artifact gate:** set `docs/.active_ticket` to `SPEC-001`, confirm
-`bash scripts/gate-workflow.sh` exits 2 because the plan and tasklist are still `DRAFT`. That is the
-gate working. It currently reads `BOOTSTRAP`, which bypasses it — remove that once `SPEC-001`
-starts.
+```
+DetektNegativeControl.kt:5:14: The function negativeControl appears to be too complex
+based on Cyclomatic Complexity (complexity: 13). Defined complexity threshold for
+methods is set to '10' [CyclomaticComplexMethod]
+> Analysis failed with 14 weighted issues.
+BUILD FAILED
+```
+
+Deleted; the build returns to green. The gate fails on the rule the config actually names, which
+also confirms the `CyclomaticComplexMethod` / deprecated-`ComplexMethod` landmine is dodged.
+
+**Artifact gate** — `scripts/gate-workflow.sh` exits 2 with `SPEC-001` active (PRD present, plan and
+tasklist absent) and exits 2 for an unknown ticket. It exits 0 today only because
+`docs/.active_ticket` reads `BOOTSTRAP`, which is the deliberate bypass — remove that once
+`SPEC-001` starts, or the gate protects nothing.
 
 ## 8. Then start the real work
 

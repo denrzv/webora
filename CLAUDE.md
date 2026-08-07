@@ -17,8 +17,9 @@ The product's central contract:
 The app brand is **Webora**; the protocol is **SiteSkin**. They are deliberately separate names —
 site owners implement a vendor-neutral protocol, not one browser's private format.
 
-> **Repo naming:** the GitHub repo is currently `denrzv/skinsite` and is to be renamed to
-> `denrzv/webora`. Everything inside already says Webora.
+> **Repo naming:** the repo is `denrzv/webora`. An earlier bootstrap session was blocked from
+> attaching it and wrote into `denrzv/skinsite`, which is why some history refers to a pending
+> rename — there is none. `skinsite` never received a commit and needs no migration.
 
 ## Build Commands
 

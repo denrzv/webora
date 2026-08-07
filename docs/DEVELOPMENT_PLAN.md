@@ -3,13 +3,12 @@
 Status: APPROVED
 Date: 2026-08-07
 
-> **Repository note.** This plan was approved naming `denrzv/webora` as the app repo. Attaching that
-> repo was blocked by a session permission control, so the bootstrap landed in **`denrzv/skinsite`**,
-> which was already attached with push access. The intent is unchanged: **rename `skinsite` →
-> `webora` on GitHub** (GitHub preserves redirects for the old name, so clones and remotes keep
-> working), after which `denrzv/webora` — currently empty — is redundant and can be deleted. Every
-> identifier inside this repo already says Webora: `applicationId app.webora.browser`, Gradle root
-> project `Webora`. Only the GitHub repo name lags.
+> **Repository note — resolved.** This plan was approved naming `denrzv/webora` as the app repo.
+> Attaching that repo was blocked when the plan was written, so the bootstrap was drafted against
+> `denrzv/skinsite` and this section used to describe a pending rename. That is now moot: the
+> scaffolding was committed to **`denrzv/webora`** directly, and `denrzv/skinsite` never received a
+> commit, so there is nothing to rename and nothing to migrate. Every identifier already said
+> Webora — `applicationId app.webora.browser`, Gradle root project `Webora`.
 
 ## Context
 
@@ -21,7 +20,7 @@ and **`denrzv/bloom-flowers`** (the reference integration). `denrzv/skinsite` is
 no further work. `denrzv/hermes-agent` is reference-only — it carries the AIDD workflow (artifact
 templates, `Status:` gates, hook-enforced ordering, ticket naming) that this project should adopt.
 
-See the repository note above for why the bootstrap landed in `skinsite` rather than `webora`.
+See the repository note above — the bootstrap ultimately landed in `webora` as intended.
 
 This session produces the planning artifacts and the repo bootstrap. No feature code. The outcome
 is: both repos scaffolded, quality gates green and provably real, an epic-level ticket index with
@@ -322,8 +321,8 @@ back to regular mode · 011 **first-use consent** · 012 signed manifests deferr
 
 ## What this session writes
 
-**`denrzv/webora`**, branch `claude/skinsite-browser-plan-naouua` (keeping the session's designated
-branch name; say the word if you want it renamed to something webora-shaped):
+**`denrzv/webora`**, branch `claude/review-work-artifacts-unjbah` (the branch the restoring session
+was assigned; the originally-planned `claude/skinsite-browser-plan-naouua` was never pushed):
 - **`docs/DEVELOPMENT_PLAN.md` — this document, saved in full**, so it is referable from the repo
   rather than from a session transcript. It is the project's north star: the naming decision, the
   two concept amendments, the milestone/ticket index, the §60 answer table, the Java and Play
