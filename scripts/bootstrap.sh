@@ -5,7 +5,7 @@
 # Codex Cloud should call this script directly from its environment setup.
 #
 # This script is intentionally provider-neutral, idempotent, and strict: callers
-# that require a usable Android toolchain get a non-zero exit code on failure.
+# that require a usable development toolchain get a non-zero exit code on failure.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -14,7 +14,10 @@ ANDROID_SDK_DIR="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-${HOME}/android-sdk}}"
 CMDLINE_TOOLS_VERSION="${WEBORA_CMDLINE_TOOLS_VERSION:-13114758}" # cmdline-tools 17.0
 COMPILE_SDK="${WEBORA_COMPILE_SDK:-36}"
 BUILD_TOOLS="${WEBORA_BUILD_TOOLS:-36.0.0}"
+GITLEAKS_VERSION="${WEBORA_GITLEAKS_VERSION:-8.29.1}"
+SHELLCHECK_VERSION="${WEBORA_SHELLCHECK_VERSION:-0.11.0}"
 PREPARE_GRADLE="${WEBORA_BOOTSTRAP_PREPARE_GRADLE:-0}"
+USER_BIN_DIR="${HOME}/.local/bin"
 
 log() { echo "[bootstrap] $*"; }
 fail() { log "ERROR: $*" >&2; exit 1; }
@@ -23,12 +26,90 @@ require_cmd() {
   command -v "$1" >/dev/null 2>&1 || fail "required command not found: $1"
 }
 
-commandline_tools_platform() {
+host_os() {
   case "$(uname -s)" in
     Linux) echo "linux" ;;
-    Darwin) echo "mac" ;;
+    Darwin) echo "darwin" ;;
     *) fail "unsupported host OS: $(uname -s)" ;;
   esac
+}
+
+host_arch() {
+  case "$(uname -m)" in
+    x86_64|amd64) echo "x86_64" ;;
+    arm64|aarch64) echo "aarch64" ;;
+    *) fail "unsupported host architecture: $(uname -m)" ;;
+  esac
+}
+
+ensure_user_bin_path() {
+  mkdir -p "${USER_BIN_DIR}"
+  case ":${PATH}:" in
+    *":${USER_BIN_DIR}:"*) ;;
+    *) export PATH="${USER_BIN_DIR}:${PATH}" ;;
+  esac
+}
+
+install_gitleaks() {
+  command -v gitleaks >/dev/null 2>&1 && return 0
+  require_cmd curl
+  require_cmd tar
+
+  local os arch asset url tmpdir archive
+  os="$(host_os)"
+  case "$(host_arch)" in
+    x86_64) arch="x64" ;;
+    aarch64) arch="arm64" ;;
+  esac
+
+  asset="gitleaks_${GITLEAKS_VERSION}_${os}_${arch}.tar.gz"
+  url="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${asset}"
+  tmpdir="$(mktemp -d)"
+  archive="${tmpdir}/${asset}"
+
+  log "Installing Gitleaks ${GITLEAKS_VERSION}"
+  curl -fsSL "${url}" -o "${archive}"
+  tar -xzf "${archive}" -C "${tmpdir}"
+  [[ -f "${tmpdir}/gitleaks" ]] || {
+    rm -rf "${tmpdir}"
+    fail "gitleaks executable missing from downloaded archive"
+  }
+  cp "${tmpdir}/gitleaks" "${USER_BIN_DIR}/gitleaks"
+  chmod 0755 "${USER_BIN_DIR}/gitleaks"
+  rm -rf "${tmpdir}"
+}
+
+install_shellcheck() {
+  command -v shellcheck >/dev/null 2>&1 && return 0
+  require_cmd curl
+  require_cmd tar
+
+  local os arch asset url tmpdir archive binary
+  os="$(host_os)"
+  arch="$(host_arch)"
+  asset="shellcheck-v${SHELLCHECK_VERSION}.${os}.${arch}.tar.gz"
+  url="https://github.com/koalaman/shellcheck/releases/download/v${SHELLCHECK_VERSION}/${asset}"
+  tmpdir="$(mktemp -d)"
+  archive="${tmpdir}/${asset}"
+  binary="${tmpdir}/shellcheck-v${SHELLCHECK_VERSION}/shellcheck"
+
+  log "Installing ShellCheck ${SHELLCHECK_VERSION}"
+  curl -fsSL "${url}" -o "${archive}"
+  tar -xzf "${archive}" -C "${tmpdir}"
+  [[ -f "${binary}" ]] || {
+    rm -rf "${tmpdir}"
+    fail "shellcheck executable missing from downloaded archive"
+  }
+  cp "${binary}" "${USER_BIN_DIR}/shellcheck"
+  chmod 0755 "${USER_BIN_DIR}/shellcheck"
+  rm -rf "${tmpdir}"
+}
+
+provision_guardrail_tools() {
+  ensure_user_bin_path
+  install_gitleaks
+  install_shellcheck
+  log "guardrail tools ready: gitleaks $(gitleaks version), shellcheck $(shellcheck --version | awk '/^version:/ {print $2}')"
 }
 
 install_cmdline_tools() {
@@ -39,7 +120,10 @@ install_cmdline_tools() {
   require_cmd unzip
 
   local platform tmpdir zip url
-  platform="$(commandline_tools_platform)"
+  case "$(host_os)" in
+    linux) platform="linux" ;;
+    darwin) platform="mac" ;;
+  esac
   tmpdir="$(mktemp -d)"
   zip="${tmpdir}/cmdline-tools.zip"
   url="https://dl.google.com/android/repository/commandlinetools-${platform}-${CMDLINE_TOOLS_VERSION}_latest.zip"
@@ -115,6 +199,7 @@ prepare_gradle() {
 }
 
 report_java
+provision_guardrail_tools
 provision_android_sdk
 write_local_properties
 prepare_gradle
