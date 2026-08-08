@@ -16,7 +16,7 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 
 - [x] `SPEC-001` Manifest v1.0 spec, JSON Schema, conformance fixture corpus
 - [x] `SPEC-002` Versioning and compatibility policy
-- [ ] `CORE-001` Origin model and URL resolution
+- [x] `CORE-001` Origin model and URL resolution
 - [ ] `CORE-002` DTOs and parsing
 - [ ] `CORE-003` Schema validation
 - [ ] `CORE-004` Security validation and normalization

@@ -93,6 +93,25 @@ Two mechanisms enforce it, because a documented rule is not a rule:
 Core declares `interface ManifestSource` and consumes bytes. OkHttp lives in `:app`. Core never
 learns what a `Context` is.
 
+### Origin model
+
+`SiteOrigin` is the sole origin-comparison type. It canonicalizes scheme, host and port before it
+can be constructed; origin binding compares that complete tuple, never suffixes or registrable
+domains. The registrable domain and mixed-script signal are browser-owned display properties and
+do not participate in equality. See `ADR-004` for the canonicalization and bundled Public Suffix
+List decisions.
+
+Use `java.net.URI`, never `java.net.URL`: `URL.equals` may perform DNS resolution. JDK 25's URI/IDN
+behaviour also has several non-obvious constraints pinned by the core tests:
+
+- `IDN.toASCII` does not lowercase an ASCII host, so canonicalization lowercases its ASCII output.
+- `URI.host` is null for a valid Unicode hostname, so parsing starts from the raw authority.
+- `URI.resolve` accepts protocol-relative references and inherits the base scheme; reject them
+  before resolution.
+- `URI.normalize` preserves a leading traversal as a residual `..`; reject that residue rather
+  than treating normalization as permission to accept the URL.
+- IPv6 literals keep their brackets and bypass IDN conversion.
+
 ### Trust pipeline
 
 ```
