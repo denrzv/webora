@@ -12,7 +12,7 @@ A control that was not run is left blank, never assumed.
 
 ## Tasks
 
-- [ ] TASK-1: Host canonicalization
+- [x] TASK-1: Host canonicalization
   - New: `siteskin-core/src/main/kotlin/dev/siteskin/core/origin/HostName.kt`
   - New: `siteskin-core/src/test/kotlin/dev/siteskin/core/origin/HostNameTest.kt`
   - Acceptance: `münchen.example` and `MÜNCHEN.example` both canonicalize to
@@ -22,7 +22,19 @@ A control that was not run is left blank, never assumed.
     IP literals.
   - Tests: `HostNameTest`
   - Negative control: remove the ASCII-lowercase step that follows `IDN.toASCII` — the
-    `ShOp.Example` and `SHOP.EXAMPLE` cases must fail. (Result: )
+    `ShOp.Example` and `SHOP.EXAMPLE` cases must fail. (Result: **ran, fails as required.**
+    `asciiHostsAreLowercased` and `idnCaseFoldingAgreesWithPunycodeConversion` both failed;
+    restored, both pass. Worth recording *how* they failed: `expected:<shop.example> but
+    was:<null>` rather than `was:<ShOp.Example>`. Without the lowercase step the uppercase host
+    stops matching the lowercase-only STD3 label grammar, so it is rejected outright instead of
+    canonicalizing wrongly. The two guards are independent and the test detects the removal either
+    way, but a reader expecting a comparison failure should know why the message says `null`.)
+  - Deviation: needed a scoped `config/detekt/detekt.yml` change — `SwallowedException`'s
+    `ignoredExceptionTypes` now also lists `IllegalArgumentException` and `URISyntaxException`.
+    `IDN.toASCII` and `java.net.URI` signal "malformed" by throwing, and `ADR-010` requires that
+    become a typed `null`/rejection rather than propagating into a navigation. Listing the two
+    types keeps the rule active for every other exception. Planned for TASK-7; pulled forward
+    because TASK-1 is where it first blocks.
 
 - [ ] TASK-2: `SiteOrigin` value type
   - New: `siteskin-core/src/main/kotlin/dev/siteskin/core/origin/SiteOrigin.kt`

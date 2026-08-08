@@ -71,6 +71,22 @@ exceptions:
     active: true
   SwallowedException:
     active: true
+    # ADR-010 requires every parse failure to end in regular browsing rather than an exception
+    # reaching a navigation, so converting these two to a typed null/rejection at the boundary is
+    # the mandated behaviour, not an oversight. They are the throws the JDK's URL primitives use to
+    # say "malformed": java.net.IDN throws IllegalArgumentException for an empty or undecodable
+    # label, java.net.URI throws URISyntaxException for a reference it cannot parse. Neither
+    # carries anything a caller could act on beyond "no".
+    #
+    # Scoped deliberately: the rule stays on for every other exception type, so a swallowed
+    # IOException or IllegalStateException still fails the build.
+    ignoredExceptionTypes:
+      - 'InterruptedException'
+      - 'MalformedURLException'
+      - 'NumberFormatException'
+      - 'ParseException'
+      - 'IllegalArgumentException'
+      - 'URISyntaxException'
 
 coroutines:
   active: true
