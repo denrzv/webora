@@ -36,9 +36,14 @@ shell, not the renderer. Revisit only if a shell feature turns out to be impossi
 ## ADR-002 — `.well-known/siteskin.json` for discovery
 
 Predictable, origin-bound, cacheable, and requires no HTML parsing — so discovery can run
-concurrently with page load rather than after it. HTML `<link rel="siteskin">` is a future addition
-(`SPEC-002`), not a v1 alternative: it would force us to wait for the document, which conflicts with
-`ADR-009`.
+concurrently with page load rather than after it. HTML `<link rel="siteskin">` is a future addition,
+not a v1 alternative: it would force us to wait for the document, which conflicts with `ADR-009`.
+
+This originally pointed at `SPEC-002` for the mechanism. `SPEC-002` deliberately did not implement
+it — that belongs to `NET-001` — and instead settled the question the pointer was really about:
+whether such an addition needs a major bump. It does not. `SPEC.md` §4.2 uses it as the worked
+example of an additive change, since a reader that does not know the `<link>` element still finds
+`/.well-known/siteskin.json` and no manifest becomes unreachable.
 
 ## ADR-003 — Manifest is declarative data, never code
 

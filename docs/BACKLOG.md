@@ -16,9 +16,30 @@ Every ticket's acceptance criteria end with the same final item, per repo conven
 
 ## M1 — SiteSkin API
 
-**`SPEC-002` Versioning and compatibility policy.** Accept `1.x`, reject `2.x`. Unknown fields
-ignored with `SS-W-FIELD-UNKNOWN`. Documented deprecation path and what constitutes a breaking
-change. Fixtures for `1.0`, `1.1`, `2.0`, missing version, malformed version.
+**`SPEC-002` Versioning and compatibility policy.** ✅ **Done.** Accept `1.x`, reject `2.x`. Unknown
+fields ignored with `SS-W-FIELD-UNKNOWN`. Documented deprecation path and what constitutes a
+breaking change. Fixtures for `1.0`, `1.1`, `2.0`, missing version, malformed version.
+
+> **What actually shipped**, since the scope moved once the ticket met the corpus. The `1.0`, `1.1`
+> and `2.0` fixtures this entry asks for already existed — `SPEC-001` delivered them as
+> `valid/minimal.json`, `valid/forward-compat-1.1.json` and `invalid/version-major-2.json`. Rather
+> than duplicate them, `SPEC-002` added `invalid/version-missing.json` and
+> `invalid/version-malformed.json` (the two genuinely absent), plus two the entry did not anticipate:
+> `invalid/version-major-2-alien.json`, a `2.0` document the `1.0` schema rejects outright, which is
+> the only fixture that can prove the version layer runs *before* the schema; and
+> `invalid/unknown-field-1.0.json`, which pins that the unknown-field policy is version-independent
+> rather than a courtesy extended to future minors.
+>
+> The boundary itself moved out of the document corpus entirely, into `spec/versions.json` — a
+> 17-row decision table over every spelling at the edge. Version handling is a decision on a scalar,
+> and near-identical manifests differing in one field would have cost more and tested less.
+>
+> Two defects were found and fixed inside the ticket, both in the *published schema*: `01.0` and
+> `1.0` were two spellings of one version, and — the sharper one — every `^…$` pattern in the schema
+> accepted a **trailing newline**, because `java.util.regex`'s `$` matches before a final line
+> terminator while the ECMA-262 semantics JSON Schema specifies do not. `"schemaVersion": "1.0\n"`
+> validated. Both are recorded as breaking changes in `SPEC.md` §4.5, taken deliberately inside the
+> free-change window that section defines and closes.
 
 **`SPEC-003` `siteskin-lint` CLI.** Fetches a live origin's manifest and validates it with the same
 `:siteskin-core` code path the browser uses. Exit 0 = will activate. Prints diagnostic codes.

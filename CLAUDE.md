@@ -210,6 +210,54 @@ Three invariants worth knowing before you touch the schema:
 `.well-known/siteskin.json`, pinned by SHA-256 in both repos. Changing it means updating the
 constant in `SpecCorpusTest`, the copy, and that repo's `.sha256` — all three.
 
+### Versioning and the layer model (SPEC-002)
+
+**Validation runs `transport → parse → version → schema → security`, and a rejection short-circuits
+every later layer.** The order is data, not prose: `layerOrder` in `spec/diagnostics.json`, asserted
+by `diagnosticsDoNotCrossARejectingLayer`. A fixture may not expect a diagnostic from a layer its
+own rejection has already made unreachable.
+
+The one counter-intuitive consequence, and the thing to not "fix":
+
+- **`version` runs before `schema`, but only on a *present, well-formed* version string.** An absent
+  or malformed `schemaVersion` is `SS-E-SCHEMA-INVALID`, never `SS-E-VERSION-UNSUPPORTED` — with no
+  version there is no major to evaluate. `invalid/version-missing.json` pins it.
+- Version runs first so that a `2.0` document whose *shape* is alien to `1.0` is refused on its
+  version rather than producing a heap of structural errors about a format we already decided not to
+  interpret. `invalid/version-major-2-alien.json` is the only fixture that can prove this, and it
+  carries `"schemaValid": false` for the purpose.
+
+`Fixture.schemaValid()` and the layer order answer **two different questions** — "is this document
+structurally valid?" (asserted against the real schema, for every parsing fixture) versus "would a
+browser ever ask the schema?" Collapsing them loses coverage: `oversized` and `version-major-2` are
+both rejected pre-schema and both still prove they are structurally valid.
+
+`spec/versions.json` is the version decision table — every spelling at the boundary, with its
+decision and diagnostic. It is a **registry**, which is why it sits beside `diagnostics.json` rather
+than under `fixtures/`. Its `wellFormed` column is checked against the `schemaVersion` pattern read
+out of the schema file at test time, never a copy.
+
+**Two schema landmines, both fixed and both easy to reintroduce:**
+
+- **Never end a schema `pattern` with a bare `$`.** JSON Schema specifies ECMA-262 regexes, where an
+  unflagged `$` matches only at end of input. `java.util.regex` also matches it *before a final line
+  terminator*, so `"schemaVersion": "1.0\n"` validated against a schema that meant to forbid it —
+  and `schemaVersion` keys the manifest cache. Anchor with `(?![\s\S])`. Guarded by
+  `schemaPatternsAnchorAtEndOfInput`, and the reason to check regex behaviour against the engine
+  rather than the specification it cites.
+- **No leading zeros in `schemaVersion`.** `01.0` and `1.0` must not be two spellings of one
+  version, for the same cache-key reason. Fix the grammar, never normalize at read time — a
+  normalization step is a second place for the two spellings to reappear.
+
+Both were taken as **breaking changes inside a free-change window** that `SPEC.md` §4.5 documents
+and closes. There is no second window. For genuine defects found later, §4.3's security carve-out
+lets a narrowing ship in a minor — deliberately written as an exception rather than by redefining
+such changes as non-breaking.
+
+`SS-W-FIELD-DEPRECATED` is **reserved in `SPEC.md` §4.4 and deliberately absent from
+`diagnostics.json`.** Nothing in `1.0` is deprecated, so it has no fixture, and a code with no
+fixture does not exist. Register it in the same commit as the fixture that produces it.
+
 ---
 
 ## Detekt

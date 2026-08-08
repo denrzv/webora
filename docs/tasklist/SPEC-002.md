@@ -206,7 +206,7 @@ caveat rather than a pass.
     versions, not time, which is only a strong promise if majors are rare — and this format has no
     release cadence yet to anchor a duration to. Saying so beats implying a calendar commitment.
 
-- [ ] **TASK-7: close out**
+- [x] **TASK-7: close out**
   - Modified: `docs/BACKLOG.md` — mark `SPEC-002` done, note that the `1.0`/`1.1`/`2.0` fixtures the
     entry asked for were already delivered by `SPEC-001` and what was added instead.
   - Modified: `CLAUDE.md` — a short note under the corpus section on the layer model and
@@ -215,6 +215,17 @@ caveat rather than a pass.
     retargeted, so it does not read as unfinished work in this ticket.
   - Acceptance: `bash scripts/pre-commit-check.sh` passes; no stale forward-reference to this ticket
     remains for work it did not do.
+  - **Result:** ✅ All four updated (`BACKLOG.md`, `DEVELOPMENT_PLAN.md`, `adr/README.md`,
+    `CLAUDE.md`). 36 tests green, detekt green; the `unit tests` step is the pre-existing
+    Android-SDK gap documented above, not a regression.
+    The backlog entry records what shipped *versus* what it asked for, because the two differ: the
+    `1.0`/`1.1`/`2.0` fixtures it requested already existed from `SPEC-001`, and the boundary moved
+    into a decision table instead of more documents. Leaving the entry ticked without that note
+    would misreport the ticket.
+    `ADR-002`'s pointer is retargeted rather than deleted. The ADR parked `<link rel="siteskin">`
+    on "`SPEC-002`"; this ticket did not implement it and says so, while settling the question the
+    pointer was actually about — whether such an addition needs a major bump (it does not, and
+    `SPEC.md` §4.2 uses it as the worked example).
 
 - [x] **TASK-FIX-1: split `versionTableSeparatesGrammarFromPolicy`**
   - Source: `detekt` gate, run during TASK-6's pre-commit. Not a `/review` finding.
