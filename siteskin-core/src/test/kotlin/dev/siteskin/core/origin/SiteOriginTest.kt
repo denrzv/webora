@@ -223,6 +223,26 @@ class SiteOriginTest {
         assertEquals(homographic.hasMixedScriptHost, origin("https://xn--pple-43d.com")?.hasMixedScriptHost)
     }
 
+    /**
+     * `ADR-006`'s always-visible domain, reachable from the type the browser already holds. Also a
+     * display value: two origins sharing a registrable domain are still two origins, and
+     * `distinctOriginsNeverCompareEqual` already pins that `admin.shop.example` is not
+     * `shop.example`.
+     */
+    @Test
+    fun theRegistrableDomainIsExposedForChrome() {
+        assertEquals("example.co.uk", origin("https://www.example.co.uk/cart")?.registrableDomain)
+        assertEquals("site.github.io", origin("https://site.github.io")?.registrableDomain)
+
+        // A real suffix, deliberately: `example` matches no PSL rule, so a host under it falls to
+        // the documented no-match path and returns itself — which would not exercise the sharing.
+        val sub = requireNotNull(origin("https://admin.shop.co.uk"))
+        val parent = requireNotNull(origin("https://shop.co.uk"))
+        assertEquals("shop.co.uk", sub.registrableDomain)
+        assertEquals(sub.registrableDomain, parent.registrableDomain)
+        assertNotEquals("a shared registrable domain must not merge two origins", sub, parent)
+    }
+
     @Test
     fun toStringIsTheCanonicalForm() {
         // Logs and assertion messages print origins constantly; the canonical form is the one

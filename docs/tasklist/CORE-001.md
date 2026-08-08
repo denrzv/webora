@@ -80,7 +80,7 @@ A control that was not run is left blank, never assumed.
     `HARDEN-001`, which owns the adversarial corpus that would justify carrying one. The PRD asks
     for mixed-script and this is exactly that.
 
-- [ ] TASK-4: Public Suffix List and registrable domain
+- [x] TASK-4: Public Suffix List and registrable domain
   - New: `siteskin-core/src/main/resources/dev/siteskin/core/origin/public_suffix_list.dat`
   - New: `siteskin-core/src/main/kotlin/dev/siteskin/core/origin/PublicSuffixList.kt`
   - New: `siteskin-core/src/test/kotlin/dev/siteskin/core/origin/PublicSuffixListTest.kt`
@@ -93,7 +93,23 @@ A control that was not run is left blank, never assumed.
     asserted against the constants recorded in `ADR-004`.
   - Tests: `PublicSuffixListTest`
   - Negative control: ignore `!` exception rules — the `city.kawasaki.jp` case must fail.
-    (Result: )
+    (Result: **ran, fails as required.** `exceptionRulesBeatWildcardRules` failed with
+    `expected:<city.kawasaki.jp> but was:<b.city.kawasaki.jp>` — the wildcard rule prevailed and
+    consumed a label it should not have. Restored, passes.)
+  - Deviation: `registrableDomain` is a computed accessor on `SiteOrigin`, not a stored property.
+    `parse` runs on every navigation and the NFR requires it to stay allocation-light, while the
+    registrable domain is wanted only when chrome is drawn — so the ~10,000-rule snapshot is not
+    loaded until something asks for a domain to render.
+  - Deviation: 459 of the bundled rules are written in Unicode while every host reaching the
+    matcher is punycode, so rules are converted with `IDN.toASCII` on load. Not anticipated by the
+    plan. Skipping it fails *open* — the internationalized suffixes simply never match and every
+    host under one falls through to the no-match path, which looks like it works.
+    `unicodeRulesMatchPunycodeHosts` pins it.
+  - Correction made while writing the tests: the first draft of
+    `SiteOriginTest.theRegistrableDomainIsExposedForChrome` asserted that `admin.shop.example` and
+    `shop.example` share a registrable domain. They do not — `example` matches no PSL rule, so both
+    fall to the no-match path and return themselves. Rewritten against `co.uk`, which is a real
+    suffix and actually exercises the sharing.
 
 - [ ] TASK-5: `UrlResolver` and origin binding
   - New: `siteskin-core/src/main/kotlin/dev/siteskin/core/origin/UrlResolver.kt`

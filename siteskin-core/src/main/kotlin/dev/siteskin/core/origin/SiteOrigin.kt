@@ -56,6 +56,21 @@ public class SiteOrigin private constructor(
      */
     public val hasMixedScriptHost: Boolean = IdnGuard.hasMixedScript(host)
 
+    /**
+     * The registrable domain (eTLD+1) — `example.co.uk` for `www.example.co.uk`.
+     *
+     * `ADR-006` requires this to be visible whenever a manifest is applied, in browser-owned
+     * typography, with no manifest field able to suppress it. Like [hasMixedScriptHost] it is a
+     * display value and **not part of equality**: origin binding compares the full canonical host,
+     * so two origins sharing a registrable domain are still two origins.
+     *
+     * Computed on access rather than stored. `parse` runs on every navigation and must stay
+     * allocation-light, while this is wanted only when chrome is drawn — so the ~10,000-rule
+     * snapshot is not loaded until something actually asks for a domain to render.
+     */
+    public val registrableDomain: String
+        get() = PublicSuffixList.registrableDomain(host)
+
     override fun equals(other: Any?): Boolean =
         this === other ||
             (other is SiteOrigin && scheme == other.scheme && host == other.host && port == other.port)
