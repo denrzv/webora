@@ -8,7 +8,14 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+USER_BIN_DIR="${HOME}/.local/bin"
 fail=0
+
+# The shared bootstrap installs cloud-only guardrail binaries here. Add the path
+# explicitly because cloud setup scripts run in a separate shell from the agent.
+if [[ -d "${USER_BIN_DIR}" ]]; then
+  export PATH="${USER_BIN_DIR}:${PATH}"
+fi
 
 run() {
   local name="$1"; shift

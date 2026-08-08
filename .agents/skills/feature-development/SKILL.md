@@ -31,6 +31,12 @@ The existing Claude command files are the current shared phase definitions. Read
 - `.claude/commands/qa.md`
 - `.claude/commands/validate.md`
 
-Follow the order in `workflow.md`. During implementation, complete exactly one `TASK-*` or `TASK-FIX-*`, run the pre-commit gate, commit it, and push the current ticket branch before starting the next task. The pushed commit is the handoff checkpoint; if it cannot be pushed, stop and report the blocked checkpoint rather than continuing with more local-only work.
+Follow the order in `workflow.md`. During implementation, complete exactly one `TASK-*` or `TASK-FIX-*`, run the pre-commit gate, and create exactly one commit for that task.
+
+After each task commit:
+- If the checkout has a push-capable remote, push and verify the current ticket branch before starting the next task.
+- If this is a managed cloud checkout that intentionally has no push-capable remote, do not synthesize remotes or credentials. The local task commit is a valid intra-session checkpoint and the next task may start.
+
+Before ending a managed-cloud session or handing work to another assistant, persist all accumulated task commits through the platform-provided PR/export/sync mechanism. If that durable checkpoint cannot be created, stop and report the blocked handoff.
 
 If the working tree contains partial work from another session or assistant, stop the normal loop and use the `recover` skill semantics before continuing.
