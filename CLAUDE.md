@@ -125,6 +125,12 @@ back into a code-review guarantee.
 
 Parsing success is not validity. A DTO is untrusted remote input that happens to be well-formed.
 
+
+Manifest parsing is a bounded stream operation: core consumes no more than 131,073 bytes, rejects
+malformed UTF-8 rather than accepting replacement characters, and leaves the caller-owned stream
+open. `ignoreUnknownKeys` is paired with an explicit shape walk that emits
+`SS-W-FIELD-UNKNOWN` paths; enabling it alone would silently discard protocol diagnostics.
+
 ---
 
 ## Java version — two knobs, do not conflate them
