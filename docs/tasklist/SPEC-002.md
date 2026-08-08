@@ -241,6 +241,24 @@ caveat rather than a pass.
     whether the two rejection codes stay on their own sides of the grammar line, the other asks
     whether acceptance matches the supported-major allow-list, and they fail for different reasons.
 
+- [x] **TASK-FIX-2: drive the real validator in `versionTableMatchesTheSchemaGrammar`**
+  - Source: `/review` FINDING-1.
+  - Modified: `.../spec/SpecCorpus.kt` — `schemaVersionGrammar` (a `Regex`) replaced by
+    `schemaAcceptsVersion(decision)`, which validates a minimal document through the published
+    schema. Consumer updated in `SpecCorpusTest.kt`.
+  - Cause: the table's `wellFormed` column was checked with `Regex.matches` — a *full-region* match —
+    against a pattern the schema applies as a *find*. The test therefore asserted a **stricter**
+    grammar than the schema enforces and was blind to changes making the real schema more
+    permissive at the front of the string.
+  - Acceptance: deleting the leading `^` from `schemaVersion.pattern` must now fail this test.
+  - **Result:** ✅ Confirmed by direct before/after. With `^` deleted, the test previously stayed
+    **green**; it now fails with *"1.0.0: table says wellFormed=false, but siteskin-1.0.schema.json
+    accepts it"* — find-semantics locates `1.0` inside `1.0.0`. Restored; 36 tests green, detekt
+    green.
+    Bonus from the fix: the `number` and `absent` rows are no longer skipped. A regex has no opinion
+    on a `type` or `required` failure, so those two rows were previously unchecked; the validator
+    covers all 17.
+
 ## Deferred
 
 Named here rather than skipped silently, following `SPEC-001`'s precedent:

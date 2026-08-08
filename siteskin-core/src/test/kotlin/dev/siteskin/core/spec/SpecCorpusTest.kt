@@ -411,25 +411,25 @@ class SpecCorpusTest {
 
     @Test
     fun versionTableMatchesTheSchemaGrammar() {
-        // The table's `wellFormed` column is checked against the pattern read out of
-        // siteskin-1.0.schema.json, never against a copy of it. A copy would let the two drift
-        // while both looked right — the exact failure the corpus exists to prevent.
+        // Every row of spec/versions.json is put through the REAL validator, in a document that is
+        // otherwise minimal and valid, and its verdict compared to the table's `wellFormed` column.
         //
-        // Non-string forms are excluded: `wellFormed: false` for an unquoted number or an absent
-        // field is a `type`/`required` failure, which the grammar has no opinion about. Asserting
-        // them here would be asking the wrong question and getting the right answer by luck.
-        val disagreements = SpecCorpus.versionDecisions
-            .filter { it.form == "string" }
-            .mapNotNull { decision ->
-                val value = requireNotNull(decision.stringValue) { "${decision.label} declares no version" }
-                val matches = SpecCorpus.schemaVersionGrammar.matches(value)
-                if (matches == decision.wellFormed) {
-                    null
-                } else {
-                    "${decision.label}: table says wellFormed=${decision.wellFormed}, " +
-                        "schema grammar says $matches"
-                }
+        // Not a Regex rebuilt from the schema's `pattern`: that is how this test was first written,
+        // and it was weaker than it looked. `Regex.matches` is a full-region match while a JSON
+        // Schema `pattern` is a *find*, so it asserted a stricter grammar than the schema applies
+        // and stayed green when the leading `^` was deleted — the exact drift the test exists to
+        // catch. Going through the validator also lets the `number` and `absent` rows be checked
+        // here rather than skipped, since `type` and `required` failures are things a validator
+        // knows about and a grammar does not.
+        val disagreements = SpecCorpus.versionDecisions.mapNotNull { decision ->
+            val accepted = SpecCorpus.schemaAcceptsVersion(decision)
+            if (accepted == decision.wellFormed) {
+                null
+            } else {
+                "${decision.label}: table says wellFormed=${decision.wellFormed}, " +
+                    "but siteskin-1.0.schema.json ${if (accepted) "accepts" else "rejects"} it"
             }
+        }
         assertTrue(disagreements.joinToString("\n"), disagreements.isEmpty())
     }
 

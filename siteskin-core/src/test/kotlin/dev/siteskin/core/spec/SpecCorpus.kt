@@ -4,10 +4,13 @@ import io.github.optimumcode.json.schema.JsonSchema
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 import java.io.File
 
 /**
@@ -106,19 +109,30 @@ internal object SpecCorpus {
     }
 
     /**
-     * The `schemaVersion` grammar, read out of the published schema rather than restated here.
+     * Whether the published schema accepts [decision]'s `schemaVersion` in a document that is
+     * otherwise minimal and valid.
      *
-     * A copy would let the table and the schema drift while both looked right, which is the exact
-     * failure the corpus exists to prevent. Matched with [Regex.matches] — a full-region match — so
-     * that the assertion does not itself depend on `$`'s end-of-input semantics, which is what
-     * SPEC.md §4.5(b) records going wrong inside the schema.
+     * Deliberately drives the **real validator** rather than reconstructing the grammar as a
+     * [Regex]. An earlier version of this did the latter and matched with `Regex.matches`, a
+     * full-region match — but a JSON Schema `pattern` is applied as a *find*, so the test asserted a
+     * stricter grammar than the schema enforces and could not see a missing `^`. Verified: deleting
+     * the leading anchor left that assertion green.
+     *
+     * Going through the validator also covers the `number` and `absent` forms, which a grammar
+     * cannot speak to at all — those fail on `type` and `required` respectively.
      */
-    val schemaVersionGrammar: Regex by lazy {
-        val pattern = json.parseToJsonElement(specDir.resolve("siteskin-1.0.schema.json").readText())
-            .jsonObject.getValue("properties")
-            .jsonObject.getValue("schemaVersion")
-            .jsonObject.getValue("pattern").jsonPrimitive.content
-        Regex(pattern)
+    fun schemaAcceptsVersion(decision: VersionDecision): Boolean {
+        val document = buildJsonObject {
+            decision.declared?.let { put("schemaVersion", it) }
+            put(
+                "site",
+                buildJsonObject {
+                    put("id", JsonPrimitive("probe"))
+                    put("name", JsonPrimitive("Probe"))
+                },
+            )
+        }
+        return schema.validate(document) {}
     }
 
     /** The layer names the registry defines, independent of the order they run in. */
