@@ -159,7 +159,15 @@ did not happen.
   - Tests: `validFixturesPassTheSchema`, `schemaEncodesTheActionTypeAllowList`,
     `unknownFieldsAreAcceptedNotRejected`
 
-- [ ] **TASK-4: Origin-binding invalid corpus**
+- [x] **TASK-4: Origin-binding invalid corpus**
+  - **Done.** Seven fixtures, core subset gate green. Verified the `test` task actually re-executed
+    rather than passing an up-to-date check — `:siteskin-core:test` is absent from Gradle's
+    UP-TO-DATE list and its results are newer than both the fixtures and the registry, which
+    confirms the `inputs.dir(spec/)` wiring from TASK-1 does what it claims.
+  - *Note:* `nav-userinfo-authority` is the sharpest of the six. The serving origin's host appears
+    verbatim inside the URL, so any check built on `contains` or `startsWith` passes while the real
+    host is `evil.example`. It is the fixture that punishes comparing strings instead of parsed
+    origins, and `CORE-001` should treat it as its acceptance criterion.
   - New fixtures, each registering `SS-E-ORIGIN-MISMATCH` usage — one per resolver failure mode
     rather than one representative case, because these are the bugs most likely to be introduced by
     a plausible-looking refactor:

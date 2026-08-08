@@ -1,0 +1,40 @@
+{
+  "origin": "https://bloomflowers.example",
+  "note": "site.homeUrl points off-origin. Per SPEC.md section 3 it is dropped and falls back to the origin root, and per section 12 homeUrl is always present in the canonical result \u2014 so the fallback is observable rather than an omission. The navigation is untouched, proving the drop is scoped to the offending field.",
+  "diagnostics": [
+    {
+      "code": "SS-E-ORIGIN-MISMATCH",
+      "disposition": "drop-item",
+      "pointer": "/site/homeUrl"
+    }
+  ],
+  "result": {
+    "schemaVersion": "1.0",
+    "origin": "https://bloomflowers.example",
+    "site": {
+      "id": "bloom-flowers",
+      "name": "Bloom Flowers",
+      "homeUrl": "https://bloomflowers.example/"
+    },
+    "bottomNavigation": [
+      {
+        "id": "home",
+        "label": "Home",
+        "icon": "home",
+        "action": {
+          "type": "internal_url",
+          "url": "https://bloomflowers.example/"
+        }
+      },
+      {
+        "id": "offsite",
+        "label": "Offsite",
+        "icon": "grid_view",
+        "action": {
+          "type": "internal_url",
+          "url": "https://bloomflowers.example/catalog"
+        }
+      }
+    ]
+  }
+}

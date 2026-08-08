@@ -1,0 +1,31 @@
+{
+  "origin": "https://bloomflowers.example",
+  "note": "An absolute URL to a different origin \u2014 the base case. internal_url MUST resolve inside the serving origin. Structurally valid, so it MUST pass siteskin-1.0.schema.json; only the security layer rejects it.",
+  "diagnostics": [
+    {
+      "code": "SS-E-ORIGIN-MISMATCH",
+      "disposition": "drop-item",
+      "pointer": "/bottomNavigation/1/action/url"
+    }
+  ],
+  "result": {
+    "schemaVersion": "1.0",
+    "origin": "https://bloomflowers.example",
+    "site": {
+      "id": "bloom-flowers",
+      "name": "Bloom Flowers",
+      "homeUrl": "https://bloomflowers.example/"
+    },
+    "bottomNavigation": [
+      {
+        "id": "home",
+        "label": "Home",
+        "icon": "home",
+        "action": {
+          "type": "internal_url",
+          "url": "https://bloomflowers.example/"
+        }
+      }
+    ]
+  }
+}

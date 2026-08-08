@@ -1,0 +1,31 @@
+{
+  "origin": "https://bloomflowers.example",
+  "note": "Same scheme, same host, different port. Origin is scheme + host + port, so this is a different origin \u2014 a resolver comparing only the host lets it through. Structurally valid, so it MUST pass siteskin-1.0.schema.json; only the security layer rejects it.",
+  "diagnostics": [
+    {
+      "code": "SS-E-ORIGIN-MISMATCH",
+      "disposition": "drop-item",
+      "pointer": "/bottomNavigation/1/action/url"
+    }
+  ],
+  "result": {
+    "schemaVersion": "1.0",
+    "origin": "https://bloomflowers.example",
+    "site": {
+      "id": "bloom-flowers",
+      "name": "Bloom Flowers",
+      "homeUrl": "https://bloomflowers.example/"
+    },
+    "bottomNavigation": [
+      {
+        "id": "home",
+        "label": "Home",
+        "icon": "home",
+        "action": {
+          "type": "internal_url",
+          "url": "https://bloomflowers.example/"
+        }
+      }
+    ]
+  }
+}

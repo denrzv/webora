@@ -1,0 +1,31 @@
+{
+  "origin": "https://bloomflowers.example",
+  "note": "A protocol-relative reference. Inherits the current scheme and so LOOKS origin-relative to a naive resolver that only checks for a leading '/', which is exactly why it has its own fixture. Structurally valid, so it MUST pass siteskin-1.0.schema.json; only the security layer rejects it.",
+  "diagnostics": [
+    {
+      "code": "SS-E-ORIGIN-MISMATCH",
+      "disposition": "drop-item",
+      "pointer": "/bottomNavigation/1/action/url"
+    }
+  ],
+  "result": {
+    "schemaVersion": "1.0",
+    "origin": "https://bloomflowers.example",
+    "site": {
+      "id": "bloom-flowers",
+      "name": "Bloom Flowers",
+      "homeUrl": "https://bloomflowers.example/"
+    },
+    "bottomNavigation": [
+      {
+        "id": "home",
+        "label": "Home",
+        "icon": "home",
+        "action": {
+          "type": "internal_url",
+          "url": "https://bloomflowers.example/"
+        }
+      }
+    ]
+  }
+}

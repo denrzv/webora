@@ -1,0 +1,17 @@
+{
+  "origin": "https://bloomflowers.example",
+  "note": "The logo is served from cdn.bloomflowers.example — the site's own CDN subdomain, which is the single most reasonable-looking thing in this whole corpus. ADR-004 makes it a DIFFERENT ORIGIN and therefore cross-origin, because a subdomain is frequently delegated to a third party and inheriting the parent's branding would let that party impersonate it. This fixture exists because it is the one a future contributor is most likely to 'fix' into a bug: the failing test looks like over-strictness until you know why. The logo drops to a monogram; the rest of the branding survives, so a bad asset never costs a site its whole integration.",
+  "diagnostics": [
+    { "code": "SS-E-ASSET-CROSS-ORIGIN", "disposition": "drop-item", "pointer": "/branding/logoUrl" }
+  ],
+  "result": {
+    "schemaVersion": "1.0",
+    "origin": "https://bloomflowers.example",
+    "site": { "id": "bloom-flowers", "name": "Bloom Flowers", "homeUrl": "https://bloomflowers.example/" },
+    "branding": { "primaryColor": "#D94F8A", "textColor": "#2B1B24" },
+    "bottomNavigation": [
+      { "id": "home", "label": "Home", "icon": "home",
+        "action": { "type": "internal_url", "url": "https://bloomflowers.example/" } }
+    ]
+  }
+}

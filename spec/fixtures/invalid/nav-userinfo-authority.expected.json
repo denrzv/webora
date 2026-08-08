@@ -1,0 +1,31 @@
+{
+  "origin": "https://bloomflowers.example",
+  "note": "The authority carries userinfo. The serving origin's host appears verbatim in the URL, so a substring or startsWith check passes while the real host is evil.example. This is the fixture that punishes comparing strings instead of parsed origins. Structurally valid, so it MUST pass siteskin-1.0.schema.json; only the security layer rejects it.",
+  "diagnostics": [
+    {
+      "code": "SS-E-ORIGIN-MISMATCH",
+      "disposition": "drop-item",
+      "pointer": "/bottomNavigation/1/action/url"
+    }
+  ],
+  "result": {
+    "schemaVersion": "1.0",
+    "origin": "https://bloomflowers.example",
+    "site": {
+      "id": "bloom-flowers",
+      "name": "Bloom Flowers",
+      "homeUrl": "https://bloomflowers.example/"
+    },
+    "bottomNavigation": [
+      {
+        "id": "home",
+        "label": "Home",
+        "icon": "home",
+        "action": {
+          "type": "internal_url",
+          "url": "https://bloomflowers.example/"
+        }
+      }
+    ]
+  }
+}

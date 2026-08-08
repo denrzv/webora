@@ -1,0 +1,31 @@
+{
+  "origin": "https://bloomflowers.example",
+  "note": "Path traversal escaping the origin root. A resolver that normalizes before comparing, rather than rejecting, can be walked out of the origin one '..' at a time. Structurally valid, so it MUST pass siteskin-1.0.schema.json; only the security layer rejects it.",
+  "diagnostics": [
+    {
+      "code": "SS-E-ORIGIN-MISMATCH",
+      "disposition": "drop-item",
+      "pointer": "/bottomNavigation/1/action/url"
+    }
+  ],
+  "result": {
+    "schemaVersion": "1.0",
+    "origin": "https://bloomflowers.example",
+    "site": {
+      "id": "bloom-flowers",
+      "name": "Bloom Flowers",
+      "homeUrl": "https://bloomflowers.example/"
+    },
+    "bottomNavigation": [
+      {
+        "id": "home",
+        "label": "Home",
+        "icon": "home",
+        "action": {
+          "type": "internal_url",
+          "url": "https://bloomflowers.example/"
+        }
+      }
+    ]
+  }
+}

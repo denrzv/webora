@@ -40,6 +40,18 @@
       "summary": "Document fails siteskin-1.0.schema.json: a missing required field, a wrong type, or a malformed value. Absence of a required field is not an element that can be dropped, so this rejects."
     },
     {
+      "code": "SS-E-ORIGIN-MISMATCH",
+      "layer": "security",
+      "disposition": "drop-item",
+      "summary": "A URL resolves outside the serving origin. Not expressible in JSON Schema, which does not know the origin the manifest was served from — this is the rule that makes the schema/security split necessary rather than tidy."
+    },
+    {
+      "code": "SS-E-ASSET-CROSS-ORIGIN",
+      "layer": "security",
+      "disposition": "drop-item",
+      "summary": "An asset URL lies outside the serving origin. Subdomains count as outside (ADR-004): a subdomain is frequently delegated to a third party, and inheriting the parent's branding would let that party impersonate it. The logo falls back to a monogram."
+    },
+    {
       "code": "SS-W-FIELD-UNKNOWN",
       "layer": "security",
       "disposition": "warn",
