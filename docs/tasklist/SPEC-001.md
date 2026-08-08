@@ -215,7 +215,11 @@ did not happen.
     asserting the five names appear across `invalid/`
 
 - [x] **TASK-6: Limits, contrast, duplicate ids, unknown action type**
-  - **Done.** Registry complete at 14 codes, 26 tests green, detekt green.
+  - **Done.** Registry complete at **13** codes, 26 tests green, detekt green. (TASK-6's commit
+    message says 14 — that is a miscount, not a missing entry. The draft spec listed 11; `SPEC-001`
+    added `SS-E-SCHEMA-INVALID` and `SS-W-ICON-UNKNOWN`. `everyRegisteredCodeHasAFixture` is
+    exhaustive over whatever the registry actually holds, so the count is descriptive, not a
+    target.)
   - **Negative control, recorded per `PROJECT_RULES.md`.** The tasklist said negative controls do
     not bind on this ticket because it writes no security code. That is true of the *spec*, but the
     layer-split guard is itself a protection and was asserted rather than demonstrated. Injected
@@ -251,7 +255,15 @@ did not happen.
   - Tests: `everyRegisteredCodeHasAFixture` (now exhaustive),
     `duplicateIdDropsTheLaterOccurrence`, `showDomainIsIgnoredNotHonoured`
 
-- [ ] **TASK-7: Bloom Flowers manifest in `denrzv/bloom-flowers`** *(cross-repo)*
+- [x] **TASK-7: Bloom Flowers manifest in `denrzv/bloom-flowers`** *(cross-repo)*
+  - **Done.** `denrzv/bloom-flowers@13c5675`, pushed. Byte-identical copy verified by `diff` and
+    matching SHA-256.
+  - *Deviation:* the task said "a CI step comparing the checksum against the fixture", implying a
+    cross-repo fetch. Implemented as a checksum pinned **independently in both repos** instead —
+    webora asserts it in `bloomFlowersFixtureMatchesThePublishedCopy`, bloom-flowers checks it with
+    `sha256sum --check` in CI. A fetch would need a URL into webora's default branch, which
+    currently has no commits at all, and would make the guard depend on network availability and a
+    branch name. Two independent pins mean whichever side is edited alone breaks its own build.
   - New (in `denrzv/bloom-flowers`): `.well-known/siteskin.json` — a **byte-identical** copy of
     `spec/fixtures/valid/bloom-flowers.json`; copy direction is one-way, the fixture is the source
   - New (in `denrzv/bloom-flowers`): a CI step comparing the checksum against the fixture, so the
@@ -264,7 +276,15 @@ did not happen.
   - Tests: checksum comparison in `bloom-flowers` CI; `validFixturesPassTheSchema` already covers
     the webora side
 
-- [ ] **TASK-8: Close out — roadmap, deferred-coverage record**
+- [x] **TASK-8: Close out — roadmap, deferred-coverage record**
+  - **Done** except acceptance criterion 1. `docs/ROADMAP.md` ticked, `CLAUDE.md` carries the corpus
+    wiring note and the three schema invariants a future session would otherwise have to rediscover.
+  - **Not done, and blocking `/validate`:** the full `bash scripts/pre-commit-check.sh` has never
+    run. This container has no Android SDK, so `./gradlew test` cannot build `:app`, and it has
+    neither `gitleaks` nor `shellcheck`. Every task above was verified with the core subset only.
+    Run the full script on an SDK-equipped machine before `/validate`, together with
+    `:app:assembleDebug` from `BOOTSTRAP.md` § 6 — which is still the one genuinely unverified
+    thing in this repository.
   - Modified: `docs/ROADMAP.md` — tick `SPEC-001`
   - Modified: `CLAUDE.md` — a short note that the corpus lives at `spec/fixtures/` and is executed
     by `:siteskin-core:test` via `siteskin.spec.dir`, so the next session does not go looking for

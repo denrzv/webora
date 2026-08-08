@@ -14,7 +14,7 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 
 ## M1 — SiteSkin API (spec first, then TDD against it)
 
-- [ ] `SPEC-001` Manifest v1.0 spec, JSON Schema, conformance fixture corpus
+- [x] `SPEC-001` Manifest v1.0 spec, JSON Schema, conformance fixture corpus
 - [ ] `SPEC-002` Versioning and compatibility policy
 - [ ] `SPEC-003` `siteskin-lint` CLI
 - [ ] `CORE-001` Origin model and URL resolution

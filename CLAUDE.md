@@ -172,6 +172,35 @@ negative-control result in the tasklist.
 The conformance corpus in `spec/fixtures/` is the contract. Validation code is written to satisfy
 it, not the other way round. Adding a validation rule means adding a fixture first.
 
+### How the corpus is wired (SPEC-001)
+
+It lives at the **repo root**, not in module resources — it is shared with `:siteskin-lint` and
+`denrzv/bloom-flowers`, and it is a published artifact a second implementer is meant to consume
+without running Gradle. `:siteskin-core`'s `test` task passes its path as `siteskin.spec.dir` and
+declares it via `inputs.dir`, so editing a fixture reruns the tests instead of hitting an
+up-to-date check.
+
+`spec/diagnostics.json` is the machine-readable registry. `SpecCorpusTest` asserts completeness in
+**both** directions: every registered code has a fixture, and no fixture invents a code. So the
+registry must grow *with* its fixtures — adding codes ahead of them leaves the build red.
+
+Three invariants worth knowing before you touch the schema:
+
+- **`siteskin-1.0.schema.json` covers structure only.** Origin binding is not expressible there (it
+  does not know the serving origin), and the allow-lists are deliberately *not* `enum`s: an enum on
+  `action.type` or `icon` turns an unknown value into a whole-manifest rejection, which is exactly
+  what `ADR-007` forbids. `securityLayerFixturesPassTheSchema` fails if a security rule is ever
+  smuggled in — verified with a negative control.
+- **No `maxLength`/`maxItems` in the schema.** `SPEC.md` §8 requires over-limit values to be
+  *truncated with a warning*; a schema constraint would make them fatal.
+- **The disposition is a property of the code, not the fixture.** `reject` / `drop-item` / `warn`
+  live in the registry, and `SS-E-ACTION-UNKNOWN` is an `E` code that deliberately does not reject.
+  Never infer behaviour from the `E`/`W` prefix.
+
+`spec/fixtures/valid/bloom-flowers.json` is byte-identical to `denrzv/bloom-flowers`'s published
+`.well-known/siteskin.json`, pinned by SHA-256 in both repos. Changing it means updating the
+constant in `SpecCorpusTest`, the copy, and that repo's `.sha256` — all three.
+
 ---
 
 ## Detekt
