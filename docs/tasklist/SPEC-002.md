@@ -216,6 +216,20 @@ caveat rather than a pass.
   - Acceptance: `bash scripts/pre-commit-check.sh` passes; no stale forward-reference to this ticket
     remains for work it did not do.
 
+- [x] **TASK-FIX-1: split `versionTableSeparatesGrammarFromPolicy`**
+  - Source: `detekt` gate, run during TASK-6's pre-commit. Not a `/review` finding.
+  - Modified: `.../spec/SpecCorpusTest.kt` — the acceptance recomputation moves into its own
+    `versionTableAcceptanceFollowsTheSupportedMajors`.
+  - Cause: the test landed in TASK-4 at cyclomatic complexity **10** against a threshold of 10.
+    I ran `detekt` after TASK-3 and then not again until TASK-6, so TASK-4 and TASK-5 were committed
+    without it. The gate did its job; my sequencing did not. Running the full gate per task, rather
+    than the test task per task, is the correction.
+  - Acceptance: `detekt` green; the two assertions keep their distinct failure messages rather than
+    being merged into one.
+  - **Result:** ✅ 36 tests green, detekt green. The split is also the better shape — one test asks
+    whether the two rejection codes stay on their own sides of the grammar line, the other asks
+    whether acceptance matches the supported-major allow-list, and they fail for different reasons.
+
 ## Deferred
 
 Named here rather than skipped silently, following `SPEC-001`'s precedent:

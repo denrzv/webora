@@ -452,16 +452,20 @@ class SpecCorpusTest {
             }
         }
         assertTrue(confused.joinToString("\n"), confused.isEmpty())
+    }
 
-        // Acceptance is exactly "well-formed AND supported major", stated independently of the
-        // table's own `decision` column so the two have to agree.
+    @Test
+    fun versionTableAcceptanceFollowsTheSupportedMajors() {
+        // Acceptance is recomputed here as "well-formed AND major ∈ supportedMajors", deliberately
+        // without consulting the table's own `decision` column — so the two have to agree rather
+        // than this test restating one of them. It is what would catch a row hand-edited to accept
+        // a major the allow-list does not contain.
         val misjudged = SpecCorpus.versionDecisions
             .filter { it.form == "string" && it.wellFormed }
             .mapNotNull { decision ->
                 val major = requireNotNull(decision.stringValue).substringBefore('.').toInt()
                 val shouldAccept = major in SpecCorpus.supportedMajors
-                val doesAccept = decision.decision == "accept"
-                if (shouldAccept == doesAccept) {
+                if (shouldAccept == (decision.decision == "accept")) {
                     null
                 } else {
                     "${decision.label}: major $major, supported=${SpecCorpus.supportedMajors}, " +
