@@ -156,7 +156,7 @@ A control that was not run is left blank, never assumed.
     baseline asserted to still contain the (a) guard before patching; the 2-failure result above is
     the isolated one. The contaminated run is not evidence and is not counted.)
 
-- [ ] TASK-6: Drive the conformance corpus through the resolver
+- [x] TASK-6: Drive the conformance corpus through the resolver
   - New: `siteskin-core/src/test/kotlin/dev/siteskin/core/origin/OriginCorpusTest.kt`
   - Acceptance: reads `spec/fixtures/invalid/{nav-cross-origin,nav-port-change,
     nav-protocol-relative,nav-traversal-escape,nav-userinfo-authority,home-url-cross-origin,
@@ -166,7 +166,18 @@ A control that was not run is left blank, never assumed.
     code — those are `CORE-004`'s.
   - Tests: `OriginCorpusTest`
   - Negative control: point the reader at a directory that does not exist — the count assertion must
-    fail rather than the suite passing on an empty list. (Result: )
+    fail rather than the suite passing on an empty list. (Result: **ran, fails as required.** All
+    four `OriginCorpusTest` cases failed, including `theOriginFixturesAreAllPresent`; restored, all
+    pass. Worth running even though the test had gone green on its first attempt — a
+    corpus-walking test that passes immediately is exactly the shape that also passes over an empty
+    directory, and the two are indistinguishable from the build output alone.)
+  - Deviation: `everyOtherUrlInThoseFixturesResolves` walks the document for URL-bearing keys
+    instead of reading known paths, so a fixture that grows a URL somewhere new is covered without
+    editing this test. `match` patterns are excluded — they are path patterns, not URLs, and
+    `CORE-006` owns them.
+  - Added beyond the task: `theBloomFlowersManifestResolvesEndToEnd`. Every URL in the published
+    reference manifest must resolve, or `denrzv/bloom-flowers` is serving an integration the browser
+    would partly discard — which no other test in either repo would have noticed.
 
 - [ ] TASK-7: Close out
   - New: `docs/adr/ADR-004-origin-binding.md`
