@@ -1,0 +1,28 @@
+{
+  "schemaVersion": "1.0",
+  "site": {
+    "id": "bloom-flowers",
+    "name": "Bloom Flowers",
+    "homeUrl": "/"
+  },
+  "bottomNavigation": [
+    {
+      "id": "home",
+      "label": "Home",
+      "icon": "home",
+      "action": {
+        "type": "internal_url",
+        "url": "/"
+      }
+    },
+    {
+      "id": "teleport",
+      "label": "Teleport",
+      "icon": "grid_view",
+      "action": {
+        "type": "teleport",
+        "value": "somewhere"
+      }
+    }
+  ]
+}

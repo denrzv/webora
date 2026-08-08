@@ -301,8 +301,25 @@ browser-owned text unreadable by choosing a hostile background.
 - Correction MUST adjust the **manifest-supplied** colour. A browser MUST NOT adjust the colour of
   browser-owned text, because that text is the signal the correction exists to protect.
 - Correction MUST be deterministic: the same input pair MUST always produce the same corrected
-  output. Implementations adjust the manifest colour's luminance in fixed steps away from the text
-  colour until the ratio is met, and MUST record `SS-W-CONTRAST-CORRECTED`.
+  output, and MUST record `SS-W-CONTRAST-CORRECTED`.
+
+The correction algorithm is specified exactly, not left to the implementation. This is unusually
+prescriptive for a specification and it is deliberate: the conformance corpus pins corrected colour
+values, and a fixture asserting an output that only one implementation can reproduce is a fixture
+that tests that implementation rather than this format.
+
+Given a manifest colour `C` and the browser-owned text colour `T`:
+
+1. If `contrast(C, T) ≥ target`, `C` is unchanged and no diagnostic is recorded.
+2. Otherwise let `direction` be *lighten* when `relativeLuminance(T) < 0.5`, else *darken*.
+3. Repeatedly add (lighten) or subtract (darken) **8** from each of `C`'s red, green and blue
+   channels, clamping each to `[0, 255]`, until `contrast(C, T) ≥ target` or 64 iterations elapse.
+4. The result is the corrected colour. `SS-W-CONTRAST-CORRECTED` is recorded.
+
+`target` is `4.5` for body text and `3.0` for large text and UI components. Channels are stepped
+uniformly rather than in a perceptual colour space because the property being guaranteed is
+legibility, not hue fidelity — a site that supplies a hostile colour has already forfeited the
+argument about its exact shade.
 
 [wcag]: https://www.w3.org/TR/WCAG22/#dfn-relative-luminance
 

@@ -1,0 +1,18 @@
+{
+  "origin": "https://bloomflowers.example",
+  "note": "An icon name the browser does not ship. The item survives with a generic glyph — it is not dropped and the manifest is certainly not rejected. This fixture is the reason siteskin-1.0.schema.json constrains `icon` by pattern rather than enum: an enum would make this SS-E-SCHEMA-INVALID and discard the whole integration over a typo, which is exactly the outcome ADR-007 rejects for unknown action types. The pattern still carries the security property, since it structurally prevents `icon` from holding a URL.",
+  "diagnostics": [
+    { "code": "SS-W-ICON-UNKNOWN", "disposition": "warn", "pointer": "/bottomNavigation/1/icon" }
+  ],
+  "result": {
+    "schemaVersion": "1.0",
+    "origin": "https://bloomflowers.example",
+    "site": { "id": "bloom-flowers", "name": "Bloom Flowers", "homeUrl": "https://bloomflowers.example/" },
+    "bottomNavigation": [
+      { "id": "home", "label": "Home", "icon": "home",
+        "action": { "type": "internal_url", "url": "https://bloomflowers.example/" } },
+      { "id": "wishlist", "label": "Wishlist", "icon": "generic",
+        "action": { "type": "internal_url", "url": "https://bloomflowers.example/wishlist" } }
+    ]
+  }
+}

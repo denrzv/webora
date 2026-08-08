@@ -2,9 +2,13 @@ package dev.siteskin.core.spec
 
 import io.github.optimumcode.json.schema.JsonSchema
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.security.MessageDigest
 
 /**
  * Corpus integrity. These tests do not exercise any validation logic — there is none yet — but they
@@ -167,6 +171,76 @@ class SpecCorpusTest {
     }
 
     @Test
+    fun duplicateIdDropsTheLaterOccurrence() {
+        // The direction is the whole content of the rule. An implementation collecting items into a
+        // last-write-wins map also "drops duplicates", and would pass any test that merely counted
+        // the survivors — so this asserts *which* one survived.
+        val fixture = SpecCorpus.fixtures.single { it.name == "invalid/duplicate-nav-id" }
+        val surviving = fixture.resultArray("bottomNavigation")
+
+        assertEquals("Exactly one item survives", 1, surviving.size)
+        assertEquals(
+            "The FIRST occurrence must win — 'Cart', not 'Basket'",
+            "Cart",
+            surviving.single().jsonObject.getValue("label").jsonPrimitive.content,
+        )
+        assertEquals("/bottomNavigation/1", fixture.diagnostics.single().pointer)
+    }
+
+    @Test
+    fun showDomainIsIgnoredNotHonoured() {
+        // ADR-006's attack as a fixture. Rejecting the manifest would also be safe, so "ignored"
+        // has to be asserted specifically: the field warns, does not appear in the result, and
+        // costs the site nothing else it asked for.
+        val fixture = SpecCorpus.fixtures.single { it.name == "invalid/showdomain-ignored" }
+
+        assertEquals(
+            "showDomain must be reported as an unknown field, not an error",
+            listOf("SS-W-FIELD-UNKNOWN"),
+            fixture.diagnostics.map { it.code },
+        )
+        assertTrue("An ignored field must not reject the manifest", !fixture.isRejected)
+
+        val toolbar = fixture.result().getValue("toolbar").jsonObject
+        assertTrue("showDomain must not survive into the canonical result", "showDomain" !in toolbar)
+        assertEquals(
+            "The site keeps its title — beside the domain, not instead of it",
+            "Your Bank",
+            toolbar.getValue("title").jsonPrimitive.content,
+        )
+    }
+
+    @Test
+    fun contrastCorrectionMovesTheManifestColourNotTheText() {
+        // The direction of the correction is the security property. Adjusting the text colour would
+        // also reach AA while destroying the signal the rule exists to protect.
+        val fixture = SpecCorpus.fixtures.single { it.name == "invalid/hostile-contrast" }
+        val branding = fixture.result().getValue("branding").jsonObject
+
+        assertEquals(
+            "The browser-owned text colour must be untouched",
+            "#2B1B24",
+            branding.getValue("textColor").jsonPrimitive.content,
+        )
+        assertTrue(
+            "The manifest's background colour must have moved",
+            branding.getValue("backgroundColor").jsonPrimitive.content != "#2E1E27",
+        )
+    }
+
+    @Test
+    fun emptiedCollectionsArePresentNotOmitted() {
+        // "The site asked for navigation and none of it survived" is a different state from "the
+        // site never asked", and only the first one still renders a SiteSkin toolbar.
+        val fixture = SpecCorpus.fixtures.single { it.name == "invalid/all-navigation-dropped" }
+        val result = fixture.result()
+
+        assertTrue("bottomNavigation must be present as []", "bottomNavigation" in result)
+        assertEquals(0, result.getValue("bottomNavigation").jsonArray.size)
+        assertTrue("Dropping every item must not reject the manifest", !fixture.isRejected)
+    }
+
+    @Test
     fun everyDeniedSchemeHasItsOwnFixture() {
         // PRD acceptance criterion 5 names these five explicitly. Asserted individually rather than
         // by counting SS-E-SCHEME-DENIED fixtures, because five fixtures for `javascript:` would
@@ -252,6 +326,28 @@ class SpecCorpusTest {
     }
 
     @Test
+    fun bloomFlowersFixtureMatchesThePublishedCopy() {
+        // denrzv/bloom-flowers serves a byte-identical copy of this fixture at
+        // /.well-known/siteskin.json, and its CI checks the same hash. Pinning it in both repos,
+        // rather than fetching across them, means whichever side is edited alone breaks its own
+        // build immediately — no network, no branch-name dependency, and no window in which the
+        // published manifest and the fixture it is supposed to demonstrate silently disagree.
+        //
+        // If this fails because the fixture legitimately changed: update the constant here, copy
+        // the file to bloom-flowers, and update .well-known/siteskin.json.sha256 there. All three,
+        // or the guard is doing nothing.
+        val bytes = SpecCorpus.fixturesDir.resolve("valid/bloom-flowers.json").readBytes()
+        val actual = MessageDigest.getInstance("SHA-256").digest(bytes)
+            .joinToString("") { "%02x".format(it) }
+
+        assertEquals(
+            "spec/fixtures/valid/bloom-flowers.json changed without its published copy following",
+            BLOOM_FLOWERS_SHA256,
+            actual,
+        )
+    }
+
+    @Test
     fun jsonSchemaValidatorSupportsDraft2020_12() {
         // Pins the assumption behind the dependency choice rather than leaving it to a comment.
         // If a future bump drops 2020-12 support, this fails here instead of failing obscurely
@@ -274,6 +370,10 @@ class SpecCorpusTest {
 
     private companion object {
         val ORIGIN_FORM = Regex("^https?://[a-z0-9.-]+(:[0-9]+)?$")
+
+        /** Pinned in denrzv/bloom-flowers too, at .well-known/siteskin.json.sha256. */
+        const val BLOOM_FLOWERS_SHA256 =
+            "9af07e2b4280fd413cdbe50f5ea8ebf2483f3a12d45aacafcc38144c22783565"
 
         /** PRD acceptance criterion 5. Each needs a fixture of its own. */
         val DENIED_SCHEMES = listOf("javascript", "file", "content", "intent", "data")

@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "1.0",
+  "site": { "id": "your-bank", "name": "Your Bank", "homeUrl": "/" },
+  "branding": { "primaryColor": "#004B87", "textColor": "#FFFFFF" },
+  "toolbar": {
+    "title": "Your Bank",
+    "subtitle": "Secure Banking",
+    "showDomain": false
+  },
+  "bottomNavigation": [
+    { "id": "accounts", "label": "Accounts", "icon": "home",
+      "action": { "type": "internal_url", "url": "/accounts" } }
+  ]
+}

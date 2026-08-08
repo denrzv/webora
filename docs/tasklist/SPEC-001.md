@@ -214,7 +214,25 @@ did not happen.
   - Tests: covered by the registry/integrity suite; add `everyDeniedSchemeHasItsOwnFixture`
     asserting the five names appear across `invalid/`
 
-- [ ] **TASK-6: Limits, contrast, duplicate ids, unknown action type**
+- [x] **TASK-6: Limits, contrast, duplicate ids, unknown action type**
+  - **Done.** Registry complete at 14 codes, 26 tests green, detekt green.
+  - **Negative control, recorded per `PROJECT_RULES.md`.** The tasklist said negative controls do
+    not bind on this ticket because it writes no security code. That is true of the *spec*, but the
+    layer-split guard is itself a protection and was asserted rather than demonstrated. Injected
+    `"enum": [...nine action types...]` into `$defs/action/properties/type` — the exact regression
+    `securityLayerFixturesPassTheSchema` exists to catch — and ran the suite:
+    `26 tests completed, 2 failed`, those two being `securityLayerFixturesPassTheSchema` and
+    `schemaDoesNotEnumerateActionTypesOrIcons`. Precisely the intended pair and nothing else.
+    Schema restored, suite green. The guard is real.
+  - *Deviation:* §9.1 now specifies the correction algorithm exactly — lighten or darken each
+    channel by 8 per step, direction chosen by the text colour's luminance, until AA is met. The
+    task assumed determinism was enough for a fixture to pin a corrected value; it is not. Two
+    conforming implementations could both be deterministic and disagree, so a pinned value would
+    have tested our implementation rather than the format. `#2E1E27` on `#2B1B24` is ratio 1.036 and
+    corrects to `#96868F` at 4.750.
+  - *Added beyond the task:* `all-navigation-dropped`, which pins the §10 rule that an emptied
+    collection is `[]` and still activates SiteSkin mode. It was in the spec with no fixture, and a
+    rule with no fixture does not exist.
   - New fixtures registering the remaining codes — `SS-E-ACTION-UNKNOWN`, `SS-E-DUPLICATE-ID`,
     `SS-W-LIMIT-TRUNCATED`, `SS-W-CONTRAST-CORRECTED`:
     - `nav-over-limit` (6 items → 5), `menu-over-limit`, `quick-actions-over-limit`

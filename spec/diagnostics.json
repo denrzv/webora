@@ -58,10 +58,40 @@
       "summary": "An asset URL lies outside the serving origin. Subdomains count as outside (ADR-004): a subdomain is frequently delegated to a third party, and inheriting the parent's branding would let that party impersonate it. The logo falls back to a monogram."
     },
     {
+      "code": "SS-E-ACTION-UNKNOWN",
+      "layer": "security",
+      "disposition": "drop-item",
+      "summary": "An action type outside the allow-list. Drops that item and keeps the rest of the manifest (ADR-007) — an E code that deliberately does not reject, which is why disposition is declared per code rather than inferred from the E/W prefix."
+    },
+    {
+      "code": "SS-E-DUPLICATE-ID",
+      "layer": "security",
+      "disposition": "drop-item",
+      "summary": "Two items in the same collection share an id. The FIRST occurrence wins and the later one drops, so the outcome depends on document order — an implementation using a last-write-wins map produces the opposite result."
+    },
+    {
+      "code": "SS-W-LIMIT-TRUNCATED",
+      "layer": "security",
+      "disposition": "warn",
+      "summary": "A collection or string exceeded its limit and was truncated, keeping the first N in document order. Deliberately not enforced by the JSON Schema: a maxLength there would make an over-long title fatal, where SPEC.md section 8 requires it to be truncated."
+    },
+    {
+      "code": "SS-W-CONTRAST-CORRECTED",
+      "layer": "security",
+      "disposition": "warn",
+      "summary": "A manifest colour failed WCAG AA against browser-owned text and was adjusted by the algorithm in SPEC.md section 9.1. The manifest colour moves, never the text colour — the text is the signal the correction exists to protect."
+    },
+    {
       "code": "SS-W-FIELD-UNKNOWN",
       "layer": "security",
       "disposition": "warn",
       "summary": "A field not defined in this schema version was ignored. Minor versions are additive, so unknown fields must never be fatal — this is the policy that lets a 1.1 manifest be served safely to a 1.0 reader. toolbar.showDomain reaches this path by design (ADR-006): it is ignored, not honoured."
+    },
+    {
+      "code": "SS-W-ICON-UNKNOWN",
+      "layer": "security",
+      "disposition": "warn",
+      "summary": "An icon name the browser does not recognise; a generic glyph is substituted. Not a schema enum, because that would make a typo'd icon name discard the whole manifest — the same argument ADR-007 makes for unknown action types."
     }
   ]
 }

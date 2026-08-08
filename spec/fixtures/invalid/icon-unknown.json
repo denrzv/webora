@@ -1,0 +1,10 @@
+{
+  "schemaVersion": "1.0",
+  "site": { "id": "bloom-flowers", "name": "Bloom Flowers", "homeUrl": "/" },
+  "bottomNavigation": [
+    { "id": "home", "label": "Home", "icon": "home",
+      "action": { "type": "internal_url", "url": "/" } },
+    { "id": "wishlist", "label": "Wishlist", "icon": "heart_sparkle_outline",
+      "action": { "type": "internal_url", "url": "/wishlist" } }
+  ]
+}

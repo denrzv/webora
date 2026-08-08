@@ -1,0 +1,67 @@
+{
+  "origin": "https://bloomflowers.example",
+  "note": "Six navigation items against a limit of five. Truncation keeps the FIRST five in document order and warns; it does not reject, because a slightly over-eager site should still get a working integration (SPEC.md section 8). The sixth is gone, not reordered.",
+  "diagnostics": [
+    {
+      "code": "SS-W-LIMIT-TRUNCATED",
+      "disposition": "warn",
+      "pointer": "/bottomNavigation"
+    }
+  ],
+  "result": {
+    "schemaVersion": "1.0",
+    "origin": "https://bloomflowers.example",
+    "site": {
+      "id": "bloom-flowers",
+      "name": "Bloom Flowers",
+      "homeUrl": "https://bloomflowers.example/"
+    },
+    "bottomNavigation": [
+      {
+        "id": "item-1",
+        "label": "Item 1",
+        "icon": "home",
+        "action": {
+          "type": "internal_url",
+          "url": "https://bloomflowers.example/p1"
+        }
+      },
+      {
+        "id": "item-2",
+        "label": "Item 2",
+        "icon": "home",
+        "action": {
+          "type": "internal_url",
+          "url": "https://bloomflowers.example/p2"
+        }
+      },
+      {
+        "id": "item-3",
+        "label": "Item 3",
+        "icon": "home",
+        "action": {
+          "type": "internal_url",
+          "url": "https://bloomflowers.example/p3"
+        }
+      },
+      {
+        "id": "item-4",
+        "label": "Item 4",
+        "icon": "home",
+        "action": {
+          "type": "internal_url",
+          "url": "https://bloomflowers.example/p4"
+        }
+      },
+      {
+        "id": "item-5",
+        "label": "Item 5",
+        "icon": "home",
+        "action": {
+          "type": "internal_url",
+          "url": "https://bloomflowers.example/p5"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "origin": "https://bloomflowers.example",
+  "note": "Two items share the id 'cart'. The FIRST occurrence wins and the later one drops, so the outcome depends on document order \u2014 which is why SPEC.md section 10 states the direction explicitly rather than leaving 'duplicates are dropped' to interpretation. The surviving label is 'Cart', not 'Basket'; an implementation using a last-write-wins map would produce the opposite and pass a test that only counted items.",
+  "diagnostics": [
+    {
+      "code": "SS-E-DUPLICATE-ID",
+      "disposition": "drop-item",
+      "pointer": "/bottomNavigation/1"
+    }
+  ],
+  "result": {
+    "schemaVersion": "1.0",
+    "origin": "https://bloomflowers.example",
+    "site": {
+      "id": "bloom-flowers",
+      "name": "Bloom Flowers",
+      "homeUrl": "https://bloomflowers.example/"
+    },
+    "bottomNavigation": [
+      {
+        "id": "cart",
+        "label": "Cart",
+        "icon": "shopping_cart",
+        "action": {
+          "type": "internal_url",
+          "url": "https://bloomflowers.example/cart"
+        }
+      }
+    ]
+  }
+}

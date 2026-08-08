@@ -1,0 +1,31 @@
+{
+  "origin": "https://bloomflowers.example",
+  "note": "An action type outside the allow-list. ADR-007 requires exactly one item to drop while the rest of the manifest applies, so a site experimenting with a 1.1 action does not lose its integration. Note this fixture MUST pass the schema: action.type is pattern-constrained rather than enumerated precisely so that this stays a drop-item rather than a whole-document rejection.",
+  "diagnostics": [
+    {
+      "code": "SS-E-ACTION-UNKNOWN",
+      "disposition": "drop-item",
+      "pointer": "/bottomNavigation/1"
+    }
+  ],
+  "result": {
+    "schemaVersion": "1.0",
+    "origin": "https://bloomflowers.example",
+    "site": {
+      "id": "bloom-flowers",
+      "name": "Bloom Flowers",
+      "homeUrl": "https://bloomflowers.example/"
+    },
+    "bottomNavigation": [
+      {
+        "id": "home",
+        "label": "Home",
+        "icon": "home",
+        "action": {
+          "type": "internal_url",
+          "url": "https://bloomflowers.example/"
+        }
+      }
+    ]
+  }
+}

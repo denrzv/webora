@@ -1,0 +1,21 @@
+{
+  "origin": "https://bloomflowers.example",
+  "note": "backgroundColor #2E1E27 against textColor #2B1B24 is a contrast ratio of 1.036 — very nearly the same colour, which renders text invisible while looking like an ordinary palette in a diff. This is the attack SPEC.md section 9.1 exists to stop, and it is why correction is normative rather than advisory. The MANIFEST colour moves; the text colour does not, because the text is the signal the correction protects. Applying the specified algorithm (lighten each channel by 8 per step, since the text luminance is below 0.5) reaches #96868F at ratio 4.750, the first step clearing AA's 4.5. The exact value is pinned because section 9.1 specifies the algorithm exactly — a fixture asserting an output only one implementation can reproduce would be testing that implementation rather than this format.",
+  "diagnostics": [
+    { "code": "SS-W-CONTRAST-CORRECTED", "disposition": "warn", "pointer": "/branding/backgroundColor" }
+  ],
+  "result": {
+    "schemaVersion": "1.0",
+    "origin": "https://bloomflowers.example",
+    "site": { "id": "bloom-flowers", "name": "Bloom Flowers", "homeUrl": "https://bloomflowers.example/" },
+    "branding": {
+      "primaryColor": "#D94F8A",
+      "backgroundColor": "#96868F",
+      "textColor": "#2B1B24"
+    },
+    "bottomNavigation": [
+      { "id": "home", "label": "Home", "icon": "home",
+        "action": { "type": "internal_url", "url": "https://bloomflowers.example/" } }
+    ]
+  }
+}

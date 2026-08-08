@@ -1,0 +1,31 @@
+{
+  "origin": "https://bloomflowers.example",
+  "note": "A 37-character label against a 32-character limit. Truncated to exactly 32 with a warning. Deliberately NOT a schema maxLength: section 8 requires truncation, and a schema constraint would make it fatal.",
+  "diagnostics": [
+    {
+      "code": "SS-W-LIMIT-TRUNCATED",
+      "disposition": "warn",
+      "pointer": "/bottomNavigation/0/label"
+    }
+  ],
+  "result": {
+    "schemaVersion": "1.0",
+    "origin": "https://bloomflowers.example",
+    "site": {
+      "id": "bloom-flowers",
+      "name": "Bloom Flowers",
+      "homeUrl": "https://bloomflowers.example/"
+    },
+    "bottomNavigation": [
+      {
+        "id": "item-1",
+        "label": "Extraordinarily Long Navigation ",
+        "icon": "home",
+        "action": {
+          "type": "internal_url",
+          "url": "https://bloomflowers.example/p1"
+        }
+      }
+    ]
+  }
+}

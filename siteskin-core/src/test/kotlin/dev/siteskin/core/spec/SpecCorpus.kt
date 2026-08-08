@@ -2,6 +2,7 @@ package dev.siteskin.core.spec
 
 import io.github.optimumcode.json.schema.JsonSchema
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -108,6 +109,7 @@ internal object SpecCorpus {
             origin = expected["origin"]?.jsonPrimitive?.content,
             bodyParses = expected["parses"]?.jsonPrimitive?.content?.toBooleanStrictOrNull() ?: true,
             hasResult = expected.containsKey("result"),
+            resultObject = expected["result"]?.jsonObject,
             diagnostics = expected["diagnostics"]?.jsonArray.orEmpty().map { entry ->
                 val obj = entry.jsonObject
                 ExpectedDiagnostic(
@@ -141,9 +143,16 @@ internal data class Fixture(
     val origin: String?,
     val bodyParses: Boolean,
     val hasResult: Boolean,
+    val resultObject: JsonObject?,
     val diagnostics: List<ExpectedDiagnostic>,
 ) {
     val isValidBucket: Boolean get() = bucket == "valid"
+
+    /** The canonical result this fixture pins. Fails loudly rather than returning empty. */
+    fun result(): JsonObject = requireNotNull(resultObject) { "$name declares no `result`" }
+
+    fun resultArray(field: String): List<JsonElement> =
+        result()[field]?.jsonArray ?: error("$name has no `result.$field`")
 
     /** True when any expected diagnostic discards the whole manifest. */
     val isRejected: Boolean get() = diagnostics.any { it.disposition == "reject" }

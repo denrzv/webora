@@ -1,0 +1,26 @@
+{
+  "origin": "https://bloomflowers.example",
+  "note": "Both navigation items fail origin binding, so the collection empties completely. Per SPEC.md section 10 SiteSkin mode still applies and the bottom bar simply does not render \u2014 the browser MUST NOT fall back to regular mode because a collection ended up empty. The canonical result carries [] rather than omitting the key, because 'the site asked and nothing survived' is a different state from 'the site never asked'.",
+  "diagnostics": [
+    {
+      "code": "SS-E-ORIGIN-MISMATCH",
+      "disposition": "drop-item",
+      "pointer": "/bottomNavigation/0/action/url"
+    },
+    {
+      "code": "SS-E-ORIGIN-MISMATCH",
+      "disposition": "drop-item",
+      "pointer": "/bottomNavigation/1/action/url"
+    }
+  ],
+  "result": {
+    "schemaVersion": "1.0",
+    "origin": "https://bloomflowers.example",
+    "site": {
+      "id": "bloom-flowers",
+      "name": "Bloom Flowers",
+      "homeUrl": "https://bloomflowers.example/"
+    },
+    "bottomNavigation": []
+  }
+}

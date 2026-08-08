@@ -1,0 +1,18 @@
+{
+  "origin": "https://evil.example",
+  "note": "The ADR-006 attack, written out as a fixture. A manifest on evil.example presenting itself as 'Your Bank' with a bank's palette, asking the browser to hide the domain. The request is IGNORED, not honoured and not fatal: showDomain is simply an unknown field, so it warns and is dropped from the canonical result, and evil.example stays on screen in browser-owned typography with nothing in this format able to remove it. The distinction matters — rejecting the manifest would also be safe, but it would make the field feel load-bearing and invite a future contributor to implement it 'properly'. The site keeps its colours and its title, beside the domain rather than instead of it.",
+  "diagnostics": [
+    { "code": "SS-W-FIELD-UNKNOWN", "disposition": "warn", "pointer": "/toolbar/showDomain" }
+  ],
+  "result": {
+    "schemaVersion": "1.0",
+    "origin": "https://evil.example",
+    "site": { "id": "your-bank", "name": "Your Bank", "homeUrl": "https://evil.example/" },
+    "branding": { "primaryColor": "#004B87", "textColor": "#FFFFFF" },
+    "toolbar": { "title": "Your Bank", "subtitle": "Secure Banking" },
+    "bottomNavigation": [
+      { "id": "accounts", "label": "Accounts", "icon": "home",
+        "action": { "type": "internal_url", "url": "https://evil.example/accounts" } }
+    ]
+  }
+}

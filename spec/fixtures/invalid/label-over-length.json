@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "1.0",
+  "site": {
+    "id": "bloom-flowers",
+    "name": "Bloom Flowers",
+    "homeUrl": "/"
+  },
+  "bottomNavigation": [
+    {
+      "id": "item-1",
+      "label": "Extraordinarily Long Navigation Label",
+      "icon": "home",
+      "action": {
+        "type": "internal_url",
+        "url": "/p1"
+      }
+    }
+  ]
+}
