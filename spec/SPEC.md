@@ -181,6 +181,50 @@ document that the `1.0` schema rejects outright, and whose only conforming diagn
 A conforming implementation MUST NOT report `SS-E-VERSION-UNSUPPORTED` for a manifest that declares
 no version at all.
 
+### 4.5 The free-change window, and one change taken inside it
+
+The compatibility promise in §§4.2–4.4 begins binding when this section was written. Before that
+point the format had no published `$id`, no deployed manifest outside this repository, and no
+consumer but its own conformance corpus — so changing it cost nobody anything, and the honest thing
+was to make the corrections that were known to be needed rather than grandfather them.
+
+Two such changes were taken, on **2026-08-08**, in `SPEC-002`. Both narrow a value grammar, so both
+are **breaking changes** by the rules in §4.3. They are recorded here rather than reclassified,
+because a policy that redefines its own first violations as compliant is not a policy.
+
+**(a) `schemaVersion` no longer admits leading zeros.**
+
+> `^[0-9]+\.[0-9]+$` → `^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)…`. Under the old grammar `01.0` and `1.0`
+> were two spellings of one version.
+
+The motivation is not tidiness. `schemaVersion` participates in the manifest cache key
+(`origin + schemaVersion`), so two spellings of one version mean two cache entries for one
+configuration. Fixing the grammar is strictly better than normalizing at read time, because a
+normalization step is a second place for the two spellings to diverge.
+
+**(b) Every pattern in the schema now anchors with `(?![\s\S])` instead of `$`.**
+
+JSON Schema specifies ECMA-262 regular expressions, where an unflagged `$` matches only at end of
+input. `java.util.regex` is not ECMA-262 here: its `$` *also* matches immediately before a final
+line terminator. So on a JVM validator every `^…$` pattern in this schema accepted a trailing
+newline, and `"schemaVersion": "1.0\n"` validated. Change (a) alone would not have closed that —
+`"01.0\n"` and `"1.0\n"` simply move the ambiguity one character along.
+
+`(?![\s\S])` asserts that no character of any kind follows, and behaves identically under both
+engines. The correction is applied to all six patterns, not only `schemaVersion`, because the defect
+is in the anchoring idiom rather than in any one field.
+
+This is the sharper of the two findings and it is worth stating plainly: **a pattern that is
+correct under the specification it cites can still be wrong under the engine that runs it.** A
+conforming implementation MUST reject a `schemaVersion` with leading or trailing whitespace of any
+kind, including a trailing newline, and SHOULD verify that against its own regex engine rather than
+inferring it from the pattern's shape.
+
+The window is now closed. Either change made after this section would require a `2.0`, and no
+further changes of this kind will be taken. Note that §4.3's security carve-out remains available
+for defects discovered later — it exists precisely so that a narrowing needed to close a hole is
+never trapped behind a major bump.
+
 ---
 
 ## 5. Structure

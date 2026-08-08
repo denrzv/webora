@@ -85,7 +85,7 @@ caveat rather than a pass.
     "any other major", with the supported set named as an allow-list. The old table could be read
     as three special cases, which is precisely the deny-list reading `ADR-007` warns against.
 
-- [ ] **TASK-3: tighten the `schemaVersion` grammar inside the free-change window**
+- [x] **TASK-3: tighten the `schemaVersion` grammar inside the free-change window**
   - Modified: `spec/siteskin-1.0.schema.json` — pattern → `^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$`,
     description updated.
   - Modified: `spec/SPEC.md` — §4.5 recording the change and the window, so the policy written in
@@ -96,6 +96,28 @@ caveat rather than a pass.
     `securityLayerFixturesPassTheSchema` all green and unchanged in meaning.
   - Negative control: temporarily add `"schemaVersion": "01.0"` to a scratch copy of
     `valid/minimal.json`; it must fail the schema. (Scratch only — not committed.)
+  - **Result:** ✅ Corpus unaffected, as predicted — the leading-zero narrowing changes the verdict
+    on exactly `01.0` and `1.00` and nothing else, and no fixture uses either.
+    **This task uncovered a second, sharper defect and was widened to fix it.** Probing the real
+    validator rather than reasoning about the regex showed `"schemaVersion": "1.0\n"` was
+    **accepted**. JSON Schema specifies ECMA-262, where an unflagged `$` matches only at end of
+    input; `java.util.regex`'s `$` also matches before a *final line terminator*, so on a JVM
+    validator every `^…$` pattern in the schema admitted a trailing newline. The leading-zero fix
+    alone would not have closed it — `"1.0\n"` and `"01.0\n"` just move the ambiguity along.
+    Fixed by anchoring with `(?![\s\S])`, which means "no character of any kind follows" and is
+    identical under both engines. Applied to **all six** patterns, not just `schemaVersion`: the
+    defect is in the anchoring idiom, not in one field. Verified through the validator, not by
+    inspection.
+    Scope note: fixing the other five patterns goes beyond TASK-3 as planned. Taken deliberately
+    because §4.5 — written in this same task — closes the free-change window, and a narrowing
+    deferred past it would need a `2.0` for what is a regex-engine bug. Recorded in `SPEC.md`
+    §4.5(b) as a breaking change rather than reclassified as compliant.
+    Negative control (both defects at once): reverting `schemaVersion` to `^[0-9]+\.[0-9]+$` failed
+    exactly two tests — `schemaVersionRejectsTrailingAndLeadingWhitespace` (on `1.0\n`) and
+    `schemaPatternsAnchorAtEndOfInput` (naming the offending pattern). Restored; 31 tests green.
+    Two guards were added rather than one, because either alone is weak: the structural scan would
+    pass a pattern that is anchored but wrong, and the behavioural probe covers only the one field
+    it exercises.
 
 - [ ] **TASK-4: the version decision table**
   - New: `spec/versions.json` — `supportedMajors`, `currentMinor`, and the `decisions` array over

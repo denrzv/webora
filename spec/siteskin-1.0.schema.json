@@ -2,13 +2,14 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "SiteSkin Manifest 1.0",
   "description": "Structural validity ONLY. This schema is one layer of validation, not the whole of it. Origin binding, URI-scheme allow-listing, asset provenance, duplicate ids, limit clamping and contrast correction are all enforced afterwards by the security layer and are deliberately absent here — the schema does not know the origin the manifest was served from, and duplicating a security control in a second language invites the two to drift apart silently. A document that validates against this schema has cleared the structural bar and nothing more. See SPEC.md section 1.",
+  "patternAnchoringNote": "Every `pattern` in this file ends with the negative lookahead (?![\\s\\S]) rather than with `$`. This is deliberate and MUST be preserved. JSON Schema specifies ECMA-262 regular expressions, in which an unflagged `$` matches only at end of input — but java.util.regex's `$` also matches immediately BEFORE a final line terminator, so on a JVM validator a pattern ending in `$` accepts a trailing newline. 'schemaVersion': '1.0\\n' passed this schema until SPEC-002. That is not cosmetic: schemaVersion participates in the manifest cache key, so two spellings of one version are two cache entries. (?![\\s\\S]) means 'no character of any kind follows' and behaves identically under both engines. SpecCorpusTest.schemaPatternsAnchorAtEndOfInput fails the build if a bare `$` is reintroduced.",
   "type": "object",
   "required": ["schemaVersion", "site"],
   "properties": {
     "schemaVersion": {
       "type": "string",
-      "description": "MAJOR.MINOR. The major is deliberately NOT pinned here: version support is a policy decision, so an unsupported major produces SS-E-VERSION-UNSUPPORTED rather than a schema failure, and this file stays valid for all of 1.x.",
-      "pattern": "^[0-9]+\\.[0-9]+$"
+      "description": "MAJOR.MINOR, each a non-negative integer without leading zeros. The major is deliberately NOT pinned here: version support is a policy decision, so an unsupported major produces SS-E-VERSION-UNSUPPORTED rather than a schema failure, and this file stays valid for all of 1.x. Leading zeros are excluded so a version has exactly one spelling — '01.0' and '1.0' must not be two names for one version, because schemaVersion participates in the manifest cache key (origin + schemaVersion) and an ambiguous key is a cache-poisoning surface. See SPEC.md sections 4.1 and 4.5.",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?![\\s\\S])"
     },
     "site": {
       "type": "object",
@@ -44,22 +45,22 @@
   "$defs": {
     "identifier": {
       "type": "string",
-      "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$"
+      "pattern": "^[a-z0-9][a-z0-9_-]{0,63}(?![\\s\\S])"
     },
     "color": {
       "type": "string",
       "description": "#RGB or #RRGGBB. An unparseable colour falls back to a browser default rather than failing, so this pattern catches the typo at lint time without making it fatal at runtime.",
-      "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+      "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})(?![\\s\\S])"
     },
     "icon": {
       "type": "string",
       "description": "Deliberately a pattern and NOT an enum. The pattern is what delivers the security property: an icon field structurally cannot carry a URL or any other resource reference. Enumerating the names here would make a typo'd icon SS-E-SCHEMA-INVALID and discard the whole manifest, which contradicts the reasoning ADR-007 gives for unknown action types. An unrecognised name degrades to a generic glyph with SS-W-ICON-UNKNOWN.",
-      "pattern": "^[a-z][a-z0-9_]{0,31}$"
+      "pattern": "^[a-z][a-z0-9_]{0,31}(?![\\s\\S])"
     },
     "matchPattern": {
       "type": "string",
       "description": "An origin-relative path pattern. Must begin with a single '/', which rules out both absolute URLs and protocol-relative '//host' references. Glob grammar is in SPEC.md section 7.1.",
-      "pattern": "^/([^/].*)?$"
+      "pattern": "^/([^/].*)?(?![\\s\\S])"
     },
     "navigationItem": {
       "type": "object",
@@ -79,7 +80,7 @@
         "type": {
           "type": "string",
           "description": "Deliberately NOT an enum, for the same reason as icon: ADR-007 requires an unrecognised action type to drop that one item (SS-E-ACTION-UNKNOWN) and keep the rest of the manifest, so a site experimenting with a 1.1 action does not lose its integration. An enum here would turn that into a whole-document rejection. The allow-list is enforced by the security layer.",
-          "pattern": "^[a-z][a-z_]{0,31}$"
+          "pattern": "^[a-z][a-z_]{0,31}(?![\\s\\S])"
         },
         "url": { "type": "string", "minLength": 1 },
         "value": { "type": "string", "minLength": 1 }

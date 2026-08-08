@@ -2,6 +2,7 @@ package dev.siteskin.core.spec
 
 import io.github.optimumcode.json.schema.JsonSchema
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -396,6 +397,47 @@ class SpecCorpusTest {
                 "can drop the item rather than the schema rejecting the document: $errors",
             accepted,
         )
+    }
+
+    @Test
+    fun schemaPatternsAnchorAtEndOfInput() {
+        // JSON Schema specifies ECMA-262 regexes, where an unflagged `$` matches only at end of
+        // input. java.util.regex disagrees: its `$` also matches immediately before a FINAL line
+        // terminator. So on a JVM validator every `^...$` pattern here silently accepted a trailing
+        // newline, and "schemaVersion": "1.0\n" validated against a schema that means not to allow
+        // it — two spellings of one version, in a field that keys the manifest cache.
+        //
+        // Asserted structurally *and* behaviourally below, because either alone is weak: the string
+        // check would pass a pattern that is anchored but wrong, and the behavioural check covers
+        // only the field it probes.
+        val schemaText = SpecCorpus.specDir.resolve("siteskin-1.0.schema.json").readText()
+        val bareDollar = Regex(""""pattern"\s*:\s*"([^"]*)"""")
+            .findAll(schemaText)
+            .map { it.groupValues[1] }
+            .filter { it.endsWith("$") }
+            .toList()
+        assertTrue(
+            "These patterns end with a bare `$` and therefore accept a trailing newline on a JVM " +
+                "validator. Anchor with (?![\\s\\S]) instead — see SPEC.md section 4.5(b): $bareDollar",
+            bareDollar.isEmpty(),
+        )
+    }
+
+    @Test
+    fun schemaVersionRejectsTrailingAndLeadingWhitespace() {
+        // The behavioural half of the assertion above, run through the real validator rather than
+        // through a regex we reason about. Every one of these was accepted before SPEC-002 except
+        // the leading forms.
+        fun accepts(version: String): Boolean {
+            val doc = json.parseToJsonElement(
+                """{"schemaVersion": ${JsonPrimitive(version)}, "site": {"id": "x", "name": "X"}}""",
+            )
+            return SpecCorpus.schema.validate(doc) {}
+        }
+
+        assertTrue("A plain version must still validate", accepts("1.0"))
+        listOf("1.0\n", "1.0 ", "1.0\t", "\n1.0", " 1.0", "1.0\r\n", "01.0", "1.00", "1", "1.0.0", "")
+            .forEach { assertTrue("schemaVersion '$it' must be rejected", !accepts(it)) }
     }
 
     @Test
