@@ -52,9 +52,11 @@ second implementation is the failure this ticket exists to prevent.
 malformed JSON yields `SS-E-PARSE`; a 129 KB payload yields `SS-E-SIZE-EXCEEDED` without being fully
 read. Parse success must not produce a trusted type — the DTO is inert.
 
-**`CORE-003` Schema validation.** DTO → `ManifestValidationResult(errors, warnings)` carrying the
-spec's diagnostic codes. Required fields, types, enum membership, version. Acceptance: the full
-`invalid/` corpus produces exactly its expected codes, no more and no fewer.
+**`CORE-003` ✅ Schema validation.** Parsed JSON → `ManifestValidationResult(errors, warnings)`
+carrying the spec's diagnostic codes. The production validator executes the version table and every
+parsable corpus document, short-circuiting unsupported majors before structural validation. Because
+`CORE-002` is not yet implemented, the seam accepts `JsonElement`; byte parsing, DTO mapping, and
+unknown-field discovery remain there. Security allow-lists deliberately remain `CORE-004`.
 
 **`CORE-004` Security validation and normalization.** The heart of the trust boundary. Origin
 binding for every URL, scheme allow-list, icon-name allow-list, asset same-origin check, colour
