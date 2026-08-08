@@ -34,6 +34,7 @@ instantiate() {
 }
 
 instantiate docs/prd.template.md      "docs/prd/${TICKET}.prd.md"
+instantiate docs/research.template.md "docs/research/${TICKET}.md"
 instantiate docs/plan.template.md     "docs/plan/${TICKET}.md"
 instantiate docs/tasklist.template.md "docs/tasklist/${TICKET}.md"
 

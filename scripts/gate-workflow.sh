@@ -28,6 +28,7 @@ if [[ "${TICKET}" == "BOOTSTRAP" ]]; then
 fi
 
 PRD="docs/prd/${TICKET}.prd.md"
+RESEARCH="docs/research/${TICKET}.md"
 PLAN="docs/plan/${TICKET}.md"
 TASKS="docs/tasklist/${TICKET}.md"
 
@@ -46,9 +47,10 @@ check_status() {
   fi
 }
 
-check_status "${PRD}"   "PRD_READY"      "PRD"
-check_status "${PLAN}"  "PLAN_APPROVED"  "Plan"
-check_status "${TASKS}" "TASKLIST_READY" "Tasklist"
+check_status "${PRD}"      "PRD_READY"       "PRD"
+check_status "${RESEARCH}" "RESEARCH_READY"  "Research"
+check_status "${PLAN}"     "PLAN_APPROVED"   "Plan"
+check_status "${TASKS}"    "TASKLIST_READY"  "Tasklist"
 
 if [[ "${fail}" -ne 0 ]]; then
   exit 2

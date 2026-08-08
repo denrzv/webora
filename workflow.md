@@ -5,28 +5,38 @@
 ```
 S0  Ticket selected          docs/.active_ticket names it
 S1  PRD_READY                docs/prd/<TICKET>.prd.md
-S2  PLAN_APPROVED            docs/plan/<TICKET>.md
-S3  TASKLIST_READY           docs/tasklist/<TICKET>.md
-S4  Implement loop           /implement → /pre-commit → commit, one TASK at a time
-S5  Review complete          reports/review/<TICKET>.md
-S6  QA_PASSED                reports/qa/<TICKET>.md
-S7  Docs updated             CLAUDE.md notes, ADRs, spec
-S8  Validate                 /validate
+S2  RESEARCH_READY           docs/research/<TICKET>.md
+S3  PLAN_APPROVED            docs/plan/<TICKET>.md
+S4  TASKLIST_READY           docs/tasklist/<TICKET>.md
+S5  Implement loop           /implement → /pre-commit → commit, one TASK at a time
+S6  Review complete          reports/review/<TICKET>.md
+S7  QA_PASSED                reports/qa/<TICKET>.md
+S8  Docs updated             CLAUDE.md notes, ADRs, spec
+S9  Validate                 /validate
 ```
+
+`S2` is not optional and does not run late. The plan commits to a trust boundary and a file list;
+deciding those before the affected origins, the manifest-controlled surface and the browser-owned
+remainder have been mapped makes the plan a guess that implementation then has to relitigate.
+`/researcher` produces the map, `/plan` consumes it.
 
 ## The gate
 
 `scripts/gate-workflow.sh` runs on **PreToolUse** for `Edit|Write` and blocks (exit 2) until all
-three artifacts for the active ticket carry their ready status:
+four artifacts for the active ticket carry their ready status:
 
 | File | Required line |
 |---|---|
 | `docs/prd/<TICKET>.prd.md` | `Status: PRD_READY` |
+| `docs/research/<TICKET>.md` | `Status: RESEARCH_READY` |
 | `docs/plan/<TICKET>.md` | `Status: PLAN_APPROVED` |
 | `docs/tasklist/<TICKET>.md` | `Status: TASKLIST_READY` |
 
 The check is `grep -E "^Status:\s*<WANT>\s*$" -m1`, so the status must be an exact top-level line —
 no YAML frontmatter, no indentation, no trailing commentary on the same line.
+
+The research note is gated on a status line rather than on the file merely existing, which `touch`
+would satisfy. A gate that cannot fail is decoration; this repo does not keep those.
 
 `docs/`, `reports/`, and `spec/` are exempt from the gate; otherwise writing the PRD that satisfies
 the gate would itself be blocked by the gate.
@@ -36,6 +46,7 @@ the gate would itself be blocked by the gate.
 | Artifact | Values |
 |---|---|
 | PRD | `DRAFT` → `PRD_READY` |
+| Research | `DRAFT` → `RESEARCH_READY` |
 | Plan | `DRAFT` → `PLAN_APPROVED`, or `SUPERSEDED` |
 | Tasklist | `DRAFT` → `TASKLIST_READY` |
 | QA report | `DRAFT` → `QA_PASSED` / `QA_BLOCKED` |

@@ -2,6 +2,10 @@
 
 Write `docs/plan/<TICKET>.md`: flow, trust boundary, security, file-by-file changes, tests.
 
+Read `docs/research/<TICKET>.md` first — it is the input to this step, and it must already carry
+`Status: RESEARCH_READY`. If it does not, run `/researcher <TICKET>` instead of planning around the
+gap.
+
 State the origin-boundary implications before the file list — per `PROJECT_RULES.md`, every
 website-controlled capability needs an explicit browser-owned contract, and that contract is
 decided here, not during implementation.

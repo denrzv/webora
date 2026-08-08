@@ -357,7 +357,7 @@ Bloom Flowers pages. Those are M1+ and run through the `/idea → /plan → /tas
    control; do the same. Add a throwaway file with a deliberate violation, confirm
    `./gradlew detekt` fails, delete it. Same for `gate-workflow.sh`: with `docs/.active_ticket` set
    to a ticket whose PRD is `Status: DRAFT`, an `Edit` must be blocked (exit 2); flip to
-   `PRD_READY`+`PLAN_APPROVED`+`TASKLIST_READY` and it must pass.
+   `PRD_READY`+`RESEARCH_READY`+`PLAN_APPROVED`+`TASKLIST_READY` and it must pass.
 2. **Android SDK provisioning.** This container has JDK 21 + Gradle but **no Android SDK**, so
    `:app` cannot assemble here today. `FOUND-003` adds a SessionStart hook (per the
    `session-start-hook` skill) that installs `cmdline-tools` + `platforms;android-36` +

@@ -10,5 +10,8 @@ Initialize ticket artifacts and set the active ticket.
 4. Set `Status: PRD_READY`.
 
 ## Outputs
-- `docs/prd/<TICKET>.prd.md`, `docs/plan/<TICKET>.md`, `docs/tasklist/<TICKET>.md` (stubs)
+- `docs/prd/<TICKET>.prd.md`, `docs/research/<TICKET>.md`, `docs/plan/<TICKET>.md`,
+  `docs/tasklist/<TICKET>.md` (stubs)
 - `docs/.active_ticket`
+
+Next step is `/researcher <TICKET>`, not `/plan`.

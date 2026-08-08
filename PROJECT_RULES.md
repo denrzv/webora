@@ -1,7 +1,7 @@
 # Project rules — Webora Browser
 
 ## Mandatory
-- Follow the AIDD order: `/idea` → `/plan` → `/tasks` → `/implement` → `/pre-commit` → `/review` → `/qa` → `/validate`.
+- Follow the AIDD order: `/idea` → `/researcher` → `/plan` → `/tasks` → `/implement` → `/pre-commit` → `/review` → `/qa` → `/validate`.
 - One TASK per commit. Message: `<TICKET> TASK-N: <short>`.
 - Run `bash scripts/pre-commit-check.sh` before every commit.
 - Treat every manifest as untrusted remote input. Parsing success is never trust.
