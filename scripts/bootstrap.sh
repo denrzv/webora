@@ -1,0 +1,121 @@
+#!/usr/bin/env bash
+# Shared development bootstrap for cloud agents and local Linux/macOS shells.
+#
+# Claude Code calls this through scripts/session-start.sh (best-effort).
+# Codex Cloud should call this script directly from its environment setup.
+#
+# This script is intentionally provider-neutral, idempotent, and strict: callers
+# that require a usable Android toolchain get a non-zero exit code on failure.
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+ANDROID_SDK_DIR="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-${HOME}/android-sdk}}"
+CMDLINE_TOOLS_VERSION="${WEBORA_CMDLINE_TOOLS_VERSION:-13114758}" # cmdline-tools 17.0
+COMPILE_SDK="${WEBORA_COMPILE_SDK:-36}"
+BUILD_TOOLS="${WEBORA_BUILD_TOOLS:-36.0.0}"
+PREPARE_GRADLE="${WEBORA_BOOTSTRAP_PREPARE_GRADLE:-0}"
+
+log() { echo "[bootstrap] $*"; }
+fail() { log "ERROR: $*" >&2; exit 1; }
+
+require_cmd() {
+  command -v "$1" >/dev/null 2>&1 || fail "required command not found: $1"
+}
+
+commandline_tools_platform() {
+  case "$(uname -s)" in
+    Linux) echo "linux" ;;
+    Darwin) echo "mac" ;;
+    *) fail "unsupported host OS: $(uname -s)" ;;
+  esac
+}
+
+install_cmdline_tools() {
+  local sdkmanager="${ANDROID_SDK_DIR}/cmdline-tools/latest/bin/sdkmanager"
+  [[ -x "${sdkmanager}" ]] && return 0
+
+  require_cmd curl
+  require_cmd unzip
+
+  local platform tmpdir zip url
+  platform="$(commandline_tools_platform)"
+  tmpdir="$(mktemp -d)"
+  zip="${tmpdir}/cmdline-tools.zip"
+  url="https://dl.google.com/android/repository/commandlinetools-${platform}-${CMDLINE_TOOLS_VERSION}_latest.zip"
+
+  log "Installing Android command-line tools ${CMDLINE_TOOLS_VERSION}"
+  mkdir -p "${ANDROID_SDK_DIR}/cmdline-tools"
+  curl -fsSL "${url}" -o "${zip}"
+  unzip -q "${zip}" -d "${tmpdir}/unpacked"
+
+  [[ -x "${tmpdir}/unpacked/cmdline-tools/bin/sdkmanager" ]] || {
+    rm -rf "${tmpdir}"
+    fail "sdkmanager missing from downloaded command-line tools"
+  }
+
+  rm -rf "${ANDROID_SDK_DIR}/cmdline-tools/latest"
+  mv "${tmpdir}/unpacked/cmdline-tools" "${ANDROID_SDK_DIR}/cmdline-tools/latest"
+  rm -rf "${tmpdir}"
+}
+
+provision_android_sdk() {
+  install_cmdline_tools
+
+  local sdkmanager="${ANDROID_SDK_DIR}/cmdline-tools/latest/bin/sdkmanager"
+  local -a packages=()
+
+  [[ -d "${ANDROID_SDK_DIR}/platform-tools" ]] || packages+=("platform-tools")
+  [[ -d "${ANDROID_SDK_DIR}/platforms/android-${COMPILE_SDK}" ]] || packages+=("platforms;android-${COMPILE_SDK}")
+  [[ -d "${ANDROID_SDK_DIR}/build-tools/${BUILD_TOOLS}" ]] || packages+=("build-tools;${BUILD_TOOLS}")
+
+  if (( ${#packages[@]} == 0 )); then
+    log "Android SDK ${COMPILE_SDK} already present at ${ANDROID_SDK_DIR}"
+    return 0
+  fi
+
+  log "Provisioning Android SDK packages into ${ANDROID_SDK_DIR}: ${packages[*]}"
+  yes | "${sdkmanager}" --sdk_root="${ANDROID_SDK_DIR}" --licenses >/dev/null 2>&1 || true
+  "${sdkmanager}" --sdk_root="${ANDROID_SDK_DIR}" "${packages[@]}" >/dev/null
+  log "Android SDK ready"
+}
+
+write_local_properties() {
+  local lp="${ROOT}/local.properties"
+  local tmp
+  tmp="$(mktemp)"
+
+  # Preserve developer-local values (for example signing properties) and only
+  # replace sdk.dir. The old SessionStart script overwrote the whole file.
+  if [[ -f "${lp}" ]]; then
+    grep -v '^sdk\.dir=' "${lp}" > "${tmp}" || true
+  fi
+  printf 'sdk.dir=%s\n' "${ANDROID_SDK_DIR}" >> "${tmp}"
+  mv "${tmp}" "${lp}"
+  log "configured sdk.dir in ${lp}"
+}
+
+report_java() {
+  require_cmd java
+  local version
+  version="$(java -version 2>&1 | head -n1 || true)"
+  log "java: ${version:-unknown}"
+}
+
+prepare_gradle() {
+  [[ "${PREPARE_GRADLE}" == "1" ]] || return 0
+  [[ -x "${ROOT}/gradlew" ]] || fail "gradlew not found or not executable"
+
+  # This intentionally runs only a configuration task. It downloads the Gradle
+  # distribution and build plugins while setup-phase internet is available,
+  # without making cloud environment creation depend on the current test state.
+  log "Preparing Gradle wrapper and project configuration"
+  (cd "${ROOT}" && ./gradlew --no-daemon --quiet help >/dev/null)
+  log "Gradle ready"
+}
+
+report_java
+provision_android_sdk
+write_local_properties
+prepare_gradle
+log "bootstrap complete"
