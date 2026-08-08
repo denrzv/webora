@@ -133,6 +133,25 @@ class SpecCorpusTest {
     }
 
     @Test
+    fun everyRegisteredCodeAppearsInSpec() {
+        // Catches a code added to the registry and to a fixture but never written down for the
+        // humans the spec is actually for. Containment rather than table parsing: the assertion
+        // should survive someone reformatting the markdown.
+        val spec = SpecCorpus.specDir.resolve("SPEC.md").readText()
+        val undocumented = SpecCorpus.registry.keys.filterNot { spec.contains(it) }.sorted()
+        assertTrue("Registered but absent from SPEC.md: $undocumented", undocumented.isEmpty())
+    }
+
+    @Test
+    fun specDeclaresItselfReady() {
+        val spec = SpecCorpus.specDir.resolve("SPEC.md").readText()
+        assertTrue(
+            "spec/SPEC.md must carry `Status: SPEC_READY` once SPEC-001 lands",
+            spec.lineSequence().any { it.trim() == "Status: SPEC_READY" },
+        )
+    }
+
+    @Test
     fun malformedFixturesFailToParse() {
         // `parses: false` is asserted, not taken on trust — otherwise a fixture could claim to be
         // malformed while being perfectly good JSON, and SS-E-PARSE would have no real evidence.

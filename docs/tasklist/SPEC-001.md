@@ -80,7 +80,24 @@ did not happen.
     `everyFixtureCodeIsRegistered`, `everyRegisteredCodeHasAFixture`,
     `rejectFixturesCarryNoResult`, `malformedFixturesFailToParse`
 
-- [ ] **TASK-2: `spec/SPEC.md` → normative, `Status: SPEC_READY`**
+- [x] **TASK-2: `spec/SPEC.md` → normative, `Status: SPEC_READY`**
+  - **Done.** Core subset gate green. `everyRegisteredCodeAppearsInSpec` and `specDeclaresItselfReady`
+    added to `SpecCorpusTest`.
+  - *Deviation:* added `SS-W-ICON-UNKNOWN`, a 14th code the plan did not anticipate. Writing §7
+    forced the question the plan skipped: if `icon` is allow-listed and the allow-list is encoded as
+    a JSON Schema `enum`, then a typo'd icon name is `SCHEMA-INVALID` and kills the whole
+    integration — which directly contradicts the reasoning `ADR-007` gives for unknown *action*
+    types. Resolved by not enumerating icons in the schema at all. The schema constrains `icon` to
+    `^[a-z][a-z0-9_]{0,31}$`, which is what actually delivers the security property (an icon field
+    structurally cannot carry a URL or any resource reference), and an unrecognised name degrades to
+    a generic glyph with a warning.
+  - *Deviation:* §12 gained two stated exceptions to "absent optional values are omitted" —
+    `origin` and `site.homeUrl` are always present, and an emptied collection is `[]` rather than
+    absent. Both surfaced while hand-writing the first expected results, which were otherwise
+    unwritable: `[]` and "omitted" would have been indistinguishable, and §10 requires them to mean
+    different things.
+  - *Deviation:* documented `menu`, which the limits table has always bounded (20 items) and which
+    `SiteSkinLimits.MAX_MENU_ITEMS` already declares, but which no structural section defined.
   - Modified: `spec/SPEC.md`
   - Restructure so the **trust model precedes any field description** (PRD NFR — a skimming reader
     must not come away thinking the site is in control). RFC 2119 keywords throughout.
