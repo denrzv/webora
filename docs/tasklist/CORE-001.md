@@ -36,7 +36,7 @@ A control that was not run is left blank, never assumed.
     types keeps the rule active for every other exception. Planned for TASK-7; pulled forward
     because TASK-1 is where it first blocks.
 
-- [ ] TASK-2: `SiteOrigin` value type
+- [x] TASK-2: `SiteOrigin` value type
   - New: `siteskin-core/src/main/kotlin/dev/siteskin/core/origin/SiteOrigin.kt`
   - New: `siteskin-core/src/test/kotlin/dev/siteskin/core/origin/SiteOriginTest.kt`
   - Acceptance: PRD 1–4. `parse` returns `null` for `javascript:`, `file:`, `content:`, `intent:`,
@@ -47,7 +47,13 @@ A control that was not run is left blank, never assumed.
     matches the corpus's `origin` field; `rootUrl` appends `/`. No public constructor and no `copy`.
   - Tests: `SiteOriginTest`
   - Negative control: drop `port` from `equals`/`hashCode` — the `:8443` inequality case must fail.
-    (Result: )
+    (Result: **ran, fails as required.** `distinctOriginsNeverCompareEqual` and
+    `defaultPortsAreNormalizedPerScheme` both failed; restored, both pass.)
+  - Deviation: `siteOriginIsConstructibleOnlyThroughParse` filters out **synthetic** constructors.
+    Kotlin emits a package-private bridge taking a trailing `DefaultConstructorMarker` so the
+    companion can reach the private constructor. It is `ACC_SYNTHETIC`, callable from neither
+    Kotlin nor ordinary Java, and asserting over it fails on a compiler detail rather than on a
+    real API leak. Found by writing the test first — it went red on the real class.
 
 - [ ] TASK-3: Mixed-script homograph guard
   - New: `siteskin-core/src/main/kotlin/dev/siteskin/core/origin/IdnGuard.kt`
