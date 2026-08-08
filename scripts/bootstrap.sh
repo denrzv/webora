@@ -50,8 +50,23 @@ ensure_user_bin_path() {
   esac
 }
 
+installed_gitleaks_version() {
+  command -v gitleaks >/dev/null 2>&1 || return 1
+  gitleaks version 2>/dev/null | head -n1 | sed 's/^v//'
+}
+
+installed_shellcheck_version() {
+  command -v shellcheck >/dev/null 2>&1 || return 1
+  shellcheck --version 2>/dev/null | awk '/^version:/ {print $2}'
+}
+
 install_gitleaks() {
-  command -v gitleaks >/dev/null 2>&1 && return 0
+  local installed=""
+  installed="$(installed_gitleaks_version || true)"
+  if [[ "${installed}" == "${GITLEAKS_VERSION}" ]]; then
+    return 0
+  fi
+
   require_cmd curl
   require_cmd tar
 
@@ -67,7 +82,11 @@ install_gitleaks() {
   tmpdir="$(mktemp -d)"
   archive="${tmpdir}/${asset}"
 
-  log "Installing Gitleaks ${GITLEAKS_VERSION}"
+  if [[ -n "${installed}" ]]; then
+    log "Replacing Gitleaks ${installed} with ${GITLEAKS_VERSION}"
+  else
+    log "Installing Gitleaks ${GITLEAKS_VERSION}"
+  fi
   curl -fsSL "${url}" -o "${archive}"
   tar -xzf "${archive}" -C "${tmpdir}"
   [[ -f "${tmpdir}/gitleaks" ]] || {
@@ -80,7 +99,12 @@ install_gitleaks() {
 }
 
 install_shellcheck() {
-  command -v shellcheck >/dev/null 2>&1 && return 0
+  local installed=""
+  installed="$(installed_shellcheck_version || true)"
+  if [[ "${installed}" == "${SHELLCHECK_VERSION}" ]]; then
+    return 0
+  fi
+
   require_cmd curl
   require_cmd tar
 
@@ -93,7 +117,11 @@ install_shellcheck() {
   archive="${tmpdir}/${asset}"
   binary="${tmpdir}/shellcheck-v${SHELLCHECK_VERSION}/shellcheck"
 
-  log "Installing ShellCheck ${SHELLCHECK_VERSION}"
+  if [[ -n "${installed}" ]]; then
+    log "Replacing ShellCheck ${installed} with ${SHELLCHECK_VERSION}"
+  else
+    log "Installing ShellCheck ${SHELLCHECK_VERSION}"
+  fi
   curl -fsSL "${url}" -o "${archive}"
   tar -xzf "${archive}" -C "${tmpdir}"
   [[ -f "${binary}" ]] || {
@@ -109,7 +137,7 @@ provision_guardrail_tools() {
   ensure_user_bin_path
   install_gitleaks
   install_shellcheck
-  log "guardrail tools ready: gitleaks $(gitleaks version), shellcheck $(shellcheck --version | awk '/^version:/ {print $2}')"
+  log "guardrail tools ready: gitleaks $(installed_gitleaks_version), shellcheck $(installed_shellcheck_version)"
 }
 
 install_cmdline_tools() {
