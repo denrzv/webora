@@ -3,7 +3,7 @@ agp = "9.1.0"
 kotlin = "2.3.20"
 kotlinxSerialization = "1.9.0"
 kotlinxCoroutines = "1.10.2"
-detekt = "1.23.8"
+detekt = "2.0.0-alpha.3"
 
 # Android
 coreKtx = "1.18.0"
@@ -58,7 +58,6 @@ okhttp-logging-interceptor = { group = "com.squareup.okhttp3", name = "logging-i
 # --- test ---
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
-# MockWebServer is how origin-binding is tested: distinct ports are distinct origins.
 okhttp-mockwebserver = { group = "com.squareup.okhttp3", name = "mockwebserver", version.ref = "okhttp" }
 okhttp-tls = { group = "com.squareup.okhttp3", name = "okhttp-tls", version.ref = "okhttp" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinxCoroutines" }
@@ -73,4 +72,4 @@ android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
-detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
+detekt = { id = "dev.detekt", version.ref = "detekt" }
