@@ -19,6 +19,8 @@ Before proposing architecture, read `docs/DEVELOPMENT_PLAN.md` and the relevant 
 - `docs/.active_ticket` identifies the current ticket.
 - Implement exactly one task at a time and keep one task per commit.
 - Run `bash scripts/pre-commit-check.sh` before each task commit.
+- Push every completed task commit to the current ticket branch before starting the next task. The remote commit is the handoff checkpoint between assistants or sessions.
+- If a checkpoint cannot be pushed, stop and report it instead of accumulating additional local-only tasks.
 - Preserve the AIDD order and status vocabulary defined in `workflow.md`.
 - If work was interrupted or another assistant worked on the branch, reconcile `git status`, `git diff`, recent commits, and the active tasklist before editing.
 

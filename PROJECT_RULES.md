@@ -4,6 +4,8 @@
 - Follow the AIDD order: `/idea` → `/researcher` → `/plan` → `/tasks` → `/implement` → `/pre-commit` → `/review` → `/qa` → `/validate`.
 - One TASK per commit. Message: `<TICKET> TASK-N: <short>`.
 - Run `bash scripts/pre-commit-check.sh` before every commit.
+- After every completed `TASK-N` or `TASK-FIX-N` commit, push the current ticket branch before starting the next task. A task is not handoff-safe until its commit is visible on the remote.
+- If a task checkpoint cannot be pushed, stop and report the blocked checkpoint instead of continuing with another task.
 - Treat every manifest as untrusted remote input. Parsing success is never trust.
 - Every website-controlled native capability needs an explicit browser-owned contract.
 - Security-sensitive behaviour requires explicit tests, including negative cases.
