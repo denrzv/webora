@@ -170,13 +170,21 @@ release signing config `app/build.gradle.kts` never implemented. Also set
 |---|---|
 | `SPEC-001` | **SiteSkin Manifest v1.0**: `spec/SPEC.md` (normative), `spec/siteskin-1.0.schema.json`, and the conformance corpus — `fixtures/valid/*.json` + `fixtures/invalid/*.json`, each invalid case paired with its expected stable diagnostic code (`SS-E-ORIGIN-MISMATCH`, `SS-E-SCHEME-DENIED`, `SS-W-CONTRAST-CORRECTED`, …). **The corpus is the contract; the Kotlin is written to satisfy it.** |
 | `SPEC-002` | ✅ Versioning & compatibility policy: `SPEC.md` §§4.1–4.5 (layer ordering, breaking-change rules with a security carve-out, deprecation lifecycle), the `spec/versions.json` decision table, and four version fixtures. Fixed two defects in the published schema — leading-zero versions, and a trailing-newline bypass in every `^…$` pattern |
-| `SPEC-003` | `siteskin-lint` CLI — `siteskin-lint https://site.example` — the tool a site owner runs. Same validator as the browser, so "passes lint" means "will activate" |
 | `CORE-001` | `SiteOrigin` + URL resolution: scheme/host/port, IDN→punycode, mixed-script homograph guard, default ports, relative-path resolution |
 | `CORE-002` | DTOs + kotlinx.serialization parsing; byte-size guard before parse; unknown fields ignored-with-warning; parse success ≠ trust |
 | `CORE-003` | `SchemaValidator` → `ManifestValidationResult(errors, warnings)` with the SPEC-001 diagnostic codes |
 | `CORE-004` | `SecurityValidator` + normalisation → trusted `SiteSkinConfiguration`: origin binding, scheme allow-list (`https`/`mailto`/`tel`/`geo`), icon allow-list, colour parse + WCAG AA contrast correction, limit clamping |
 | `CORE-005` | Action model: `internal_url`, `external_url`, `phone`, `email`, `map`, `share`, `home`, `refresh`, `open_menu` → sealed `ResolvedAction`; unknown type drops the item, never the manifest |
 | `CORE-006` | `NavMatcher` — active-item detection, exact path + `/cart/**` glob |
+| `SPEC-003` | `siteskin-lint` CLI — `siteskin-lint https://site.example` — the tool a site owner runs. Same validator as the browser, so "passes lint" means "will activate" |
+
+**`SPEC-003` runs last in M1, not third.** This table originally grouped it with the other `SPEC-*`
+tickets, which read as an ordering and is not one. Its acceptance criteria are that the CLI exits 0
+against Bloom Flowers and non-zero with the *expected diagnostic code* against each `invalid/`
+fixture — 23 of the 30 of which are security-layer rules, and 3 more schema-layer. A CLI written
+before `CORE-001..006` could answer for the transport, parse and version layers only, so it would
+either ship four-thirtieths of its contract or grow a second validator alongside the browser's,
+which is precisely the failure the ticket exists to prevent.
 
 ### M2 — Browser foundation *(the product must be a real browser first)*
 `BROWSE-001` WebView host + hardening (JS on, `setAllowFileAccess(false)`, no
