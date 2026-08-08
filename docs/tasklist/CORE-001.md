@@ -55,7 +55,7 @@ A control that was not run is left blank, never assumed.
     Kotlin nor ordinary Java, and asserting over it fails on a compiler detail rather than on a
     real API leak. Found by writing the test first — it went red on the real class.
 
-- [ ] TASK-3: Mixed-script homograph guard
+- [x] TASK-3: Mixed-script homograph guard
   - New: `siteskin-core/src/main/kotlin/dev/siteskin/core/origin/IdnGuard.kt`
   - New: `siteskin-core/src/test/kotlin/dev/siteskin/core/origin/IdnGuardTest.kt`
   - Modified: `SiteOrigin.kt` — expose `hasMixedScriptHost`, computed from the pre-punycode host
@@ -64,7 +64,21 @@ A control that was not run is left blank, never assumed.
     Katakana in one label is not flagged; digits and hyphens (`COMMON`) never flag on their own.
     The flag is absent from `equals`/`hashCode`.
   - Tests: `IdnGuardTest`, plus an equality assertion in `SiteOriginTest`
-  - Negative control: return a constant `false` — the `аpple.com` case must fail. (Result: )
+  - Negative control: return a constant `false` — the `аpple.com` case must fail. (Result: **ran,
+    fails as required.** Four tests failed — `latinAndCyrillicInOneLabelIsFlagged`,
+    `punycodeAndUnicodeSpellingsAgree`, `scriptsAreComparedWithinALabelNotAcrossTheHost` and
+    `SiteOriginTest.theHomographFlagIsExposedButNeverPartOfEquality`; restored, all pass.)
+  - Deviation from the plan, and a correction to it: the flag is computed from the **canonical**
+    host via `IDN.toUnicode`, not from the pre-punycode input the plan named. Deriving it from the
+    raw input makes it a function of *spelling* rather than of the origin, so
+    `https://аpple.com` and `https://xn--pple-43d.com` — which compare equal, being the same
+    origin — would have carried contradicting flags. Decoding the canonical form is the only way
+    the flag stays a function of `host`. `punycodeAndUnicodeSpellingsAgree` pins it.
+  - Deviation: the guard detects *mixed*-script labels only. An all-Cyrillic whole-script
+    confusable such as `раураӏ.com` uses one script and is **not** flagged; catching those needs a
+    confusable mapping rather than a script partition. Recorded in the KDoc and left to
+    `HARDEN-001`, which owns the adversarial corpus that would justify carrying one. The PRD asks
+    for mixed-script and this is exactly that.
 
 - [ ] TASK-4: Public Suffix List and registrable domain
   - New: `siteskin-core/src/main/resources/dev/siteskin/core/origin/public_suffix_list.dat`

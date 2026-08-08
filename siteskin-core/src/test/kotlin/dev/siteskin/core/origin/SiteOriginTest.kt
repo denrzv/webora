@@ -202,6 +202,27 @@ class SiteOriginTest {
         )
     }
 
+    /**
+     * The homograph flag is a display signal, not a comparison input. Two origins that differ only
+     * in it must still compare equal — which they always will, since it is a function of the host,
+     * but asserting it pins the intent: nobody may later "improve" equality by folding it in.
+     */
+    @Test
+    fun theHomographFlagIsExposedButNeverPartOfEquality() {
+        val homographic = requireNotNull(origin("https://аpple.com"))
+        val plain = requireNotNull(origin("https://apple.com"))
+
+        assertTrue(homographic.hasMixedScriptHost)
+        assertTrue(!plain.hasMixedScriptHost)
+
+        // Different origins for an independent reason: the hosts genuinely differ.
+        assertNotEquals(homographic, plain)
+
+        // Spelling must not change the flag, since spelling does not change the origin.
+        assertEquals(homographic, origin("https://xn--pple-43d.com"))
+        assertEquals(homographic.hasMixedScriptHost, origin("https://xn--pple-43d.com")?.hasMixedScriptHost)
+    }
+
     @Test
     fun toStringIsTheCanonicalForm() {
         // Logs and assertion messages print origins constantly; the canonical form is the one

@@ -42,6 +42,20 @@ public class SiteOrigin private constructor(
      */
     public val rootUrl: String = "$canonical/"
 
+    /**
+     * Whether any label of [host] mixes writing systems — the shape of an IDN homograph attack.
+     *
+     * **Not part of equality**, and no comparison may read it. It is a *display* signal: `SKIN-002`
+     * decides how to present it, and `ADR-006`'s always-visible domain is what it qualifies.
+     * Origin binding already keeps `аpple.com` and `apple.com` apart without it; what it adds is
+     * the user's ability to notice, which is the only defence against two strings that render
+     * identically.
+     *
+     * Derived from the canonical host rather than from whatever was parsed, so that two spellings
+     * of one origin can never carry contradicting flags.
+     */
+    public val hasMixedScriptHost: Boolean = IdnGuard.hasMixedScript(host)
+
     override fun equals(other: Any?): Boolean =
         this === other ||
             (other is SiteOrigin && scheme == other.scheme && host == other.host && port == other.port)
