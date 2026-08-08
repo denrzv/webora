@@ -31,6 +31,6 @@ The existing Claude command files are the current shared phase definitions. Read
 - `.claude/commands/qa.md`
 - `.claude/commands/validate.md`
 
-Follow the order in `workflow.md`. During implementation, complete exactly one `TASK-*` or `TASK-FIX-*`, run the pre-commit gate, and commit before starting the next task.
+Follow the order in `workflow.md`. During implementation, complete exactly one `TASK-*` or `TASK-FIX-*`, run the pre-commit gate, commit it, and push the current ticket branch before starting the next task. The pushed commit is the handoff checkpoint; if it cannot be pushed, stop and report the blocked checkpoint rather than continuing with more local-only work.
 
 If the working tree contains partial work from another session or assistant, stop the normal loop and use the `recover` skill semantics before continuing.
