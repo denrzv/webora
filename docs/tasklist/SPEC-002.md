@@ -119,7 +119,7 @@ caveat rather than a pass.
     pass a pattern that is anchored but wrong, and the behavioural probe covers only the one field
     it exercises.
 
-- [ ] **TASK-4: the version decision table**
+- [x] **TASK-4: the version decision table**
   - New: `spec/versions.json` — `supportedMajors`, `currentMinor`, and the `decisions` array over
     `form` ∈ {`string`, `number`, `absent`}.
   - Modified: `.../spec/SpecCorpus.kt` — read the table; extract the schema's `schemaVersion`
@@ -134,6 +134,21 @@ caveat rather than a pass.
     `versionTableMatchesTheSchemaGrammar` must fail on `01.0`; (b) flip one
     `SS-E-VERSION-UNSUPPORTED` entry to `wellFormed: false` →
     `versionTableSeparatesGrammarFromPolicy` must fail. Restore both.
+  - **Result:** ✅ 17 decisions; all four tests pass; 35 tests green.
+    Both negative controls confirmed:
+    (a) loosening the schema pattern back to `^[0-9]+\.[0-9]+$` failed
+    `versionTableMatchesTheSchemaGrammar` with *"01.0: table says wellFormed=false, schema grammar
+    says true"* — proving the table is checked against the published pattern and not a copy of it.
+    It also re-failed TASK-3's two anchoring guards, which is the correct coupling.
+    (b) flipping `2.0` to `wellFormed: false` failed `versionTableSeparatesGrammarFromPolicy` with
+    *"rejects for its major but is not well-formed — the version layer never sees a malformed
+    string"*, and independently failed the grammar check. Restored; green.
+    Two notes on how the tests are written. `versionTableMatchesTheSchemaGrammar` deliberately skips
+    the `number` and `absent` forms: their `wellFormed: false` is a `type`/`required` failure, and
+    asking a *grammar* about them would be the wrong question answered correctly by luck.
+    `versionTableSeparatesGrammarFromPolicy` recomputes acceptance as "well-formed AND major ∈
+    supportedMajors" rather than trusting the table's own `decision` column, so the two have to
+    agree instead of the test restating one of them.
 
 - [ ] **TASK-5: the document fixtures**
   - New: `spec/fixtures/invalid/version-missing.{json,expected.json}` — `SS-E-SCHEMA-INVALID`.

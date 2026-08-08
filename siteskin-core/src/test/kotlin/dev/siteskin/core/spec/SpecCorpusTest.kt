@@ -400,6 +400,110 @@ class SpecCorpusTest {
     }
 
     @Test
+    fun versionTableMatchesTheSchemaGrammar() {
+        // The table's `wellFormed` column is checked against the pattern read out of
+        // siteskin-1.0.schema.json, never against a copy of it. A copy would let the two drift
+        // while both looked right — the exact failure the corpus exists to prevent.
+        //
+        // Non-string forms are excluded: `wellFormed: false` for an unquoted number or an absent
+        // field is a `type`/`required` failure, which the grammar has no opinion about. Asserting
+        // them here would be asking the wrong question and getting the right answer by luck.
+        val disagreements = SpecCorpus.versionDecisions
+            .filter { it.form == "string" }
+            .mapNotNull { decision ->
+                val value = requireNotNull(decision.stringValue) { "${decision.label} declares no version" }
+                val matches = SpecCorpus.schemaVersionGrammar.matches(value)
+                if (matches == decision.wellFormed) {
+                    null
+                } else {
+                    "${decision.label}: table says wellFormed=${decision.wellFormed}, " +
+                        "schema grammar says $matches"
+                }
+            }
+        assertTrue(disagreements.joinToString("\n"), disagreements.isEmpty())
+    }
+
+    @Test
+    fun versionTableSeparatesGrammarFromPolicy() {
+        // SS-E-SCHEMA-INVALID and SS-E-VERSION-UNSUPPORTED must not become two labels for one
+        // check. Every version-layer rejection is well-formed and fails a policy the schema cannot
+        // express; every schema-layer rejection is malformed. If those sets ever overlap, the layer
+        // split in SPEC.md 4.1 is fiction and this is where it shows.
+        val confused = SpecCorpus.versionDecisions.mapNotNull { decision ->
+            when {
+                decision.code == "SS-E-VERSION-UNSUPPORTED" && !decision.wellFormed ->
+                    "${decision.label} rejects for its major but is not well-formed — the version " +
+                        "layer never sees a malformed string"
+                decision.code == "SS-E-SCHEMA-INVALID" && decision.wellFormed ->
+                    "${decision.label} rejects at the schema layer but is well-formed"
+                decision.decision == "accept" && !decision.wellFormed ->
+                    "${decision.label} is accepted but is not well-formed"
+                else -> null
+            }
+        }
+        assertTrue(confused.joinToString("\n"), confused.isEmpty())
+
+        // Acceptance is exactly "well-formed AND supported major", stated independently of the
+        // table's own `decision` column so the two have to agree.
+        val misjudged = SpecCorpus.versionDecisions
+            .filter { it.form == "string" && it.wellFormed }
+            .mapNotNull { decision ->
+                val major = requireNotNull(decision.stringValue).substringBefore('.').toInt()
+                val shouldAccept = major in SpecCorpus.supportedMajors
+                val doesAccept = decision.decision == "accept"
+                if (shouldAccept == doesAccept) {
+                    null
+                } else {
+                    "${decision.label}: major $major, supported=${SpecCorpus.supportedMajors}, " +
+                        "but table says '${decision.decision}'"
+                }
+            }
+        assertTrue(misjudged.joinToString("\n"), misjudged.isEmpty())
+    }
+
+    @Test
+    fun versionTableCoversTheBoundary() {
+        // Named individually rather than by counting rows, for the reason
+        // everyDeniedSchemeHasItsOwnFixture gives: fifteen spellings of "1.0.0" would satisfy a
+        // count while leaving the trailing-newline case — the one that was actually broken —
+        // untested.
+        val spellings = SpecCorpus.versionDecisions.mapNotNull { it.stringValue }.toSet()
+        val required = listOf(
+            "1.0", "1.1", "1.999", "0.9", "2.0", "10.0",
+            "1", "1.0.0", "01.0", "1.00", "v1.0", "", " 1.0", "1.0 ", "1.0\n",
+        )
+        val missing = required.filterNot { it in spellings }.map { "\"${it.replace("\n", "\\n")}\"" }
+        assertTrue("Version spellings with no table entry: $missing", missing.isEmpty())
+
+        val forms = SpecCorpus.versionDecisions.map { it.form }.toSet()
+        assertTrue("The table must cover a non-string version", "number" in forms)
+        assertTrue("The table must cover an absent version", "absent" in forms)
+
+        assertEquals("Supported majors are an allow-list of exactly {1}", listOf(1), SpecCorpus.supportedMajors)
+    }
+
+    @Test
+    fun versionTableCodesAreRegistered() {
+        // Mirrors everyFixtureCodeIsRegistered. A table inventing a code would read plausibly and
+        // pin nothing.
+        val unregistered = SpecCorpus.versionDecisions
+            .mapNotNull { it.code }
+            .filterNot { it in SpecCorpus.registry }
+            .distinct()
+        assertTrue("Version table uses unregistered codes: $unregistered", unregistered.isEmpty())
+
+        val rejectsWithoutCode = SpecCorpus.versionDecisions
+            .filter { it.decision == "reject" && it.code == null }
+            .map { it.label }
+        assertTrue("A rejection must name its diagnostic: $rejectsWithoutCode", rejectsWithoutCode.isEmpty())
+
+        val acceptsWithCode = SpecCorpus.versionDecisions
+            .filter { it.decision == "accept" && it.code != null }
+            .map { it.label }
+        assertTrue("An accepted version must not name a diagnostic: $acceptsWithCode", acceptsWithCode.isEmpty())
+    }
+
+    @Test
     fun schemaPatternsAnchorAtEndOfInput() {
         // JSON Schema specifies ECMA-262 regexes, where an unflagged `$` matches only at end of
         // input. java.util.regex disagrees: its `$` also matches immediately before a FINAL line

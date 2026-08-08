@@ -1,0 +1,143 @@
+{
+  "registryVersion": "1.0",
+  "schemaVersion": "1.0",
+  "supportedMajors": [1],
+  "currentMinor": 0,
+  "note": "The version decision table for SiteSkin Manifest 1.x. Machine-readable so that `siteskin-lint`, the browser and any third-party implementation agree on the boundary rather than each rediscovering it. Deliberately NOT document-shaped: version handling is a decision on a scalar, and thirteen near-identical manifests differing in one field would have tripled the fixture count while testing less. See SPEC.md section 4.",
+  "howToRead": "Each entry is one spelling of `schemaVersion` as it appears in a manifest, and the decision a conforming implementation MUST reach. `form` distinguishes the two cases a list of strings cannot express: `number` is an unquoted JSON number, `absent` is the field being missing entirely. `wellFormed` records whether the value satisfies the MAJOR.MINOR grammar in siteskin-1.0.schema.json — which is exactly the line between the two rejection codes, and is asserted against the schema file itself rather than restated here.",
+  "whyTwoCodes": "SS-E-SCHEMA-INVALID and SS-E-VERSION-UNSUPPORTED are not two labels for one check. Every `wellFormed: false` entry is a STRUCTURAL defect caught by the schema; every SS-E-VERSION-UNSUPPORTED entry is well-formed and fails a POLICY the schema cannot express, because siteskin-1.0.schema.json deliberately does not pin the major. If a future change made those two sets overlap, the layer split in SPEC.md section 4.1 would be fiction.",
+  "decisions": [
+    {
+      "form": "string",
+      "version": "1.0",
+      "wellFormed": true,
+      "decision": "accept",
+      "note": "The current version."
+    },
+    {
+      "form": "string",
+      "version": "1.1",
+      "wellFormed": true,
+      "decision": "accept",
+      "note": "A future minor read by a 1.0 implementation. Minors are additive, so unknown fields warn with SS-W-FIELD-UNKNOWN and the manifest still applies."
+    },
+    {
+      "form": "string",
+      "version": "1.999",
+      "wellFormed": true,
+      "decision": "accept",
+      "note": "There is no ceiling on the minor. An implementation MUST NOT reject a minor merely for being higher than the one it knows — that is the whole content of 'minors are additive', and a bound here would silently reintroduce a breaking change at some arbitrary number."
+    },
+    {
+      "form": "string",
+      "version": "0.9",
+      "wellFormed": true,
+      "decision": "reject",
+      "code": "SS-E-VERSION-UNSUPPORTED",
+      "note": "Major 0 is not major 1. Well-formed, so this is a policy rejection and not a grammar one — treating 0.x as malformed would put a second rule in the grammar for no gain."
+    },
+    {
+      "form": "string",
+      "version": "2.0",
+      "wellFormed": true,
+      "decision": "reject",
+      "code": "SS-E-VERSION-UNSUPPORTED",
+      "note": "The canonical unsupported major. Corresponds to fixtures/invalid/version-major-2.json."
+    },
+    {
+      "form": "string",
+      "version": "10.0",
+      "wellFormed": true,
+      "decision": "reject",
+      "code": "SS-E-VERSION-UNSUPPORTED",
+      "note": "Present to prove the rule is an allow-list of supported majors and not a deny-list of '2'. An implementation that special-cases 2.x would accept this and be wrong."
+    },
+    {
+      "form": "string",
+      "version": "1",
+      "wellFormed": false,
+      "decision": "reject",
+      "code": "SS-E-SCHEMA-INVALID",
+      "note": "MINOR is not optional. Corresponds to fixtures/invalid/version-malformed.json."
+    },
+    {
+      "form": "string",
+      "version": "1.0.0",
+      "wellFormed": false,
+      "decision": "reject",
+      "code": "SS-E-SCHEMA-INVALID",
+      "note": "There is no patch component. A semver-shaped string is the most likely thing a site owner types by mistake, so the rejection must be unambiguous rather than tolerated by a lenient parse."
+    },
+    {
+      "form": "string",
+      "version": "01.0",
+      "wellFormed": false,
+      "decision": "reject",
+      "code": "SS-E-SCHEMA-INVALID",
+      "note": "Leading zeros are excluded so a version has exactly one spelling. schemaVersion keys the manifest cache, and two spellings of one version are two cache entries. Narrowed in SPEC-002; see SPEC.md section 4.5(a)."
+    },
+    {
+      "form": "string",
+      "version": "1.00",
+      "wellFormed": false,
+      "decision": "reject",
+      "code": "SS-E-SCHEMA-INVALID",
+      "note": "The same rule on the minor. Present because a grammar fixed only on the major would pass this and still admit two spellings of 1.0."
+    },
+    {
+      "form": "string",
+      "version": "v1.0",
+      "wellFormed": false,
+      "decision": "reject",
+      "code": "SS-E-SCHEMA-INVALID",
+      "note": "No prefix is permitted."
+    },
+    {
+      "form": "string",
+      "version": "",
+      "wellFormed": false,
+      "decision": "reject",
+      "code": "SS-E-SCHEMA-INVALID",
+      "note": "The empty string is present rather than absent, and must not be confused with absence — both reject, but an implementation that treats '' as 'unset' and substitutes a default would activate SiteSkin on a manifest that declared no version at all."
+    },
+    {
+      "form": "string",
+      "version": " 1.0",
+      "wellFormed": false,
+      "decision": "reject",
+      "code": "SS-E-SCHEMA-INVALID",
+      "note": "Leading whitespace. An implementation MUST NOT trim before matching — trimming is a normalization step, and a normalization step is a second place for two spellings of one version to appear."
+    },
+    {
+      "form": "string",
+      "version": "1.0 ",
+      "wellFormed": false,
+      "decision": "reject",
+      "code": "SS-E-SCHEMA-INVALID",
+      "note": "Trailing whitespace, same reasoning."
+    },
+    {
+      "form": "string",
+      "version": "1.0\n",
+      "wellFormed": false,
+      "decision": "reject",
+      "code": "SS-E-SCHEMA-INVALID",
+      "note": "A trailing NEWLINE specifically, and the reason this table exists rather than a handful of obvious cases. Until SPEC-002 this was ACCEPTED: JSON Schema specifies ECMA-262 regexes where an unflagged `$` matches only at end of input, but java.util.regex's `$` also matches before a final line terminator, so every ^...$ pattern in the schema admitted one. An implementation MUST verify this against its own regex engine rather than infer it from the pattern's shape. See SPEC.md section 4.5(b)."
+    },
+    {
+      "form": "number",
+      "version": 1.0,
+      "wellFormed": false,
+      "decision": "reject",
+      "code": "SS-E-SCHEMA-INVALID",
+      "note": "An unquoted JSON number, not a string. Rejected on `type` before the pattern is reached. Worth pinning because 1.0 is a perfectly good JSON number and a lenient implementation would coerce it — and 1.10 as a number is 1.1, so coercion would silently rewrite the declared version."
+    },
+    {
+      "form": "absent",
+      "wellFormed": false,
+      "decision": "reject",
+      "code": "SS-E-SCHEMA-INVALID",
+      "note": "schemaVersion is REQUIRED. Rejects at the schema layer, not the version layer: with no version present there is no major to evaluate, and an implementation MUST NOT report SS-E-VERSION-UNSUPPORTED here. Corresponds to fixtures/invalid/version-missing.json."
+    }
+  ]
+}

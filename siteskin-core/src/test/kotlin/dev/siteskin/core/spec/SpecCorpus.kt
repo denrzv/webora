@@ -4,6 +4,7 @@ import io.github.optimumcode.json.schema.JsonSchema
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -79,6 +80,45 @@ internal object SpecCorpus {
 
     private val registryRoot: JsonObject by lazy {
         json.parseToJsonElement(specDir.resolve("diagnostics.json").readText()).jsonObject
+    }
+
+    private val versionsRoot: JsonObject by lazy {
+        json.parseToJsonElement(specDir.resolve("versions.json").readText()).jsonObject
+    }
+
+    /** Majors this schema revision supports. An allow-list, not a deny-list of known-bad majors. */
+    val supportedMajors: List<Int> by lazy {
+        versionsRoot.getValue("supportedMajors").jsonArray.map { it.jsonPrimitive.int }
+    }
+
+    /** The version decision table — `spec/versions.json`. */
+    val versionDecisions: List<VersionDecision> by lazy {
+        versionsRoot.getValue("decisions").jsonArray.map { entry ->
+            val obj = entry.jsonObject
+            VersionDecision(
+                form = obj.getValue("form").jsonPrimitive.content,
+                declared = obj["version"],
+                wellFormed = obj.getValue("wellFormed").jsonPrimitive.content.toBooleanStrict(),
+                decision = obj.getValue("decision").jsonPrimitive.content,
+                code = obj["code"]?.jsonPrimitive?.content,
+            )
+        }
+    }
+
+    /**
+     * The `schemaVersion` grammar, read out of the published schema rather than restated here.
+     *
+     * A copy would let the table and the schema drift while both looked right, which is the exact
+     * failure the corpus exists to prevent. Matched with [Regex.matches] — a full-region match — so
+     * that the assertion does not itself depend on `$`'s end-of-input semantics, which is what
+     * SPEC.md §4.5(b) records going wrong inside the schema.
+     */
+    val schemaVersionGrammar: Regex by lazy {
+        val pattern = json.parseToJsonElement(specDir.resolve("siteskin-1.0.schema.json").readText())
+            .jsonObject.getValue("properties")
+            .jsonObject.getValue("schemaVersion")
+            .jsonObject.getValue("pattern").jsonPrimitive.content
+        Regex(pattern)
     }
 
     /** The layer names the registry defines, independent of the order they run in. */
@@ -160,6 +200,31 @@ internal object SpecCorpus {
     }
 
     private const val EXPECTED_SUFFIX = ".expected.json"
+}
+
+/**
+ * One row of `spec/versions.json`: a spelling of `schemaVersion` and the decision it MUST produce.
+ *
+ * [declared] is the raw JSON element so the table can carry the two non-string cases — an unquoted
+ * number, and the field being absent entirely — which a `String` field could not distinguish from
+ * the string `"null"`.
+ */
+internal data class VersionDecision(
+    val form: String,
+    val declared: JsonElement?,
+    val wellFormed: Boolean,
+    val decision: String,
+    val code: String?,
+) {
+    /** The value as it appears in a manifest, or `null` when [form] is `absent`. */
+    val stringValue: String? get() = if (form == "string") declared?.jsonPrimitive?.content else null
+
+    val label: String
+        get() = when (form) {
+            "absent" -> "<absent>"
+            "number" -> "<number ${declared?.jsonPrimitive?.content}>"
+            else -> "\"${stringValue?.replace("\n", "\\n")}\""
+        }
 }
 
 internal data class RegisteredDiagnostic(
