@@ -106,6 +106,21 @@ back into a code-review guarantee.
 
 Parsing success is not validity. A DTO is untrusted remote input that happens to be well-formed.
 
+### Schema-validation seam (CORE-003)
+
+`SchemaValidator` accepts an already parsed `JsonElement` and returns only
+`ManifestValidationResult(errors, warnings)`. It implements the `version → schema` portion of the
+pipeline: a canonical unsupported major short-circuits before the v1 shape is inspected, while an
+absent or malformed version is a schema error. A valid result is still untrusted and is not a
+`SiteSkinConfiguration`.
+
+This input seam is deliberate while `CORE-002` remains pending. Do not add byte parsing, size
+guarding, DTO mapping, or unknown-field discovery to `SchemaValidator`; those belong to CORE-002.
+Likewise, unknown action/icon values and unknown properties pass structural validation because their
+browser-owned allow-list and warning behavior belongs to the later parsing/security layers. The
+production validator mirrors the fixed v1 structural vocabulary directly; the general JSON Schema
+engine remains a test-only independent contract oracle and must not move onto the runtime classpath.
+
 ---
 
 ## Java version — two knobs, do not conflate them
