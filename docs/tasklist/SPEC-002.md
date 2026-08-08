@@ -181,7 +181,7 @@ caveat rather than a pass.
     on purpose: an implementation tempted to treat an unrecognised object as "structure we do not
     understand" and reject it fails on that field and not on the typo.
 
-- [ ] **TASK-6: the compatibility policy**
+- [x] **TASK-6: the compatibility policy**
   - Modified: `spec/SPEC.md` — §4.2 what may change in a minor (with `<link rel="siteskin">` as the
     worked example, resolving `ADR-002`'s dangling pointer without implementing it), §4.3 what
     forces a major plus the security carve-out, §4.4 the deprecation lifecycle with
@@ -191,6 +191,20 @@ caveat rather than a pass.
     as non-breaking.
   - Tests: `everyRegisteredCodeAppearsInSpec` green — and `SS-W-FIELD-DEPRECATED` must **not** be in
     `diagnostics.json`, so `everyRegisteredCodeHasAFixture` stays satisfied.
+  - **Result:** ✅ §§4.2–4.4 added; 35 tests green, detekt green. `SS-W-FIELD-DEPRECATED` appears
+    once in `SPEC.md` and zero times in `diagnostics.json`, as intended.
+    No new test was added to protect the reservation, because the existing
+    `everyRegisteredCodeHasAFixture` already does it exactly right: registering the code early fails
+    the build for want of a fixture, while registering it *together with* a fixture is the intended
+    path and correctly passes. A dedicated "this code must stay unregistered" test would have
+    blocked the legitimate case.
+    Two things the policy says that are worth not losing. The breaking-change rules end with the
+    security carve-out written as an **exception** — such a change genuinely is breaking, and a
+    policy that reclassifies its own inconvenient cases as compliant would not survive first
+    contact; it is bounded instead by four conditions (narrowest fix, recorded, fixtured, degrades
+    gracefully). And §4.4 states the honest limit of the deprecation guarantee: it is expressed in
+    versions, not time, which is only a strong promise if majors are rare — and this format has no
+    release cadence yet to anchor a duration to. Saying so beats implying a calendar commitment.
 
 - [ ] **TASK-7: close out**
   - Modified: `docs/BACKLOG.md` — mark `SPEC-002` done, note that the `1.0`/`1.1`/`2.0` fixtures the

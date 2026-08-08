@@ -181,7 +181,112 @@ document that the `1.0` schema rejects outright, and whose only conforming diagn
 A conforming implementation MUST NOT report `SS-E-VERSION-UNSUPPORTED` for a manifest that declares
 no version at all.
 
-### 4.5 The free-change window, and one change taken inside it
+### 4.2 What may change in a minor
+
+A **minor** bump (`1.0` → `1.1`) is for changes an implementation of the previous minor handles
+correctly *without being modified*. The test is mechanical, and it is the only test:
+
+> Take a conforming implementation of `1.N`. Feed it a `1.N+1` document. If it produces a safe,
+> sensible result — possibly with fewer features, never with a wrong one — the change was additive.
+
+The following are additive, and MUST NOT bump the major:
+
+1. **Adding an OPTIONAL field**, at any nesting level. Older readers ignore it with
+   `SS-W-FIELD-UNKNOWN` — the policy in §4's table, unchanged since `1.0`, and the reason additive
+   growth is legal at all.
+2. **Adding an allow-listed `action.type`**. An older reader drops that one item with
+   `SS-E-ACTION-UNKNOWN` and keeps the rest of the manifest — which is exactly the behaviour
+   [`ADR-007`](../docs/adr/README.md) specifies, and the reason it specifies it.
+3. **Adding an `icon` name.** An older reader substitutes a generic glyph with `SS-W-ICON-UNKNOWN`.
+4. **Adding a diagnostic code** whose disposition is `warn` or `drop-item`.
+5. **Raising a limit** in [§8](#8-limits). A `1.1` manifest with 8 navigation items renders 5 on a
+   `1.0` reader, truncated with `SS-W-LIMIT-TRUNCATED` — degraded, not wrong. Site owners SHOULD
+   assume older readers truncate.
+6. **Adding a discovery mechanism.** A `<link rel="siteskin">` element, for instance, would be
+   additive: a reader that does not know it still finds `/.well-known/siteskin.json`, so no manifest
+   becomes unreachable. (This is an illustration of the rule, not a commitment to ship it.)
+7. **Adding an OPTIONAL top-level section**, on the same basis as (1).
+
+A minor bump is a **declaration of intent, not a request for permission.** Nothing is unlocked by
+declaring `1.1`: a `1.0` reader given a `1.1` document does not acquire `1.1` behaviour, and a site
+that declares `1.1` while using only `1.0` fields loses nothing. Sites SHOULD bump the minor when
+they start using a field introduced in it, because the declared version is what a diagnostic report
+and a cache entry are keyed on.
+
+### 4.3 What forces a major
+
+A **major** bump (`1.x` → `2.0`) is required when a conforming implementation of the previous
+version, fed a document valid under the new one, would produce a **wrong** result rather than a
+degraded one. Concretely, each of the following is breaking:
+
+1. **Removing or renaming a field** that had meaning. Older readers keep applying the old one.
+2. **Changing a field's type or value grammar**, including narrowing it. A previously-conforming
+   manifest may stop conforming.
+3. **Adding a REQUIRED field.** Every existing document instantly becomes invalid.
+4. **Changing what an existing value means** — redefining `internal_url`, or changing which URL
+   `home` resolves to.
+5. **Lowering a limit.** A manifest that rendered fully now silently truncates.
+6. **Changing a diagnostic's disposition** — `drop-item` to `reject`, or `reject` to `drop-item`.
+   The disposition is part of the code's definition ([§10](#10-dispositions)), so changing it
+   changes what a document does.
+7. **Changing normalization order or the canonical result's shape** ([§12](#12-normalization-and-the-canonical-result)),
+   where the change alters the result for a document that was already valid.
+8. **Removing a supported major from the allow-list.**
+
+Editorial changes — clarified wording, added examples, corrected typos, new fixtures that pin
+already-required behaviour — bump **nothing**. There is no patch component, and this is why one is
+not needed: a change that does not alter what a conforming implementation does is not a version.
+
+#### The security carve-out
+
+**A change required to close a security hole MAY ship in a minor, even when the rules above classify
+it as breaking.**
+
+This is stated as an exception rather than by defining such changes as non-breaking, because they
+*are* breaking and pretending otherwise would not survive contact with the first real case. The
+alternative is worse: a compatibility promise that can trap a security fix behind a major bump is a
+promise to leave holes open, and no site owner is served by that.
+
+The exception is bounded. A change taken under it MUST:
+
+- be the **narrowest** change that closes the hole;
+- be recorded in this document with its reasoning, as §4.5 does for the two taken so far;
+- come with a conformance fixture, so the new behaviour is pinned rather than described;
+- and degrade gracefully — a manifest caught by the new rule falls back per
+  [`ADR-010`](../docs/adr/README.md), never to a broken page.
+
+"Security" here means a defect that lets a site influence something the trust model says it must
+not. It does not mean tidiness, consistency, or a rule someone now considers a mistake.
+
+### 4.4 Deprecation
+
+A field is never removed without warning. The lifecycle is:
+
+1. **Deprecated in a minor.** The field is marked deprecated in this document, in the same minor
+   that introduces its replacement. It keeps working exactly as before.
+2. **Honoured for the remainder of the major.** A conforming implementation MUST continue to honour
+   a deprecated field until the next major. It MUST NOT downgrade it to a warning-only no-op, and
+   MUST NOT treat its presence as an error.
+3. **Removed only at a major.** Removal is a breaking change by §4.3(1) and follows that rule with
+   no exception.
+
+An implementation MAY report a deprecated field to the developer inspector. The reserved code for
+that is **`SS-W-FIELD-DEPRECATED`** (disposition `warn`).
+
+That code is deliberately **not** in [`diagnostics.json`](diagnostics.json), and the omission is not
+an oversight. Nothing in `1.0` is deprecated, so the code has no fixture — and this specification's
+rule is that a code with no fixture does not exist ([§13](#13-conformance-corpus)). Registering it
+early would mean the registry asserted something false about the format in order to satisfy a test.
+The name is reserved here so the first real deprecation cannot pick a colliding one; the code and
+its fixture enter the registry together.
+
+**The honest limit of this guarantee:** it is expressed in versions, not in time. "Until the next
+major" is a strong promise only if majors are rare, and this format has no release cadence yet to
+anchor a duration to. A site owner should read it as *"you will not be broken by a minor"* — which
+is precise — rather than as a calendar commitment, which it is not. When there is a cadence, this
+section should gain one.
+
+### 4.5 The free-change window, and the changes taken inside it
 
 The compatibility promise in §§4.2–4.4 begins binding when this section was written. Before that
 point the format had no published `$id`, no deployed manifest outside this repository, and no
