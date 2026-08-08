@@ -44,13 +44,24 @@ kotlinx.serialization, OkHttp 5.
 See `workflow.md` for the state machine and `PROJECT_RULES.md` for the hard rules.
 
 1. `/idea <TICKET> "Title"` → `Status: PRD_READY`
-2. `/plan <TICKET>` → `Status: PLAN_APPROVED`
-3. `/tasks <TICKET>` → `Status: TASKLIST_READY`
-4. Per task: `/implement <TICKET> TASK-N` → `/pre-commit` → commit `<TICKET> TASK-N: <short>`
-5. `/review` → findings become `TASK-FIX-N` micro-tasks
-6. `/qa` when green, then `/validate`
+2. `/researcher <TICKET>` → `docs/research/<TICKET>.md`
+3. `/plan <TICKET>` → `Status: PLAN_APPROVED`
+4. `/tasks <TICKET>` → `Status: TASKLIST_READY`
+5. Per task: `/implement <TICKET> TASK-N` → `/pre-commit` → commit `<TICKET> TASK-N: <short>`
+6. `/review` → findings become `TASK-FIX-N` micro-tasks
+7. `/qa` when green, then `/validate`
 
-A `PreToolUse` hook blocks `Edit|Write` until all three artifacts carry their ready status.
+Research runs **between** `/idea` and `/plan`, never after it. The PRD says what the ticket is for;
+the plan commits to a trust boundary and a file list. Deciding those without first mapping the
+affected origins, the manifest-controlled surface and what must stay browser-owned means the plan
+is a guess that implementation then has to relitigate. `/plan` reads
+`docs/research/<TICKET>.md` as its input.
+
+The research note carries no `Status:` line and the gate does not check for it — it is an input to
+planning, not one of the three gated artifacts. Skipping it is a workflow violation the tooling
+will not catch for you.
+
+A `PreToolUse` hook blocks `Edit|Write` until all three gated artifacts carry their ready status.
 `docs/`, `reports/` and `spec/` are exempt, or writing the PRD would be blocked by the gate that
 the PRD exists to satisfy.
 
