@@ -1,6 +1,3 @@
-build:
-  maxIssues: 0
-
 config:
   validation: true
   # A deprecated rule name becomes a warning, and a warning becomes a build failure.
@@ -11,29 +8,27 @@ complexity:
   active: true
   LongMethod:
     active: true
-    threshold: 40
+    allowedLines: 40
   LongParameterList:
     active: true
-    functionThreshold: 6
-    constructorThreshold: 7
+    allowedFunctionParameters: 6
+    allowedConstructorParameters: 7
   NestedBlockDepth:
     active: true
-    threshold: 4
-  # NOT `ComplexMethod` — that name is deprecated, and with warningsAsErrors it
-  # fails the entire run rather than the rule.
+    allowedDepth: 4
   CyclomaticComplexMethod:
     active: true
-    threshold: 10
+    allowedComplexity: 10
   CognitiveComplexMethod:
     active: true
-    threshold: 15
+    allowedComplexity: 15
   TooManyFunctions:
     active: true
-    thresholdInFiles: 20
-    thresholdInClasses: 20
-    thresholdInInterfaces: 20
-    thresholdInObjects: 20
-    thresholdInEnums: 20
+    allowedFunctionsPerFile: 20
+    allowedFunctionsPerClass: 20
+    allowedFunctionsPerInterface: 20
+    allowedFunctionsPerObject: 20
+    allowedFunctionsPerEnum: 20
 
 naming:
   active: true

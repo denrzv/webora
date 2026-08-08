@@ -9,25 +9,25 @@ plugins {
 // Detekt is configured for every module here rather than per-module, so adding a
 // module cannot accidentally leave it outside the complexity gate.
 subprojects {
-    apply(plugin = "io.gitlab.arturbosch.detekt")
+    apply(plugin = "dev.detekt")
 
     detekt {
         config.setFrom(files("$rootDir/config/detekt/detekt.yml"))
         buildUponDefaultConfig = true
         allRules = false
-        basePath = rootDir.absolutePath
+        basePath.set(rootDir)
         baseline = file("$rootDir/config/detekt/baseline.xml")
+        // detekt 2.x removed maxIssues. Fail on every finding to preserve the
+        // previous maxIssues=0 gate semantics across Error/Warning/Info severities.
+        failOnSeverity = dev.detekt.gradle.extensions.FailOnSeverity.Info
     }
 
-    // Detekt runs on its own embedded Kotlin compiler, whose --jvm-target ceiling is
-    // lower than the build toolchain's. Left unset it inherits the toolchain's 25 and
-    // fails with "Invalid value (25) passed to --jvm-target". Pin it to the module's
-    // bytecode target instead — the third place the 21 from CLAUDE.md § Java version
-    // has to be stated, and the one that is easiest to forget.
-    tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
-        jvmTarget = "21"
+    // The project runs on JDK 25 but emits JVM 21 bytecode. Keep detekt's type
+    // resolution aligned with the bytecode it analyses rather than the host JDK.
+    tasks.withType<dev.detekt.gradle.Detekt>().configureEach {
+        jvmTarget.set("21")
     }
-    tasks.withType<io.gitlab.arturbosch.detekt.DetektCreateBaselineTask>().configureEach {
-        jvmTarget = "21"
+    tasks.withType<dev.detekt.gradle.DetektCreateBaselineTask>().configureEach {
+        jvmTarget.set("21")
     }
 }
