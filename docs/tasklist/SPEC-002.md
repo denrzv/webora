@@ -39,7 +39,7 @@ caveat rather than a pass.
 
 ## Tasks
 
-- [ ] **TASK-1: layer ordering in the registry, and the short-circuit invariant**
+- [x] **TASK-1: layer ordering in the registry, and the short-circuit invariant**
   - Modified: `spec/diagnostics.json` — add `layerOrder`; correct the `version` layer description
     to match the split (`present, well-formed` version strings only).
   - Modified: `siteskin-core/src/test/kotlin/dev/siteskin/core/spec/SpecCorpus.kt` — read
@@ -68,7 +68,7 @@ caveat rather than a pass.
     asserted "rejected at or before parse ⟹ `parses: false`", which is false — `oversized` is
     refused at the transport layer and its body is valid JSON by design. Caught before running.
 
-- [ ] **TASK-2: the layer ordering becomes normative**
+- [x] **TASK-2: the layer ordering becomes normative**
   - Modified: `spec/SPEC.md` — new §4.1 stating the five layers in order, the short-circuit rule,
     and the `version`/`schema` split with the reason the two codes are distinct.
   - Acceptance: `SPEC.md` and `diagnostics.json` no longer contradict each other on where an absent
@@ -76,6 +76,14 @@ caveat rather than a pass.
     correctly.
   - Tests: `everyRegisteredCodeAppearsInSpec` and `specDeclaresItselfReady` still green (§4 edits
     must not disturb `Status: SPEC_READY`).
+  - **Result:** ✅ §4.1 added with the layer table and the short-circuit rule stated normatively.
+    The contradiction is resolved in both directions: `SPEC.md` now says the version layer runs only
+    on a present, well-formed string, and `diagnostics.json` (TASK-1) says the same. Added a
+    explicit prohibition — an implementation MUST NOT report `SS-E-VERSION-UNSUPPORTED` for a
+    manifest declaring no version — because that is the exact error the old ordering invited.
+    Also generalised the §4 table while there: `1.1` became `1.y` for any `y`, and `2.0` became
+    "any other major", with the supported set named as an allow-list. The old table could be read
+    as three special cases, which is precisely the deny-list reading `ADR-007` warns against.
 
 - [ ] **TASK-3: tighten the `schemaVersion` grammar inside the free-change window**
   - Modified: `spec/siteskin-1.0.schema.json` — pattern → `^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$`,

@@ -116,23 +116,70 @@ away — each of:
 ```
 
 `schemaVersion` is REQUIRED and MUST be a string of the form `MAJOR.MINOR`, both non-negative
-integers.
+integers written without leading zeros.
 
 | Manifest declares | Browser supporting 1.x |
 |---|---|
 | `1.0` | accepted |
-| `1.1` | accepted; unknown fields ignored with `SS-W-FIELD-UNKNOWN` |
-| `2.0` | **rejected** → `SS-E-VERSION-UNSUPPORTED`, regular browser mode |
-| absent or malformed | **rejected** → `SS-E-SCHEMA-INVALID` |
+| `1.y`, any `y` | accepted; unknown fields ignored with `SS-W-FIELD-UNKNOWN` |
+| `0.x`, `2.x`, or any other major | **rejected** → `SS-E-VERSION-UNSUPPORTED`, regular browser mode |
+| absent, non-string or malformed | **rejected** → `SS-E-SCHEMA-INVALID` |
 
 Minor versions are additive by definition; a browser MUST ignore fields it does not recognise rather
 than rejecting the document. An unknown **major** version MUST reject the whole manifest — an
 implementation that reinterprets a format it does not know has replaced a security boundary with a
 guess.
 
-Note that `siteskin-1.0.schema.json` validates the *format* of `schemaVersion` and deliberately does
-not pin the major. Version support is a policy decision evaluated separately, which is why an
-unsupported major produces `SS-E-VERSION-UNSUPPORTED` rather than a schema failure.
+The supported majors are an **allow-list**, currently `{1}`. "Reject `2.x`" is a consequence of that
+allow-list, not a rule of its own; a `3.0` or `7.4` manifest is refused by the same mechanism and
+MUST NOT require a new rule to be written. The machine-readable table of decisions, including every
+malformed spelling at the boundary, is [`versions.json`](versions.json).
+
+### 4.1 Validation layers and short-circuiting
+
+Validation happens in five layers, in this order:
+
+```
+transport → parse → version → schema → security
+```
+
+**A manifest rejected at one layer MUST NOT be evaluated by any later one.** This is normative
+rather than an implementation note: the diagnostics a conforming implementation reports for a given
+document depend on it, and the conformance corpus asserts that a fixture never expects a diagnostic
+from a layer its own rejection has already made unreachable. The order is published in
+[`diagnostics.json`](diagnostics.json) as `layerOrder`.
+
+| Layer | Enforces | On failure |
+|---|---|---|
+| `transport` | HTTPS, redirect policy, the 128 KB cap — before the body is read | `SS-E-SIZE-EXCEEDED` |
+| `parse` | bytes are JSON | `SS-E-PARSE` |
+| `version` | the declared major is supported | `SS-E-VERSION-UNSUPPORTED` |
+| `schema` | structural validity per `siteskin-1.0.schema.json` | `SS-E-SCHEMA-INVALID` |
+| `security` | origin binding, allow-lists, limits, contrast | see [§11](#11-diagnostics) |
+
+#### Why `version` precedes `schema`, and why they are two codes
+
+The split is a real distinction, not a filing convenience, and getting it backwards produces wrong
+diagnostics:
+
+- The **version** layer runs only on a `schemaVersion` that is **present and well-formed**. It asks
+  one question — is this major supported? — and that question is not expressible in JSON Schema,
+  because `siteskin-1.0.schema.json` deliberately does not pin the major (it must stay valid for all
+  of `1.x`). An unsupported major is therefore a **policy** rejection.
+- An **absent, non-string or malformed** `schemaVersion` is a **structural** defect. The version
+  layer has no opinion on it, because there is no major to evaluate. It is caught by the schema like
+  any other malformed field, and yields `SS-E-SCHEMA-INVALID`.
+
+Version runs first because a manifest declaring a major we do not know may legitimately have a shape
+this schema was never written for. Validating a `2.0` document against the `1.0` schema would emit a
+pile of structural errors about a format we have already decided not to interpret — and a pile of
+errors is an invitation to handle them. Refusing on the version alone is the smaller and safer
+behaviour. `fixtures/invalid/version-major-2-alien.json` is that case made concrete: a `2.0`
+document that the `1.0` schema rejects outright, and whose only conforming diagnostic is
+`SS-E-VERSION-UNSUPPORTED`.
+
+A conforming implementation MUST NOT report `SS-E-VERSION-UNSUPPORTED` for a manifest that declares
+no version at all.
 
 ---
 
