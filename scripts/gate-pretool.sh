@@ -3,8 +3,9 @@
 # blocks (exit 2) when it does not.
 #
 # Artifact directories are exempt: writing the PRD that satisfies the gate must
-# not itself be blocked by the gate. Claude Code passes the tool payload on
-# stdin as JSON; we look for the target path in it.
+# not itself be blocked by the gate. Claude Code and Codex both pass tool
+# payloads on stdin as JSON, but use different shapes. We only need to detect
+# whether the requested edit targets an exempt repository path.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -14,8 +15,11 @@ if [[ ! -t 0 ]]; then
   payload="$(cat || true)"
 fi
 
-# Exempt paths: AIDD artifacts, reports, spec text, and the governance docs.
-if grep -qE '"file_path"[[:space:]]*:[[:space:]]*"[^"]*/(docs|reports|spec)/' <<<"${payload}"; then
+# Exempt paths: AIDD artifacts, reports, spec text, and governance docs.
+# Claude Edit/Write payloads expose a file_path. Codex apply_patch payloads
+# carry patch text inside tool_input.command, so match repository paths anywhere
+# in the JSON rather than depending on one provider-specific field name.
+if grep -qE '(^|[/"[:space:]])(docs|reports|spec)/' <<<"${payload}"; then
   exit 0
 fi
 
