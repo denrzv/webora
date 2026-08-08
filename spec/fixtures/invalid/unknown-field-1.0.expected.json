@@ -1,0 +1,32 @@
+{
+  "origin": "https://bloomflowers.example",
+  "note": "Unrecognised fields in a 1.0 document — a misspelled `subtitel`, and an `analytics` block the format has no concept of. Both are ignored with SS-W-FIELD-UNKNOWN and the integration still applies. forward-compat-1.1.json alone would leave open the reading that ignoring unknown fields is a courtesy extended to FUTURE minors, honoured because 1.1 is expected to exist; this fixture pins that the policy is version-independent and a plain typo costs the site nothing but its subtitle. The `analytics` case is the one worth keeping: an implementation tempted to treat an unknown OBJECT differently from an unknown scalar — rejecting it as 'structure we do not understand' — fails here. Note the subtitle is simply absent from the result rather than empty: the site did not supply one this schema recognises.",
+  "diagnostics": [
+    { "code": "SS-W-FIELD-UNKNOWN", "disposition": "warn", "pointer": "/toolbar/subtitel" },
+    { "code": "SS-W-FIELD-UNKNOWN", "disposition": "warn", "pointer": "/analytics" }
+  ],
+  "result": {
+    "schemaVersion": "1.0",
+    "origin": "https://bloomflowers.example",
+    "site": {
+      "id": "bloom-flowers",
+      "name": "Bloom Flowers",
+      "homeUrl": "https://bloomflowers.example/"
+    },
+    "branding": {
+      "primaryColor": "#D94F8A",
+      "textColor": "#2B1B24"
+    },
+    "toolbar": {
+      "title": "Bloom Flowers"
+    },
+    "bottomNavigation": [
+      {
+        "id": "home",
+        "label": "Home",
+        "icon": "home",
+        "action": { "type": "internal_url", "url": "https://bloomflowers.example/" }
+      }
+    ]
+  }
+}

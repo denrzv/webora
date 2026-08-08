@@ -1,0 +1,7 @@
+{
+  "origin": "https://bloomflowers.example",
+  "note": "MINOR is not optional: `1` is not a MAJOR.MINOR string. A grammar failure is structural, so this is SS-E-SCHEMA-INVALID and not SS-E-VERSION-UNSUPPORTED — even though a human reading `1` would guess the site meant major 1, which is exactly why the distinction has to be mechanical rather than charitable. An implementation that inferred `1` as `1.0` would be accepting a version the site never declared. The full boundary, including the whitespace and leading-zero spellings this fixture stands in for, is in ../../versions.json.",
+  "diagnostics": [
+    { "code": "SS-E-SCHEMA-INVALID", "disposition": "reject", "pointer": "/schemaVersion" }
+  ]
+}

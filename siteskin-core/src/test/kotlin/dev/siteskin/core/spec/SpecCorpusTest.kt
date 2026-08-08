@@ -341,12 +341,15 @@ class SpecCorpusTest {
 
     @Test
     fun schemaLayerFixturesFailTheSchema() {
+        // Covers both ways a fixture can be structurally invalid: expecting SS-E-SCHEMA-INVALID,
+        // and declaring `schemaValid: false` without it. The second case only exists because an
+        // earlier layer rejects the document first — see version-major-2-alien.
         val notFailing = SpecCorpus.fixtures
-            .filter { it.bodyParses && SpecCorpus.expectsSchemaFailure(it) }
+            .filter { it.bodyParses && !it.schemaValid() }
             .filter { SpecCorpus.schemaErrorsFor(it).isEmpty() }
             .map { it.name }
         assertTrue(
-            "These declare an SS-E-SCHEMA-INVALID diagnostic but the schema accepts them: $notFailing",
+            "These are declared structurally invalid but the schema accepts them: $notFailing",
             notFailing.isEmpty(),
         )
     }
@@ -358,8 +361,15 @@ class SpecCorpusTest {
         // security control expressed in two languages drifts silently. If someone later encodes one
         // of those rules as a `pattern` or an `enum`, its fixtures start failing here and the
         // duplication is caught at the moment it is introduced rather than at CORE-004.
+        //
+        // The filter is `schemaValid()`, not `!expectsSchemaFailure()`. The difference is the one
+        // fixture that is deliberately malformed *without* an SS-E-SCHEMA-INVALID diagnostic,
+        // because the version layer refuses it first. Keeping the question "is this document
+        // structurally valid?" separate from "would a browser ever ask?" is what lets `oversized`
+        // and `version-major-2` go on proving they are structurally valid — both are rejected
+        // before the schema runs, and both say so in their own notes.
         val unexpectedlyFailing = SpecCorpus.fixtures
-            .filter { it.bodyParses && !SpecCorpus.expectsSchemaFailure(it) }
+            .filter { it.bodyParses && it.schemaValid() }
             .mapNotNull { fixture ->
                 val errors = SpecCorpus.schemaErrorsFor(fixture)
                 if (errors.isEmpty()) null else "${fixture.name}:\n    " + errors.joinToString("\n    ")

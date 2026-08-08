@@ -1,0 +1,10 @@
+{
+  "site": {
+    "id": "bloom-flowers",
+    "name": "Bloom Flowers",
+    "homeUrl": "/"
+  },
+  "toolbar": {
+    "title": "Bloom Flowers"
+  }
+}

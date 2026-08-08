@@ -1,0 +1,7 @@
+{
+  "origin": "https://bloomflowers.example",
+  "note": "schemaVersion is REQUIRED and this document omits it. Rejected at the SCHEMA layer, not the version layer: with no version present there is no major to evaluate, so the version layer has no opinion. An implementation reporting SS-E-VERSION-UNSUPPORTED here would be wrong, and SPEC.md section 4.1 forbids it explicitly — that is the specific mistake the old ordering invited, since diagnostics.json said the version layer ran first without saying what it ran on. Everything else in the document is perfectly valid, so the missing version is the only reason it fails.",
+  "diagnostics": [
+    { "code": "SS-E-SCHEMA-INVALID", "disposition": "reject", "pointer": "" }
+  ]
+}

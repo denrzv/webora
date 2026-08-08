@@ -1,0 +1,8 @@
+{
+  "origin": "https://bloomflowers.example",
+  "note": "A 2.0 manifest whose STRUCTURE is alien to 1.0 — `site` is a string rather than an object, and `surfaces` replaces bottomNavigation. This is the fixture the layer ordering exists for, and it is the difference between this and version-major-2.json: that one is deliberately structurally valid, so it demonstrates a policy rejection without ever testing the order. This one cannot be described at all unless the version layer runs BEFORE the schema. Validating it against siteskin-1.0.schema.json would produce a pile of structural errors about a format we have already decided not to interpret — and a pile of errors is an invitation to handle them. The only conforming diagnostic is SS-E-VERSION-UNSUPPORTED. Note there is no claim here that a real 2.0 will look like this; the point is only that a browser must not care what it looks like.",
+  "schemaValid": false,
+  "diagnostics": [
+    { "code": "SS-E-VERSION-UNSUPPORTED", "disposition": "reject", "pointer": "/schemaVersion" }
+  ]
+}

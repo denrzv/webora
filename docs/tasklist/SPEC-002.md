@@ -150,7 +150,7 @@ caveat rather than a pass.
     supportedMajors" rather than trusting the table's own `decision` column, so the two have to
     agree instead of the test restating one of them.
 
-- [ ] **TASK-5: the document fixtures**
+- [x] **TASK-5: the document fixtures**
   - New: `spec/fixtures/invalid/version-missing.{json,expected.json}` — `SS-E-SCHEMA-INVALID`.
   - New: `spec/fixtures/invalid/version-malformed.{json,expected.json}` — `"1"`,
     `SS-E-SCHEMA-INVALID`.
@@ -165,6 +165,21 @@ caveat rather than a pass.
     `everyExpectationDeclaresAnOrigin` all green.
   - Negative control: flip the alien fixture to `"schemaValid": true` →
     `securityLayerFixturesPassTheSchema` must fail. Restore.
+  - **Result:** ✅ 4 fixtures (8 files); 35 tests green.
+    Negative control confirmed: with `"schemaValid": true` the suite failed exactly one test,
+    `securityLayerFixturesPassTheSchema`, reporting *"invalid/version-major-2-alien: /site: element
+    is not a object"*. So the declaration is asserted against the real schema rather than trusted —
+    and, incidentally, that failure is the proof the new fixtures are actually being discovered and
+    exercised rather than sitting inert in the directory.
+    Two existing tests were re-expressed to use `schemaValid()` rather than
+    `!expectsSchemaFailure()`. `securityLayerFixturesPassTheSchema` keeps `oversized` and
+    `version-major-2` in scope — both rejected before the schema runs, both claiming structural
+    validity in their own notes — while excluding the alien fixture by its own declaration.
+    `schemaLayerFixturesFailTheSchema` widens correspondingly, so a fixture cannot declare itself
+    malformed and then quietly satisfy the schema.
+    `unknown-field-1.0` carries an unknown *object* (`analytics`) as well as a misspelled scalar,
+    on purpose: an implementation tempted to treat an unrecognised object as "structure we do not
+    understand" and reject it fails on that field and not on the typo.
 
 - [ ] **TASK-6: the compatibility policy**
   - Modified: `spec/SPEC.md` — §4.2 what may change in a minor (with `<link rel="siteskin">` as the

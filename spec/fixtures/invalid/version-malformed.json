@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "1",
+  "site": {
+    "id": "bloom-flowers",
+    "name": "Bloom Flowers",
+    "homeUrl": "/"
+  },
+  "toolbar": {
+    "title": "Bloom Flowers"
+  }
+}
