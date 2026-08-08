@@ -32,6 +32,18 @@
       "layer": "version",
       "disposition": "reject",
       "summary": "schemaVersion declares a major version this implementation does not understand. Silently reinterpreting an unknown format is how a security boundary becomes a guess."
+    },
+    {
+      "code": "SS-E-SCHEMA-INVALID",
+      "layer": "schema",
+      "disposition": "reject",
+      "summary": "Document fails siteskin-1.0.schema.json: a missing required field, a wrong type, or a malformed value. Absence of a required field is not an element that can be dropped, so this rejects."
+    },
+    {
+      "code": "SS-W-FIELD-UNKNOWN",
+      "layer": "security",
+      "disposition": "warn",
+      "summary": "A field not defined in this schema version was ignored. Minor versions are additive, so unknown fields must never be fatal — this is the policy that lets a 1.1 manifest be served safely to a 1.0 reader. toolbar.showDomain reaches this path by design (ADR-006): it is ignored, not honoured."
     }
   ]
 }

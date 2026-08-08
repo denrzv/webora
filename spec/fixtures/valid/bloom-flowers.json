@@ -1,0 +1,57 @@
+{
+  "schemaVersion": "1.0",
+  "site": {
+    "id": "bloom-flowers",
+    "name": "Bloom Flowers",
+    "shortName": "Bloom",
+    "homeUrl": "/"
+  },
+  "branding": {
+    "primaryColor": "#D94F8A",
+    "secondaryColor": "#FADADD",
+    "backgroundColor": "#FFF7FA",
+    "textColor": "#2B1B24",
+    "logoUrl": "/assets/siteskin/logo.png"
+  },
+  "toolbar": {
+    "title": "Bloom Flowers",
+    "subtitle": "Fresh flowers delivered today"
+  },
+  "bottomNavigation": [
+    {
+      "id": "home",
+      "label": "Home",
+      "icon": "home",
+      "action": { "type": "internal_url", "url": "/" }
+    },
+    {
+      "id": "catalog",
+      "label": "Catalog",
+      "icon": "grid_view",
+      "action": { "type": "internal_url", "url": "/catalog" },
+      "match": ["/catalog", "/catalog/**"]
+    },
+    {
+      "id": "cart",
+      "label": "Cart",
+      "icon": "shopping_cart",
+      "action": { "type": "internal_url", "url": "/cart" },
+      "match": ["/cart/**"]
+    },
+    {
+      "id": "profile",
+      "label": "Profile",
+      "icon": "person",
+      "action": { "type": "internal_url", "url": "/account" },
+      "match": ["/account/**"]
+    }
+  ],
+  "quickActions": [
+    {
+      "id": "call-shop",
+      "label": "Call",
+      "icon": "call",
+      "action": { "type": "phone", "value": "+10000000000" }
+    }
+  ]
+}

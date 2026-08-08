@@ -121,7 +121,24 @@ did not happen.
   - Tests: `everyRegisteredCodeAppearsInSpec` (string containment — enough to catch a code added to
     the registry but never documented)
 
-- [ ] **TASK-3: JSON Schema and the valid corpus**
+- [x] **TASK-3: JSON Schema and the valid corpus**
+  - **Done.** 17 corpus tests green, detekt green, `ANDROID_HOME`/`ANDROID_SDK_ROOT` unset.
+  - *Deviation:* the task said "Enums encode the allow-lists: nine action types, four schemes, the
+    closed icon set". **The schema enumerates none of them, deliberately.** An `enum` on
+    `action.type` makes an unrecognised type `SS-E-SCHEMA-INVALID` → `reject`, which is precisely
+    the outcome `ADR-007` exists to forbid; the same argument applies to icons. Both are constrained
+    by pattern instead — `^[a-z][a-z_]{0,31}$` and `^[a-z][a-z0-9_]{0,31}$` — which delivers the
+    real security property (neither field can carry a URL or resource reference) while leaving the
+    allow-list enforcement in the security layer where the disposition can be `drop-item`. Schemes
+    were never expressible here anyway: the schema does not know the serving origin.
+    `schemaDoesNotEnumerateActionTypesOrIcons` asserts this directly, because no *valid* fixture
+    uses an unknown type and the corpus would otherwise not notice an enum being added.
+  - *Deviation:* no `maxLength` or `maxItems` anywhere in the schema, though the limits are real.
+    Encoding them would make an over-long title a rejection, while §8 requires truncation with a
+    warning. Limits are a security-layer concern for the same reason the allow-lists are.
+  - *Note:* `if`/`then` conditionals require `url` for `internal_url`/`external_url` and `value` for
+    `phone`/`email`/`map`. These fire only for known types, so unknown types stay unconstrained and
+    reach the security layer intact.
   - New: `spec/siteskin-1.0.schema.json` — draft 2020-12, structure only,
     `additionalProperties: true` (unknown fields are ignored by design; a schema rejecting them
     would contradict the `SPEC-002` forward-compatibility policy). No `$id` — see plan § Open

@@ -1,0 +1,14 @@
+{
+  "origin": "https://minimal.example",
+  "note": "The format's floor: schemaVersion plus site.id and site.name, nothing else. Proves a site can adopt SiteSkin without supplying branding or navigation, and pins the two exceptions in SPEC.md section 12 — `origin` and `site.homeUrl` are present even though the manifest omits homeUrl, while every other absent optional is omitted rather than rendered null.",
+  "diagnostics": [],
+  "result": {
+    "schemaVersion": "1.0",
+    "origin": "https://minimal.example",
+    "site": {
+      "id": "minimal",
+      "name": "Minimal",
+      "homeUrl": "https://minimal.example/"
+    }
+  }
+}

@@ -167,6 +167,77 @@ class SpecCorpusTest {
     }
 
     @Test
+    fun validFixturesPassTheSchema() {
+        val failures = SpecCorpus.fixtures
+            .filter { it.isValidBucket }
+            .mapNotNull { fixture ->
+                val errors = SpecCorpus.schemaErrorsFor(fixture)
+                if (errors.isEmpty()) null else "${fixture.name}:\n    " + errors.joinToString("\n    ")
+            }
+        assertTrue(failures.joinToString("\n"), failures.isEmpty())
+    }
+
+    @Test
+    fun schemaLayerFixturesFailTheSchema() {
+        val notFailing = SpecCorpus.fixtures
+            .filter { it.bodyParses && SpecCorpus.expectsSchemaFailure(it) }
+            .filter { SpecCorpus.schemaErrorsFor(it).isEmpty() }
+            .map { it.name }
+        assertTrue(
+            "These declare an SS-E-SCHEMA-INVALID diagnostic but the schema accepts them: $notFailing",
+            notFailing.isEmpty(),
+        )
+    }
+
+    @Test
+    fun securityLayerFixturesPassTheSchema() {
+        // The assertion that keeps the layer split honest. Origin binding and scheme allow-listing
+        // are deliberately absent from the schema: it does not know the serving origin, and a
+        // security control expressed in two languages drifts silently. If someone later encodes one
+        // of those rules as a `pattern` or an `enum`, its fixtures start failing here and the
+        // duplication is caught at the moment it is introduced rather than at CORE-004.
+        val unexpectedlyFailing = SpecCorpus.fixtures
+            .filter { it.bodyParses && !SpecCorpus.expectsSchemaFailure(it) }
+            .mapNotNull { fixture ->
+                val errors = SpecCorpus.schemaErrorsFor(fixture)
+                if (errors.isEmpty()) null else "${fixture.name}:\n    " + errors.joinToString("\n    ")
+            }
+        assertTrue(
+            "A fixture whose rule lives in the security layer must still be structurally valid.\n" +
+                "If one of these is genuinely malformed, fix the fixture. If the schema grew a\n" +
+                "security rule, remove it — that rule belongs in CORE-004.\n" +
+                unexpectedlyFailing.joinToString("\n"),
+            unexpectedlyFailing.isEmpty(),
+        )
+    }
+
+    @Test
+    fun schemaDoesNotEnumerateActionTypesOrIcons() {
+        // ADR-007 requires an unrecognised action type to drop one item and keep the manifest. An
+        // `enum` here would silently upgrade that to a whole-document rejection, and the corpus
+        // would not notice because no valid fixture uses an unknown type. Asserted directly.
+        val unknownType = json.parseToJsonElement(
+            """
+            {
+              "schemaVersion": "1.0",
+              "site": { "id": "probe", "name": "Probe" },
+              "bottomNavigation": [
+                { "id": "x", "label": "X", "icon": "not_a_real_icon_name",
+                  "action": { "type": "teleport" } }
+              ]
+            }
+            """.trimIndent(),
+        )
+        val errors = mutableListOf<String>()
+        val accepted = SpecCorpus.schema.validate(unknownType) { errors += it.message }
+        assertTrue(
+            "An unknown action type or icon name must be structurally valid so the security layer " +
+                "can drop the item rather than the schema rejecting the document: $errors",
+            accepted,
+        )
+    }
+
+    @Test
     fun jsonSchemaValidatorSupportsDraft2020_12() {
         // Pins the assumption behind the dependency choice rather than leaving it to a comment.
         // If a future bump drops 2020-12 support, this fails here instead of failing obscurely

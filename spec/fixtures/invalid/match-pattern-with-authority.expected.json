@@ -1,0 +1,7 @@
+{
+  "origin": "https://bloomflowers.example",
+  "note": "A match pattern carrying a scheme and authority. Patterns are path-only, so this is structural and the schema catches it — the pattern ^/([^/].*)?$ rejects both absolute URLs and protocol-relative //host references. Rejecting rather than dropping is deliberate: a match pattern that reaches outside the origin means the site has misunderstood what match is for, and silently dropping it would leave the item active on paths the site never intended.",
+  "diagnostics": [
+    { "code": "SS-E-SCHEMA-INVALID", "disposition": "reject", "pointer": "/bottomNavigation/0/match/0" }
+  ]
+}

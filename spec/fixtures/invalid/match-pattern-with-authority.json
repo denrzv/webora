@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "1.0",
+  "site": { "id": "match-authority", "name": "Match Authority" },
+  "bottomNavigation": [
+    {
+      "id": "catalog",
+      "label": "Catalog",
+      "icon": "grid_view",
+      "action": { "type": "internal_url", "url": "/catalog" },
+      "match": ["https://evil.example/catalog/**"]
+    }
+  ]
+}

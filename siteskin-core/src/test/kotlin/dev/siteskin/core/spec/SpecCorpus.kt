@@ -1,5 +1,6 @@
 package dev.siteskin.core.spec
 
+import io.github.optimumcode.json.schema.JsonSchema
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
@@ -27,6 +28,30 @@ internal object SpecCorpus {
     )
 
     val fixturesDir: File = specDir.resolve("fixtures")
+
+    /**
+     * The published JSON Schema. Structural validity only — it cannot express origin binding,
+     * because it does not know the origin a manifest was served from. See [SpecCorpusTest].
+     */
+    val schema: JsonSchema by lazy {
+        JsonSchema.fromDefinition(specDir.resolve("siteskin-1.0.schema.json").readText())
+    }
+
+    /** Validates a fixture body against [schema], returning the failures as readable strings. */
+    fun schemaErrorsFor(fixture: Fixture): List<String> {
+        val body = json.parseToJsonElement(fixture.bodyFile.readText())
+        val errors = mutableListOf<String>()
+        schema.validate(body) { errors += "${it.objectPath}: ${it.message}" }
+        return errors
+    }
+
+    /**
+     * True when this fixture is expected to fail the JSON Schema — that is, when any of its
+     * expected diagnostics is registered at the `schema` layer. Every other fixture, including the
+     * deliberately invalid ones, must *pass* the schema: their rules live in the security layer.
+     */
+    fun expectsSchemaFailure(fixture: Fixture): Boolean =
+        fixture.diagnostics.any { registry[it.code]?.layer == "schema" }
 
     /** Every registered diagnostic, keyed by code. */
     val registry: Map<String, RegisteredDiagnostic> by lazy {

@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "1.1",
+  "site": {
+    "id": "forward-compat",
+    "name": "Forward Compat",
+    "homeUrl": "/"
+  },
+  "toolbar": {
+    "title": "Forward Compat",
+    "showDomain": false
+  },
+  "branding": {
+    "primaryColor": "#2B6CB0",
+    "textColor": "#111111",
+    "darkVariant": { "primaryColor": "#90CDF4" }
+  },
+  "bottomNavigation": [
+    {
+      "id": "home",
+      "label": "Home",
+      "icon": "home",
+      "action": { "type": "internal_url", "url": "/" },
+      "badge": { "source": "cart-count" }
+    }
+  ],
+  "localization": { "en-GB": { "title": "Forward Compat" } }
+}

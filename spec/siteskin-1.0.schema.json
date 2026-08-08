@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SiteSkin Manifest 1.0",
+  "description": "Structural validity ONLY. This schema is one layer of validation, not the whole of it. Origin binding, URI-scheme allow-listing, asset provenance, duplicate ids, limit clamping and contrast correction are all enforced afterwards by the security layer and are deliberately absent here — the schema does not know the origin the manifest was served from, and duplicating a security control in a second language invites the two to drift apart silently. A document that validates against this schema has cleared the structural bar and nothing more. See SPEC.md section 1.",
+  "type": "object",
+  "required": ["schemaVersion", "site"],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "description": "MAJOR.MINOR. The major is deliberately NOT pinned here: version support is a policy decision, so an unsupported major produces SS-E-VERSION-UNSUPPORTED rather than a schema failure, and this file stays valid for all of 1.x.",
+      "pattern": "^[0-9]+\\.[0-9]+$"
+    },
+    "site": {
+      "type": "object",
+      "required": ["id", "name"],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "name": { "type": "string", "minLength": 1 },
+        "shortName": { "type": "string", "minLength": 1 },
+        "homeUrl": { "type": "string", "minLength": 1 }
+      }
+    },
+    "branding": {
+      "type": "object",
+      "properties": {
+        "primaryColor": { "$ref": "#/$defs/color" },
+        "secondaryColor": { "$ref": "#/$defs/color" },
+        "backgroundColor": { "$ref": "#/$defs/color" },
+        "textColor": { "$ref": "#/$defs/color" },
+        "logoUrl": { "type": "string", "minLength": 1 }
+      }
+    },
+    "toolbar": {
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "subtitle": { "type": "string" }
+      }
+    },
+    "bottomNavigation": { "type": "array", "items": { "$ref": "#/$defs/navigationItem" } },
+    "menu": { "type": "array", "items": { "$ref": "#/$defs/navigationItem" } },
+    "quickActions": { "type": "array", "items": { "$ref": "#/$defs/navigationItem" } }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$"
+    },
+    "color": {
+      "type": "string",
+      "description": "#RGB or #RRGGBB. An unparseable colour falls back to a browser default rather than failing, so this pattern catches the typo at lint time without making it fatal at runtime.",
+      "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+    },
+    "icon": {
+      "type": "string",
+      "description": "Deliberately a pattern and NOT an enum. The pattern is what delivers the security property: an icon field structurally cannot carry a URL or any other resource reference. Enumerating the names here would make a typo'd icon SS-E-SCHEMA-INVALID and discard the whole manifest, which contradicts the reasoning ADR-007 gives for unknown action types. An unrecognised name degrades to a generic glyph with SS-W-ICON-UNKNOWN.",
+      "pattern": "^[a-z][a-z0-9_]{0,31}$"
+    },
+    "matchPattern": {
+      "type": "string",
+      "description": "An origin-relative path pattern. Must begin with a single '/', which rules out both absolute URLs and protocol-relative '//host' references. Glob grammar is in SPEC.md section 7.1.",
+      "pattern": "^/([^/].*)?$"
+    },
+    "navigationItem": {
+      "type": "object",
+      "required": ["id", "label", "action"],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "label": { "type": "string", "minLength": 1 },
+        "icon": { "$ref": "#/$defs/icon" },
+        "action": { "$ref": "#/$defs/action" },
+        "match": { "type": "array", "items": { "$ref": "#/$defs/matchPattern" } }
+      }
+    },
+    "action": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Deliberately NOT an enum, for the same reason as icon: ADR-007 requires an unrecognised action type to drop that one item (SS-E-ACTION-UNKNOWN) and keep the rest of the manifest, so a site experimenting with a 1.1 action does not lose its integration. An enum here would turn that into a whole-document rejection. The allow-list is enforced by the security layer.",
+          "pattern": "^[a-z][a-z_]{0,31}$"
+        },
+        "url": { "type": "string", "minLength": 1 },
+        "value": { "type": "string", "minLength": 1 }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "internal_url" } }, "required": ["type"] },
+          "then": { "required": ["url"] }
+        },
+        {
+          "if": { "properties": { "type": { "const": "external_url" } }, "required": ["type"] },
+          "then": { "required": ["url"] }
+        },
+        {
+          "if": { "properties": { "type": { "const": "phone" } }, "required": ["type"] },
+          "then": { "required": ["value"] }
+        },
+        {
+          "if": { "properties": { "type": { "const": "email" } }, "required": ["type"] },
+          "then": { "required": ["value"] }
+        },
+        {
+          "if": { "properties": { "type": { "const": "map" } }, "required": ["type"] },
+          "then": { "required": ["value"] }
+        }
+      ]
+    }
+  }
+}

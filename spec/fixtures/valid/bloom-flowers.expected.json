@@ -1,0 +1,63 @@
+{
+  "origin": "https://bloomflowers.example",
+  "note": "The reference integration, matching mockup screen 3. denrzv/bloom-flowers serves a byte-identical copy of the body at /.well-known/siteskin.json — this file is the source and the copy direction is one-way. Nothing here is dropped or corrected: relative URLs resolve to absolute inside the origin, and the palette already clears WCAG AA against #2B1B24, so no diagnostics are expected at all.",
+  "diagnostics": [],
+  "result": {
+    "schemaVersion": "1.0",
+    "origin": "https://bloomflowers.example",
+    "site": {
+      "id": "bloom-flowers",
+      "name": "Bloom Flowers",
+      "shortName": "Bloom",
+      "homeUrl": "https://bloomflowers.example/"
+    },
+    "branding": {
+      "primaryColor": "#D94F8A",
+      "secondaryColor": "#FADADD",
+      "backgroundColor": "#FFF7FA",
+      "textColor": "#2B1B24",
+      "logoUrl": "https://bloomflowers.example/assets/siteskin/logo.png"
+    },
+    "toolbar": {
+      "title": "Bloom Flowers",
+      "subtitle": "Fresh flowers delivered today"
+    },
+    "bottomNavigation": [
+      {
+        "id": "home",
+        "label": "Home",
+        "icon": "home",
+        "action": { "type": "internal_url", "url": "https://bloomflowers.example/" }
+      },
+      {
+        "id": "catalog",
+        "label": "Catalog",
+        "icon": "grid_view",
+        "action": { "type": "internal_url", "url": "https://bloomflowers.example/catalog" },
+        "match": ["/catalog", "/catalog/**"]
+      },
+      {
+        "id": "cart",
+        "label": "Cart",
+        "icon": "shopping_cart",
+        "action": { "type": "internal_url", "url": "https://bloomflowers.example/cart" },
+        "match": ["/cart/**"]
+      },
+      {
+        "id": "profile",
+        "label": "Profile",
+        "icon": "person",
+        "action": { "type": "internal_url", "url": "https://bloomflowers.example/account" },
+        "match": ["/account/**"]
+      }
+    ],
+    "quickActions": [
+      {
+        "id": "call-shop",
+        "label": "Call",
+        "icon": "call",
+        "action": { "type": "phone", "value": "+10000000000" }
+      }
+    ]
+  }
+}

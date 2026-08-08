@@ -1,0 +1,34 @@
+{
+  "origin": "https://forward.example",
+  "note": "A 1.1 manifest read by a 1.x browser. Minor versions are additive, so unknown fields are ignored with a warning rather than rejected — the policy that makes 1.1 shippable without breaking 1.0 readers. `toolbar.showDomain` is deliberately among them: ADR-006 requires it to be IGNORED, not honoured and not fatal, and this fixture is what makes that distinction testable. `darkVariant`, `badge` and `localization` are the real 1.1 candidates from DEVELOPMENT_PLAN's decision table.",
+  "diagnostics": [
+    { "code": "SS-W-FIELD-UNKNOWN", "disposition": "warn", "pointer": "/toolbar/showDomain" },
+    { "code": "SS-W-FIELD-UNKNOWN", "disposition": "warn", "pointer": "/branding/darkVariant" },
+    { "code": "SS-W-FIELD-UNKNOWN", "disposition": "warn", "pointer": "/bottomNavigation/0/badge" },
+    { "code": "SS-W-FIELD-UNKNOWN", "disposition": "warn", "pointer": "/localization" }
+  ],
+  "result": {
+    "schemaVersion": "1.1",
+    "origin": "https://forward.example",
+    "site": {
+      "id": "forward-compat",
+      "name": "Forward Compat",
+      "homeUrl": "https://forward.example/"
+    },
+    "branding": {
+      "primaryColor": "#2B6CB0",
+      "textColor": "#111111"
+    },
+    "toolbar": {
+      "title": "Forward Compat"
+    },
+    "bottomNavigation": [
+      {
+        "id": "home",
+        "label": "Home",
+        "icon": "home",
+        "action": { "type": "internal_url", "url": "https://forward.example/" }
+      }
+    ]
+  }
+}

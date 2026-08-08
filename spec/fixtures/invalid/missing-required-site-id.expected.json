@@ -1,0 +1,7 @@
+{
+  "origin": "https://bloomflowers.example",
+  "note": "site.id is REQUIRED. Per SPEC.md section 10 a missing required field rejects rather than dropping an item — the absence of a field is not an element that can be removed. This is the schema layer's own diagnostic and must fail siteskin-1.0.schema.json.",
+  "diagnostics": [
+    { "code": "SS-E-SCHEMA-INVALID", "disposition": "reject", "pointer": "/site" }
+  ]
+}
