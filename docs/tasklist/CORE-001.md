@@ -179,7 +179,7 @@ A control that was not run is left blank, never assumed.
     reference manifest must resolve, or `denrzv/bloom-flowers` is serving an integration the browser
     would partly discard — which no other test in either repo would have noticed.
 
-- [ ] TASK-7: Close out
+- [x] TASK-7: Close out
   - New: `docs/adr/ADR-004-origin-binding.md`
   - Modified: `docs/adr/README.md`, `docs/ROADMAP.md`, `CLAUDE.md`, `config/detekt/detekt.yml`
   - Acceptance: `ADR-004` is promoted to a file recording the trailing-dot, IP-literal, PSL-section
@@ -189,4 +189,6 @@ A control that was not run is left blank, never assumed.
     `ROADMAP.md` ticks `CORE-001`.
   - Tests: `bash scripts/pre-commit-check.sh`
   - Negative control: add a file importing `java.net.URL`, confirm `./gradlew detekt` fails, delete
-    it. (Result: )
+    it. (Result: **ran, fails as required.** `ForbiddenUrlNegativeControl.kt:3` reported the
+    `java.net.URL` import as forbidden by `ForbiddenImport`; the temporary file was deleted and
+    detekt passes after restoration.)

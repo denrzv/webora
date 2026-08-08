@@ -41,6 +41,12 @@ naming:
 
 style:
   active: true
+  ForbiddenImport:
+    active: true
+    forbiddenImports:
+      # java.net.URL.equals may perform DNS resolution. Origin code must use java.net.URI and
+      # explicit canonical comparison so equality is synchronous and never leaks a lookup.
+      - 'java.net.URL'
   MagicNumber:
     active: true
     ignoreNumbers: ['-1', '0', '1', '2']

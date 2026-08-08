@@ -13,7 +13,7 @@ re-arguing.
 | 001 | Android WebView as the rendering engine | ACCEPTED |
 | 002 | `.well-known/siteskin.json` for discovery | ACCEPTED |
 | 003 | Manifest is declarative data, never code | ACCEPTED |
-| 004 | Configuration is bound to an origin | ACCEPTED |
+| [004](ADR-004-origin-binding.md) | Configuration is bound to an origin | ACCEPTED |
 | 005 | No general-purpose JavaScript bridge in MVP | ACCEPTED |
 | [006](ADR-006-browser-owned-security-chrome.md) | **Browser-owned security chrome; domain not suppressible** | ACCEPTED |
 | 007 | Strict allow-listed action types | ACCEPTED |
@@ -51,14 +51,6 @@ The manifest may request only capabilities the browser already implements. No Ja
 Android context, no Kotlin/Java, no arbitrary intents, no package execution, no shell, no dynamic
 loading, no unrestricted URI schemes or file access. Everything the manifest can express is a value
 the browser interprets, never an instruction the browser executes.
-
-## ADR-004 — Configuration is bound to an origin
-
-`origin = scheme + host + port`. `https://shop.example`, `https://admin.shop.example` and
-`http://shop.example` are three different origins with no relationship. Subdomains are **not**
-trusted automatically — a subdomain is frequently delegated to a third party, and inheriting the
-parent's branding would let that third party impersonate it. Cached configuration is never applied
-to a different origin. Manifest redirects are same-origin only, max 2 hops.
 
 ## ADR-005 — No general-purpose JavaScript bridge in MVP
 
