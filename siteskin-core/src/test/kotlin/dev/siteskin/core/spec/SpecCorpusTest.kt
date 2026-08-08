@@ -167,6 +167,20 @@ class SpecCorpusTest {
     }
 
     @Test
+    fun everyDeniedSchemeHasItsOwnFixture() {
+        // PRD acceptance criterion 5 names these five explicitly. Asserted individually rather than
+        // by counting SS-E-SCHEME-DENIED fixtures, because five fixtures for `javascript:` would
+        // satisfy a count while leaving `intent:` — the one ADR-007 singles out as the reason this
+        // is an allow-list — completely untested.
+        val bodies = SpecCorpus.fixtures
+            .filterNot { it.isValidBucket }
+            .joinToString("\n") { it.bodyFile.readText() }
+
+        val missing = DENIED_SCHEMES.filterNot { bodies.contains("$it:") }
+        assertTrue("Denied schemes with no fixture: $missing", missing.isEmpty())
+    }
+
+    @Test
     fun validFixturesPassTheSchema() {
         val failures = SpecCorpus.fixtures
             .filter { it.isValidBucket }
@@ -260,5 +274,8 @@ class SpecCorpusTest {
 
     private companion object {
         val ORIGIN_FORM = Regex("^https?://[a-z0-9.-]+(:[0-9]+)?$")
+
+        /** PRD acceptance criterion 5. Each needs a fixture of its own. */
+        val DENIED_SCHEMES = listOf("javascript", "file", "content", "intent", "data")
     }
 }

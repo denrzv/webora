@@ -1,0 +1,31 @@
+{
+  "origin": "https://bloomflowers.example",
+  "note": "The reason this is an allow-list and not a deny-list. ADR-007 names intent: specifically: it can launch arbitrary components with arbitrary extras, and anyone enumerating 'dangerous schemes' from memory forgets it. If the corpus contained only javascript: and file:, a deny-list implementation would pass the whole suite. Structurally valid JSON, so it MUST pass the schema \u2014 the scheme allow-list lives in the security layer.",
+  "diagnostics": [
+    {
+      "code": "SS-E-SCHEME-DENIED",
+      "disposition": "drop-item",
+      "pointer": "/bottomNavigation/1/action/url"
+    }
+  ],
+  "result": {
+    "schemaVersion": "1.0",
+    "origin": "https://bloomflowers.example",
+    "site": {
+      "id": "bloom-flowers",
+      "name": "Bloom Flowers",
+      "homeUrl": "https://bloomflowers.example/"
+    },
+    "bottomNavigation": [
+      {
+        "id": "home",
+        "label": "Home",
+        "icon": "home",
+        "action": {
+          "type": "internal_url",
+          "url": "https://bloomflowers.example/"
+        }
+      }
+    ]
+  }
+}

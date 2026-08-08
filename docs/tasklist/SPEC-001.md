@@ -193,7 +193,15 @@ did not happen.
     It fails loudly if a security rule is later smuggled into the schema, where it would silently
     drift from `CORE-004`.
 
-- [ ] **TASK-5: Scheme allow-list invalid corpus**
+- [x] **TASK-5: Scheme allow-list invalid corpus**
+  - **Done.** Six fixtures, core subset gate green.
+  - *Note:* `everyDeniedSchemeHasItsOwnFixture` asserts the five scheme names individually rather
+    than counting `SS-E-SCHEME-DENIED` fixtures. Counting would be satisfied by five fixtures for
+    `javascript:` while leaving `intent:` — the one `ADR-007` singles out as the reason this is an
+    allow-list at all — entirely untested.
+  - *Note:* `external-url-http` tests a different rule from the other five. `http` is a real scheme,
+    so an implementation that allow-lists by scheme name alone lets it through; what catches it is
+    §7's "`external_url` MUST be HTTPS".
   - New: one fixture per denied scheme (PRD AC 5) — `javascript:`, `file:`, `content:`, `intent:`,
     `data:` — registering `SS-E-SCHEME-DENIED`
   - New: `external-url-http.{json,expected.json}` — `external_url` over cleartext HTTP is denied

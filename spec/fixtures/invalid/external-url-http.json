@@ -1,0 +1,28 @@
+{
+  "schemaVersion": "1.0",
+  "site": {
+    "id": "bloom-flowers",
+    "name": "Bloom Flowers",
+    "homeUrl": "/"
+  },
+  "bottomNavigation": [
+    {
+      "id": "home",
+      "label": "Home",
+      "icon": "home",
+      "action": {
+        "type": "internal_url",
+        "url": "/"
+      }
+    },
+    {
+      "id": "partner",
+      "label": "Partner",
+      "icon": "grid_view",
+      "action": {
+        "type": "external_url",
+        "url": "http://partner.example/offers"
+      }
+    }
+  ]
+}

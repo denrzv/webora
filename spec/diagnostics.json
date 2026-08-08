@@ -46,6 +46,12 @@
       "summary": "A URL resolves outside the serving origin. Not expressible in JSON Schema, which does not know the origin the manifest was served from — this is the rule that makes the schema/security split necessary rather than tidy."
     },
     {
+      "code": "SS-E-SCHEME-DENIED",
+      "layer": "security",
+      "disposition": "drop-item",
+      "summary": "A URI scheme outside the allow-list (https, mailto, tel, geo), or an external_url that is not HTTPS. Allow-list rather than deny-list: a deny-list is a bet that every dangerous scheme was enumerated, and intent: alone shows how that bet loses."
+    },
+    {
       "code": "SS-E-ASSET-CROSS-ORIGIN",
       "layer": "security",
       "disposition": "drop-item",

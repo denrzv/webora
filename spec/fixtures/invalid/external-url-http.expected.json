@@ -1,0 +1,31 @@
+{
+  "origin": "https://bloomflowers.example",
+  "note": "external_url over cleartext HTTP. http is a perfectly real scheme, which is what makes this different from the five above \u2014 the rule being tested is section 7's 'external_url MUST be HTTPS', not scheme allow-listing in general. An implementation that allow-lists by scheme name alone lets this through.",
+  "diagnostics": [
+    {
+      "code": "SS-E-SCHEME-DENIED",
+      "disposition": "drop-item",
+      "pointer": "/bottomNavigation/1/action/url"
+    }
+  ],
+  "result": {
+    "schemaVersion": "1.0",
+    "origin": "https://bloomflowers.example",
+    "site": {
+      "id": "bloom-flowers",
+      "name": "Bloom Flowers",
+      "homeUrl": "https://bloomflowers.example/"
+    },
+    "bottomNavigation": [
+      {
+        "id": "home",
+        "label": "Home",
+        "icon": "home",
+        "action": {
+          "type": "internal_url",
+          "url": "https://bloomflowers.example/"
+        }
+      }
+    ]
+  }
+}
