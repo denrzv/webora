@@ -16,6 +16,27 @@ this ticket, so `everyRegisteredCodeHasAFixture` stays satisfied throughout.
 Tasks are ordered by dependency: the harness must understand layers before a fixture can rely on
 the ordering, and the grammar must be final before a table can be checked against it.
 
+## Gate status in this environment
+
+`bash scripts/pre-commit-check.sh` **cannot pass in the container this ticket was implemented in**,
+and the failure is pre-existing rather than caused by any change here. Its `unit tests` step runs
+`./gradlew test`, which includes `:app:testDebugUnitTest`, which needs an Android SDK — there is
+none installed, no `ANDROID_HOME`, and no `local.properties`. Verified by stashing every change and
+re-running against a clean tree: same failure, same step.
+
+What *was* run to completion for every task below, and is green:
+
+- `ANDROID_HOME= ANDROID_SDK_ROOT= ./gradlew :siteskin-core:test` — the corpus suite, which is the
+  entirety of this ticket's executable surface
+- `./gradlew detekt`
+- `gitleaks` and `shellcheck` are absent from the container; the script warns and skips them, as it
+  does on any machine without them. CI runs both.
+
+`:app` compiles no code from this ticket — nothing here touches `siteskin-core/src/main` or `:app`.
+The unrunnable step is therefore unrunnable, not failing. **This must be confirmed on a machine with
+the SDK before the ticket is considered validated**, and `/qa` records it as an open environmental
+caveat rather than a pass.
+
 ## Tasks
 
 - [ ] **TASK-1: layer ordering in the registry, and the short-circuit invariant**
@@ -31,6 +52,21 @@ the ordering, and the grammar must be final before a table can be checked agains
   - Tests: the three above, plus the existing suite green.
   - Negative control: reorder `layerOrder` so `security` precedes `parse`;
     `diagnosticsDoNotCrossARejectingLayer` must fail. Restore.
+  - **Result:** ✅ 3 new tests pass; no expectation file edited; 29 tests green.
+    **The planned negative control was wrong and was replaced.** Reordering `layerOrder` does not
+    fail the suite, because `diagnosticsDoNotCrossARejectingLayer` is *vacuous on today's corpus* —
+    no existing fixture pairs a `reject` with any other diagnostic, so there is no crossing to
+    detect at any ordering. That makes it a guard for future fixtures rather than a test of current
+    ones, which is legitimate but is not what a negative control proves.
+    Replaced with a constructed violation: a scratch fixture expecting `SS-E-SIZE-EXCEEDED`
+    (reject, transport) alongside `SS-W-ICON-UNKNOWN` (warn, security). Exactly one test failed —
+    `diagnosticsDoNotCrossARejectingLayer`, reporting *"SS-W-ICON-UNKNOWN sits at layer 'security',
+    after the rejection at 'transport' — that layer never runs"*. Scratch fixture removed, suite
+    green again.
+    Worth carrying forward: the vacuity is the reason `parsesFlagAgreesWithTheLayerOrder` was
+    written to cover the two directions that *are* live on the current corpus. Its first draft also
+    asserted "rejected at or before parse ⟹ `parses: false`", which is false — `oversized` is
+    refused at the transport layer and its body is valid JSON by design. Caught before running.
 
 - [ ] **TASK-2: the layer ordering becomes normative**
   - Modified: `spec/SPEC.md` — new §4.1 stating the five layers in order, the short-circuit rule,

@@ -63,6 +63,79 @@ class SpecCorpusTest {
     }
 
     @Test
+    fun layerOrderCoversEveryRegisteredLayer() {
+        // Completeness in both directions, like everyRegisteredCodeHasAFixture. A layer defined but
+        // left out of the order would make rejectingLayerIndex silently return null for its codes,
+        // and the short-circuit invariant below would stop seeing them — a gap that looks like a
+        // passing test.
+        assertEquals(
+            "diagnostics.json's `layers` and `layerOrder` must describe the same set",
+            SpecCorpus.declaredLayers.sorted(),
+            SpecCorpus.layerOrder.sorted(),
+        )
+        assertEquals(
+            "layerOrder must not repeat a layer",
+            SpecCorpus.layerOrder.size,
+            SpecCorpus.layerOrder.toSet().size,
+        )
+
+        val unplaced = SpecCorpus.registry.values
+            .filter { SpecCorpus.layerIndexOf(it.code) == null }
+            .map { "${it.code} (layer '${it.layer}')" }
+        assertTrue("Registered codes whose layer is not in layerOrder: $unplaced", unplaced.isEmpty())
+    }
+
+    @Test
+    fun diagnosticsDoNotCrossARejectingLayer() {
+        // Rejection short-circuits: a manifest refused at the parse layer is never origin-checked,
+        // so a fixture expecting both SS-E-PARSE and SS-E-ORIGIN-MISMATCH is describing a sequence
+        // that cannot happen. Nothing caught that before — the corpus checked each code against the
+        // registry individually and never against the others it was listed beside.
+        val crossings = SpecCorpus.fixtures.flatMap { fixture ->
+            val rejectAt = SpecCorpus.rejectingLayerIndex(fixture) ?: return@flatMap emptyList()
+            fixture.diagnostics.mapNotNull { diagnostic ->
+                val at = SpecCorpus.layerIndexOf(diagnostic.code) ?: return@mapNotNull null
+                if (at <= rejectAt) {
+                    null
+                } else {
+                    "${fixture.name}: ${diagnostic.code} sits at layer " +
+                        "'${SpecCorpus.layerOrder[at]}', after the rejection at " +
+                        "'${SpecCorpus.layerOrder[rejectAt]}' — that layer never runs"
+                }
+            }
+        }
+        assertTrue(crossings.joinToString("\n"), crossings.isEmpty())
+    }
+
+    @Test
+    fun parsesFlagAgreesWithTheLayerOrder() {
+        // `parses: false` and "rejected at or before the parse layer" are two spellings of one
+        // fact, and they were free to drift. A fixture claiming not to parse while expecting only a
+        // security diagnostic would satisfy both malformedFixturesFailToParse and the registry
+        // checks, and still be incoherent.
+        //
+        // Stated in the two directions that are actually true. "Rejected before the schema implies
+        // parses=false" is NOT one of them: `oversized` is refused at the transport layer and its
+        // body is immaculate JSON, which is the whole point of that fixture.
+        val parseLayer = SpecCorpus.layerOrder.indexOf("parse")
+        val disagreements = SpecCorpus.fixtures.mapNotNull { fixture ->
+            val rejectAt = SpecCorpus.rejectingLayerIndex(fixture)
+            val expectsParseLayerReject = fixture.diagnostics.any { diagnostic ->
+                diagnostic.disposition == "reject" && SpecCorpus.layerIndexOf(diagnostic.code) == parseLayer
+            }
+
+            when {
+                !fixture.bodyParses && (rejectAt == null || rejectAt > parseLayer) ->
+                    "${fixture.name} declares parses=false but expects no rejection at or before 'parse'"
+                expectsParseLayerReject && fixture.bodyParses ->
+                    "${fixture.name} expects a parse-layer rejection but declares parses=true"
+                else -> null
+            }
+        }
+        assertTrue(disagreements.joinToString("\n"), disagreements.isEmpty())
+    }
+
+    @Test
     fun everyFixtureCodeIsRegistered() {
         val unregistered = SpecCorpus.fixtures
             .flatMap { fixture -> fixture.diagnostics.map { fixture.name to it.code } }

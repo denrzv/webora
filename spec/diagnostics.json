@@ -2,11 +2,13 @@
   "registryVersion": "1.0",
   "schemaVersion": "1.0",
   "note": "The diagnostic registry for SiteSkin Manifest 1.0. Machine-readable so the conformance corpus can assert that every code has at least one fixture and every fixture code is registered. A code with no fixture does not exist.",
+  "layerOrder": ["transport", "parse", "version", "schema", "security"],
+  "layerOrderNote": "The order validation runs in, and therefore the order in which a rejection short-circuits: a manifest rejected at one layer is never evaluated by a later one. Machine-readable because the corpus asserts against it — a fixture may not expect a diagnostic from a layer its own rejection has already made unreachable. See SPEC.md section 4.1.",
   "layers": {
     "transport": "Enforced on the response before the body is parsed.",
     "parse": "Enforced while turning bytes into JSON.",
-    "version": "Enforced on schemaVersion after parsing, before schema validation. Separate from 'schema' because siteskin-1.0.schema.json validates the version *format* only and does not pin the major, so an unsupported major is a policy rejection rather than a structural one.",
-    "schema": "Enforced by siteskin-1.0.schema.json. Structural validity only.",
+    "version": "Enforced on a schemaVersion that is PRESENT and WELL-FORMED, after parsing and before schema validation. This layer has no opinion on an absent, non-string or malformed version — that is a structural defect and belongs to 'schema'. The split is real rather than a convenience: siteskin-1.0.schema.json validates the version *format* and deliberately does not pin the major, so an unsupported major is a policy rejection that no schema can express. It runs before 'schema' because a manifest declaring a major we do not know may legitimately have a structure this schema was never written for, and reporting a pile of structural errors against it would invite someone to handle them.",
+    "schema": "Enforced by siteskin-1.0.schema.json. Structural validity only — including the schemaVersion grammar itself.",
     "security": "Enforced by the security validator. Not expressible in JSON Schema — these rules depend on the serving origin, which the schema does not know."
   },
   "dispositions": {

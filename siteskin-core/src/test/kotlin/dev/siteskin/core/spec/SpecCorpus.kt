@@ -54,10 +54,41 @@ internal object SpecCorpus {
     fun expectsSchemaFailure(fixture: Fixture): Boolean =
         fixture.diagnostics.any { registry[it.code]?.layer == "schema" }
 
+    /**
+     * The order validation runs in, read from the registry rather than hardcoded here. Rejection at
+     * one layer short-circuits every later one.
+     */
+    val layerOrder: List<String> by lazy {
+        registryRoot.getValue("layerOrder").jsonArray.map { it.jsonPrimitive.content }
+    }
+
+    /** Position of a registered code's layer in [layerOrder], or `null` if either is unknown. */
+    fun layerIndexOf(code: String): Int? =
+        registry[code]?.layer?.let { layer -> layerOrder.indexOf(layer).takeIf { it >= 0 } }
+
+    /**
+     * The layer at which this fixture's manifest stops being processed, or `null` if nothing
+     * rejects it. Only a `reject` disposition short-circuits: a dropped item or a warning leaves
+     * the remaining layers to run.
+     */
+    fun rejectingLayerIndex(fixture: Fixture): Int? =
+        fixture.diagnostics
+            .filter { it.disposition == "reject" }
+            .mapNotNull { layerIndexOf(it.code) }
+            .minOrNull()
+
+    private val registryRoot: JsonObject by lazy {
+        json.parseToJsonElement(specDir.resolve("diagnostics.json").readText()).jsonObject
+    }
+
+    /** The layer names the registry defines, independent of the order they run in. */
+    val declaredLayers: Set<String> by lazy {
+        registryRoot.getValue("layers").jsonObject.keys
+    }
+
     /** Every registered diagnostic, keyed by code. */
     val registry: Map<String, RegisteredDiagnostic> by lazy {
-        val root = json.parseToJsonElement(specDir.resolve("diagnostics.json").readText()).jsonObject
-        root.getValue("diagnostics").jsonArray.associate { entry ->
+        registryRoot.getValue("diagnostics").jsonArray.associate { entry ->
             val obj = entry.jsonObject
             val code = obj.getValue("code").jsonPrimitive.content
             code to RegisteredDiagnostic(
@@ -108,6 +139,13 @@ internal object SpecCorpus {
             bodyFile = body,
             origin = expected["origin"]?.jsonPrimitive?.content,
             bodyParses = expected["parses"]?.jsonPrimitive?.content?.toBooleanStrictOrNull() ?: true,
+            // Defaults to "structurally valid unless it expects a schema-layer diagnostic", which
+            // is what every fixture written before SPEC-002 assumed — so none of them needed
+            // editing. Declared explicitly only by a fixture that is deliberately malformed
+            // *without* SS-E-SCHEMA-INVALID, which can only happen when an earlier layer rejects
+            // it first. Like `parses`, the declaration is asserted against the real schema rather
+            // than trusted; see SpecCorpusTest.securityLayerFixturesPassTheSchema.
+            declaredSchemaValid = expected["schemaValid"]?.jsonPrimitive?.content?.toBooleanStrictOrNull(),
             hasResult = expected.containsKey("result"),
             resultObject = expected["result"]?.jsonObject,
             diagnostics = expected["diagnostics"]?.jsonArray.orEmpty().map { entry ->
@@ -142,11 +180,23 @@ internal data class Fixture(
     val bodyFile: File,
     val origin: String?,
     val bodyParses: Boolean,
+    val declaredSchemaValid: Boolean?,
     val hasResult: Boolean,
     val resultObject: JsonObject?,
     val diagnostics: List<ExpectedDiagnostic>,
 ) {
     val isValidBucket: Boolean get() = bucket == "valid"
+
+    /**
+     * Whether this document is expected to satisfy `siteskin-1.0.schema.json`.
+     *
+     * A property of the *document*, deliberately kept separate from whether a browser would ever
+     * consult the schema — that is the layer order's business. Keeping the two apart is what lets
+     * `oversized` and `version-major-2` go on proving they are structurally valid (which their
+     * expectation notes claim in prose) even though both are rejected before the schema runs.
+     */
+    fun schemaValid(): Boolean =
+        declaredSchemaValid ?: !SpecCorpus.expectsSchemaFailure(this)
 
     /** The canonical result this fixture pins. Fails loudly rather than returning empty. */
     fun result(): JsonObject = requireNotNull(resultObject) { "$name declares no `result`" }
