@@ -111,7 +111,7 @@ A control that was not run is left blank, never assumed.
     fall to the no-match path and return themselves. Rewritten against `co.uk`, which is a real
     suffix and actually exercises the sharing.
 
-- [ ] TASK-5: `UrlResolver` and origin binding
+- [x] TASK-5: `UrlResolver` and origin binding
   - New: `siteskin-core/src/main/kotlin/dev/siteskin/core/origin/UrlResolver.kt`
   - New: `siteskin-core/src/test/kotlin/dev/siteskin/core/origin/UrlResolverTest.kt`
   - Acceptance: PRD 6. `/cart` → `https://…/cart`; `catalog`, `?q=1` and `#f` resolve inside the
@@ -121,9 +121,40 @@ A control that was not run is left blank, never assumed.
     and `\\evil.example/x` returns `Rejected` with the reason the plan's table names. Nothing throws
     for any input, including the empty string.
   - Tests: `UrlResolverTest`, one case per `UrlRejection`
+  - Deviation: a denied scheme carrying URI-illegal characters — `data:text/html,<script>...` — is
+    reported `MALFORMED`, not `SCHEME_NOT_ALLOWED`. `java.net.URI` refuses the `<` before any scheme
+    check runs. Found by the test failing on the first run: the case had been written with a
+    hand-made `data:` URL rather than the corpus spelling in
+    `spec/fixtures/invalid/scheme-data.json`, whose base64 payload is entirely URI-legal and does
+    reach the scheme check. Both outcomes are rejections with identical disposition, so this is a
+    reporting distinction rather than a security one, and it is now pinned by
+    `deniedSchemesWithIllegalCharactersAreRejectedAsMalformed`. Deliberately not "fixed" by sniffing
+    the scheme before parsing — that adds a second hand-rolled URL parser whose disagreements with
+    `java.net.URI` would be their own bug surface, to improve a message on an input refused either
+    way.
+  - Deviation: `absoluteRejection` was split, extracting `originRejection`. Detekt's `ReturnCount`
+    (limit 4) failed the original five-return version. The `when` expression it became is also the
+    clearer statement of "first matching rule wins".
   - Negative control: one per guard, reverted in turn — (a) resolve protocol-relative instead of
     rejecting it, (b) skip the residual-`..` check, (c) drop the userinfo check, (d) compare hosts
-    with `endsWith` instead of `==`. Each must break its own test and no other. (Result: )
+    with `endsWith` instead of `==`. Each must break its own test and no other. (Result: **all four
+    ran, each fails as required**, 103 tests in the suite:
+    - (a) → 1 failure, `protocolRelativeReferencesAreRejected`.
+    - (b) → 2 failures, `traversalEscapingTheOriginIsRejected` and
+      `percentEncodedTraversalIsRejected`. Two rather than one because the percent-encoded spelling
+      is a separate test of the same guard, which is the point of splitting it.
+    - (c) → 1 failure, `userinfoInTheAuthorityIsRejected`.
+    - (d) → 3 failures, `subdomainsAndSiblingsAreCrossOrigin`, `aDifferentPortIsADifferentOrigin`
+      and `aDifferentSchemeIsADifferentOrigin`. Replacing origin equality with a host suffix match
+      necessarily discards scheme and port comparison as well, so three is the correct blast radius
+      rather than over-reach; `subdomainsAndSiblingsAreCrossOrigin` is the one that specifically
+      catches the suffix bug.
+
+    **Procedural note, recorded because the first attempt was invalid.** Control (b) was initially
+    applied while (a) was still reverted, and reported 3 failures — (a)'s included. Controls must
+    each start from a verified-clean baseline or the attribution is meaningless. Re-run alone from a
+    baseline asserted to still contain the (a) guard before patching; the 2-failure result above is
+    the isolated one. The contaminated run is not evidence and is not counted.)
 
 - [ ] TASK-6: Drive the conformance corpus through the resolver
   - New: `siteskin-core/src/test/kotlin/dev/siteskin/core/origin/OriginCorpusTest.kt`
