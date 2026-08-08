@@ -8,7 +8,7 @@ S1  PRD_READY                docs/prd/<TICKET>.prd.md
 S2  RESEARCH_READY           docs/research/<TICKET>.md
 S3  PLAN_APPROVED            docs/plan/<TICKET>.md
 S4  TASKLIST_READY           docs/tasklist/<TICKET>.md
-S5  Implement loop           /implement → /pre-commit → commit, one TASK at a time
+S5  Implement loop           /implement → /pre-commit → commit → push, one TASK at a time
 S6  Review complete          reports/review/<TICKET>.md
 S7  QA_PASSED                reports/qa/<TICKET>.md
 S8  Docs updated             CLAUDE.md notes, ADRs, spec
@@ -53,9 +53,11 @@ the gate would itself be blocked by the gate.
 | Security review | `PASS` / `PASS_WITH_NOTES` / `BLOCKED` |
 | Review report | `RESOLVED` / `OPEN` |
 
-## Commits
+## Commits and remote checkpoints
 
-- One TASK per commit: `<TICKET> TASK-N: <short>`
+- One TASK per commit: `<TICKET> TASK-N: <short>`.
+- After every completed `TASK-N` or `TASK-FIX-N` commit, push the current ticket branch before starting the next task.
+- A task is a handoff-safe checkpoint only after its commit is visible on the remote. If push fails or the remote is unavailable, stop and report the blocked checkpoint instead of continuing with another task.
 - Post-review fixes are appended to the tasklist as `TASK-FIX-N` with a `- Source:` line recording
   provenance (`/review finding 3`, `post-/validate sweep`, `field observation`).
 - Squash-merge to `main` as `<TICKET>: <title>`.
