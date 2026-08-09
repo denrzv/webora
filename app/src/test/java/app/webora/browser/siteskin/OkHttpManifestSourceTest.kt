@@ -16,6 +16,7 @@ import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertSame
 import org.junit.Test
 
 class OkHttpManifestSourceTest {
@@ -82,6 +83,33 @@ class OkHttpManifestSourceTest {
         val source = source(readTimeoutMillis = 50)
 
         repeat(4) { assertNull(source.fetch(origin(server))) }
+    }
+
+    @Test fun `sends validators and exposes not modified metadata`() = runTest {
+        val server = server().apply {
+            enqueue(
+                MockResponse().setResponseCode(304)
+                    .setHeader("Cache-Control", "max-age=120")
+                    .setHeader("ETag", "new-tag"),
+            )
+        }
+
+        val result = source().fetch(origin(server), ManifestRequestValidators("old-tag", "yesterday"))
+        val request = server.takeRequest()
+
+        assertEquals("old-tag", request.getHeader("If-None-Match"))
+        assertEquals("yesterday", request.getHeader("If-Modified-Since"))
+        assertTrue(result is ManifestFetchResult.NotModified)
+        assertEquals("new-tag", (result as ManifestFetchResult.NotModified).metadata.etag)
+        assertEquals("max-age=120", result.metadata.cacheControl)
+    }
+
+    @Test fun `distinguishes HTTP rejection from transport unavailability`() = runTest {
+        val server = server().apply { enqueue(MockResponse().setResponseCode(503)) }
+
+        assertSame(ManifestFetchResult.Rejected, source().fetch(origin(server), ManifestRequestValidators()))
+        server.shutdown()
+        assertSame(ManifestFetchResult.Unavailable, source().fetch(origin(server), ManifestRequestValidators()))
     }
 
     private fun source(readTimeoutMillis: Long = 5_000) = OkHttpManifestSource(

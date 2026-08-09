@@ -52,8 +52,7 @@ internal fun BrowserScreen(
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val manifestDiscovery = rememberManifestDiscovery(scope)
-    val downloadStarted = stringResource(R.string.download_started)
-    val downloadFailed = stringResource(R.string.download_failed)
+    val downloadMessages = stringResource(R.string.download_started) to stringResource(R.string.download_failed)
 
     BrowserBackHandler(enabled = state.canGoBack, controller = controller)
     if (state.mode == BrowserMode.Home) {
@@ -70,7 +69,7 @@ internal fun BrowserScreen(
         onHome = { state = BrowserState() },
         onExternalNavigation = { pendingExternal = it },
         onDownload = { url ->
-            val message = if (onDownload(url)) downloadStarted else downloadFailed
+            val message = if (onDownload(url)) downloadMessages.first else downloadMessages.second
             scope.launch { snackbar.showSnackbar(message) }
         },
         onFileChooser = onFileChooser,
@@ -141,7 +140,10 @@ private fun RegularBrowser(
             HardenedWebView(
                 initialUrl = state.displayedUrl,
                 controller = controller,
-                onEvent = { onObservation(it.toBrowserObservation()) },
+                onEvent = {
+                    if (it is WebViewEvent.PageStarted) onPageStarted(it.observation.url)
+                    onObservation(it.toBrowserObservation())
+                },
                 onExternalNavigation = onExternalNavigation,
                 onDownload = onDownload,
                 onFileChooser = onFileChooser,
