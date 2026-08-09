@@ -406,5 +406,17 @@ redirects stay disabled: the app follows at most two redirects after comparing e
 canonical origin. Explicit call/connect/read/write timeouts and a 128 KiB sentinel read bound remote
 work before bytes enter the shared `SiteSkinValidator`. A new navigation or composition disposal
 cancels both the discovery coroutine and its underlying OkHttp call; rejected, missing, oversized,
-timed-out, or otherwise failed discovery remains regular browser mode. Caching and applying accepted
-configuration are later M3 tickets.
+timed-out, or otherwise failed discovery remains regular browser mode. Applying accepted
+configuration remains a later M3 ticket.
+
+### Manifest cache (NET-002)
+
+Only a `SiteSkinValidator`-accepted body enters the in-memory manifest cache. Its key is the full
+canonical origin plus the trusted exact schema version, while an origin-scoped active-version index
+prevents lookup from crossing ports, schemes, hosts, or subdomains. Website-controlled
+`Cache-Control` can shorten freshness but cannot exceed 24 hours; missing, ambiguous, malformed, or
+overflowing `max-age` is immediately stale. Stale entries contribute `ETag` and `Last-Modified` to
+conditional discovery. A `304` refreshes the same exact entry, and only explicit transport
+unavailability may reuse stale accepted bytes; HTTP rejection or invalid replacement content fails
+closed to regular browsing. Cached bytes are validated again for the currently observed origin
+before an outcome is emitted.

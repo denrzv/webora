@@ -18,35 +18,71 @@ import okhttp3.Request
 import okhttp3.Response
 import okio.Buffer
 
+internal data class ManifestRequestValidators(
+    val etag: String? = null,
+    val lastModified: String? = null,
+)
+
+internal sealed interface ManifestFetchResult {
+    data class Fetched(val bytes: ByteArray, val metadata: ManifestCacheMetadata) : ManifestFetchResult
+    data class NotModified(val metadata: ManifestCacheMetadata) : ManifestFetchResult
+    data object Unavailable : ManifestFetchResult
+    data object Rejected : ManifestFetchResult
+}
+
+internal fun interface CacheableManifestSource {
+    suspend fun fetch(origin: String, validators: ManifestRequestValidators): ManifestFetchResult
+}
+
 internal class OkHttpManifestSource(
     private val client: OkHttpClient = defaultClient(),
-) : ManifestSource {
-    override suspend fun fetch(origin: String): ByteArray? = withContext(Dispatchers.IO) {
-        val siteOrigin = SiteOrigin.parse(origin)?.takeIf { it.scheme == HTTPS } ?: return@withContext null
+) : ManifestSource, CacheableManifestSource {
+    override suspend fun fetch(origin: String): ByteArray? =
+        when (val result = fetch(origin, ManifestRequestValidators())) {
+            is ManifestFetchResult.Fetched -> result.bytes
+            else -> null
+        }
+
+    override suspend fun fetch(
+        origin: String,
+        validators: ManifestRequestValidators,
+    ): ManifestFetchResult = withContext(Dispatchers.IO) {
+        val siteOrigin = SiteOrigin.parse(origin)?.takeIf { it.scheme == HTTPS }
+            ?: return@withContext ManifestFetchResult.Rejected
         val initial = siteOrigin.canonical.toHttpUrl().newBuilder()
             .encodedPath(SiteSkinSchema.WELL_KNOWN_PATH)
             .build()
         try {
-            fetchFollowingRedirects(siteOrigin, initial)
+            fetchFollowingRedirects(siteOrigin, initial, validators)
         } catch (_: IOException) {
-            null
+            ManifestFetchResult.Unavailable
         } catch (_: IllegalArgumentException) {
-            null
+            ManifestFetchResult.Rejected
         }
     }
 
-    private suspend fun fetchFollowingRedirects(origin: SiteOrigin, initial: HttpUrl): ByteArray? {
+    private suspend fun fetchFollowingRedirects(
+        origin: SiteOrigin,
+        initial: HttpUrl,
+        validators: ManifestRequestValidators,
+    ): ManifestFetchResult {
         var url = initial
         var redirects = 0
         while (true) {
-            client.newCall(Request.Builder().url(url).get().build()).await().use { response ->
-                if (!response.isRedirect) return readSuccessfulBody(response)
-                if (redirects == SiteSkinLimits.MAX_REDIRECTS) return null
-                url = redirectTarget(response, origin) ?: return null
+            client.newCall(request(url, validators)).await().use { response ->
+                if (!response.isRedirect) return readResponse(response)
+                if (redirects == SiteSkinLimits.MAX_REDIRECTS) return ManifestFetchResult.Rejected
+                url = redirectTarget(response, origin) ?: return ManifestFetchResult.Rejected
                 redirects += 1
             }
         }
     }
+
+    private fun request(url: HttpUrl, validators: ManifestRequestValidators): Request =
+        Request.Builder().url(url).get().apply {
+            validators.etag?.let { header("If-None-Match", it) }
+            validators.lastModified?.let { header("If-Modified-Since", it) }
+        }.build()
 
     private suspend fun Call.await(): Response = suspendCancellableCoroutine { continuation ->
         continuation.invokeOnCancellation { cancel() }
@@ -71,24 +107,38 @@ internal class OkHttpManifestSource(
         return target.takeIf { targetOrigin.scheme == HTTPS && targetOrigin == origin }
     }
 
-    private fun readSuccessfulBody(response: Response): ByteArray? {
-        if (!response.isSuccessful) return null
+    private fun readResponse(response: Response): ManifestFetchResult {
+        val metadata = responseMetadata(response)
+        if (response.code == HTTP_NOT_MODIFIED) return ManifestFetchResult.NotModified(metadata)
+        if (!response.isSuccessful) return ManifestFetchResult.Rejected
         val body = response.body
-        if (body.contentLength() > SiteSkinLimits.MAX_MANIFEST_BYTES) return null
+        if (body.contentLength() > SiteSkinLimits.MAX_MANIFEST_BYTES) return ManifestFetchResult.Rejected
         val limit = SiteSkinLimits.MAX_MANIFEST_BYTES.toLong() + 1
         val buffer = Buffer()
         val source = body.source()
         while (buffer.size < limit && source.read(buffer, limit - buffer.size) != -1L) {
             // Read only through the sentinel byte; it distinguishes an exact-limit body from overflow.
         }
-        return buffer.readByteArray().takeIf { it.size <= SiteSkinLimits.MAX_MANIFEST_BYTES }
+        val bytes = buffer.readByteArray()
+        return if (bytes.size <= SiteSkinLimits.MAX_MANIFEST_BYTES) {
+            ManifestFetchResult.Fetched(bytes, metadata)
+        } else {
+            ManifestFetchResult.Rejected
+        }
     }
+
+    private fun responseMetadata(response: Response) = ManifestCacheMetadata(
+        cacheControl = response.header("Cache-Control"),
+        etag = response.header("ETag"),
+        lastModified = response.header("Last-Modified"),
+    )
 
     private companion object {
         const val HTTPS = "https"
         const val CONNECT_TIMEOUT_SECONDS = 5L
         const val IO_TIMEOUT_SECONDS = 5L
         const val CALL_TIMEOUT_SECONDS = 10L
+        const val HTTP_NOT_MODIFIED = 304
 
         fun defaultClient(): OkHttpClient = OkHttpClient.Builder()
             .followRedirects(false)
