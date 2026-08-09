@@ -11,6 +11,8 @@ internal data class WebViewObservation(
 )
 
 internal sealed interface WebViewEvent {
+    data class PageStarted(val observation: WebViewObservation) : WebViewEvent
+
     data class PageChanged(val observation: WebViewObservation) : WebViewEvent
 
     data class MainFrameFailed(val url: String, val kind: LoadErrorKind) : WebViewEvent

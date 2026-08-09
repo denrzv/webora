@@ -30,3 +30,12 @@ Status: TASKLIST_READY
 - Acceptance: only `WebResourceRequest.isForMainFrame` errors can replace rendered content; TLS handshakes remain fail closed.
 - Tests: `./gradlew :app:testDebugUnitTest :app:lintDebug`, `bash scripts/pre-commit-check.sh`.
 - Status: complete
+
+## TASK-FIX-2 — Preserve main-frame failure recovery at runtime
+
+- [x] Reduce every WebView observation against BrowserScreen's latest state, keep the attached WebView alive behind browser-owned recovery UI, and preserve a main-frame failure across later completion/history callbacks until a successful new navigation starts.
+- Source: Local runtime validation on the Pixel 6 API 33 emulator after completion of BROWSE-001 through BROWSE-005.
+- Acceptance: failed safe HTTP(S) main-frame navigation shows Webora's recovery UI instead of Chromium's error page; Retry uses the live controller, Home returns Home, successful new navigation clears the failure, and subresource errors remain unable to replace the page.
+- Tests: focused JVM/unit regression tests, `./gradlew :app:lintDebug :app:assembleDebug :app:connectedDebugAndroidTest`, manual `https://127.0.0.1:44444/` Retry/Home verification with screenshot and crash/ANR logcat inspection, `bash scripts/pre-commit-check.sh`.
+- Results: the new loading/history regression failed before the fix and passed after it; all app unit tests, lint, debug assembly, and both connected API 33 instrumentation tests passed. Manual Pixel 6 API 33 reproduction showed Webora recovery UI, Retry and Home worked, [screenshot evidence](../../reports/qa/BROWSE-004-runtime-recovery.png) was captured, and logcat contained no crash or ANR markers.
+- Status: complete

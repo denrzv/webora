@@ -2,6 +2,7 @@ package app.webora.browser.browser
 
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -27,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.ImeAction
 import app.webora.browser.R
 import app.webora.browser.web.BrowserWebViewController
@@ -60,7 +62,8 @@ internal fun BrowserScreen(
     RegularBrowser(
         state = state,
         controller = controller,
-        onStateChanged = { state = it },
+        onObservation = { state = state.observe(it) },
+        onHome = { state = BrowserState() },
         onExternalNavigation = { pendingExternal = it },
         onDownload = { url ->
             val message = if (onDownload(url)) downloadStarted else downloadFailed
@@ -103,7 +106,8 @@ private fun ExternalNavigationDialog(
 private fun RegularBrowser(
     state: BrowserState,
     controller: BrowserWebViewController,
-    onStateChanged: (BrowserState) -> Unit,
+    onObservation: (BrowserObservation) -> Unit,
+    onHome: () -> Unit,
     onExternalNavigation: (ExternalNavigation) -> Unit,
     onDownload: (String) -> Unit,
     onFileChooser: (String, (String?) -> Unit) -> Unit,
@@ -112,39 +116,43 @@ private fun RegularBrowser(
     Column(modifier = modifier) {
         AddressBar(
             state = state,
-            onAddressChanged = { onStateChanged(state.observe(BrowserObservation.AddressEdited(it))) },
+            onAddressChanged = { onObservation(BrowserObservation.AddressEdited(it)) },
             onSubmit = { resolveAddressInput(state.addressText)?.let(controller::navigate) },
             onBack = controller::goBack,
             onForward = controller::goForward,
             onReload = controller::reload,
-            onHome = { onStateChanged(BrowserState()) },
+            onHome = onHome,
         )
         if (state.isLoading) LinearProgressIndicator(Modifier.fillMaxWidth())
-        state.loadFailure?.let { failure ->
-            BrowserErrorPage(
-                failure = failure,
-                onRetry = { failure.retryUrl?.let(controller::navigate) },
-                onHome = { onStateChanged(BrowserState()) },
+        Box(Modifier.fillMaxSize()) {
+            HardenedWebView(
+                initialUrl = state.displayedUrl,
+                controller = controller,
+                onEvent = { onObservation(it.toBrowserObservation()) },
+                onExternalNavigation = onExternalNavigation,
+                onDownload = onDownload,
+                onFileChooser = onFileChooser,
                 modifier = Modifier.fillMaxSize(),
             )
-            return@Column
+            state.loadFailure?.let { failure ->
+                BrowserErrorPage(
+                    failure = failure,
+                    onRetry = { failure.retryUrl?.let(controller::navigate) },
+                    onHome = onHome,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
         }
-        HardenedWebView(
-            initialUrl = state.displayedUrl,
-            controller = controller,
-            onEvent = { event ->
-                onStateChanged(state.observe(event.toBrowserObservation()))
-            },
-            onExternalNavigation = onExternalNavigation,
-            onDownload = onDownload,
-            onFileChooser = onFileChooser,
-            modifier = Modifier.fillMaxSize(),
-        )
     }
 }
 
 private fun WebViewEvent.toBrowserObservation(): BrowserObservation = when (this) {
     is WebViewEvent.MainFrameFailed -> BrowserObservation.PageFailed(url, kind)
+    is WebViewEvent.PageStarted -> BrowserObservation.PageStarted(
+        observation.url,
+        observation.canGoBack,
+        observation.canGoForward,
+    )
     is WebViewEvent.PageChanged -> BrowserObservation.Page(
         observation.url,
         observation.isLoading,
@@ -245,13 +253,25 @@ private fun BrowserErrorPage(
                     },
                 ),
             )
-            Button(onClick = onRetry, enabled = failure.retryUrl != null) {
+            Button(
+                onClick = onRetry,
+                enabled = failure.retryUrl != null,
+                modifier = Modifier.testTag(BROWSER_ERROR_RETRY_TAG),
+            ) {
                 Text(stringResource(R.string.retry))
             }
-            Button(onClick = onHome) { Text(stringResource(R.string.home)) }
+            Button(
+                onClick = onHome,
+                modifier = Modifier.testTag(BROWSER_ERROR_HOME_TAG),
+            ) {
+                Text(stringResource(R.string.home))
+            }
         }
     }
 }
+
+internal const val BROWSER_ERROR_RETRY_TAG = "browser_error_retry"
+internal const val BROWSER_ERROR_HOME_TAG = "browser_error_home"
 
 @Composable
 private fun BrowserButton(label: String, enabled: Boolean, action: () -> Unit) {

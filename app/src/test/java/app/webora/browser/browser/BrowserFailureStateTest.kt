@@ -1,6 +1,7 @@
 package app.webora.browser.browser
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
 
@@ -33,9 +34,22 @@ class BrowserFailureStateTest {
         )
 
         val loading = failed.observe(
-            BrowserObservation.Page("https://example.com", true, false, false),
+            BrowserObservation.PageStarted("https://example.com", false, false),
         )
 
         assertNull(loading.loadFailure)
+    }
+
+    @Test
+    fun `later loading history callback cannot erase main frame failure`() {
+        val failed = BrowserState().observe(
+            BrowserObservation.PageFailed("https://example.com", LoadErrorKind.CONNECTION),
+        )
+
+        val updated = failed.observe(
+            BrowserObservation.Page("https://example.com", true, false, false),
+        )
+
+        assertNotNull(updated.loadFailure)
     }
 }

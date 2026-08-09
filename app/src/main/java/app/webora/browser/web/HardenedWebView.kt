@@ -32,6 +32,9 @@ internal fun HardenedWebView(
             WebView(context).apply {
                 applyWebViewHardening(this)
                 webViewClient = HardenedWebViewClient(
+                    onPageStarted = { view, url ->
+                        currentObserver.value(WebViewEvent.PageStarted(view.toObservation(url, true)))
+                    },
                     onPageChanged = { view, url, isLoading ->
                         currentObserver.value(WebViewEvent.PageChanged(view.toObservation(url, isLoading)))
                     },

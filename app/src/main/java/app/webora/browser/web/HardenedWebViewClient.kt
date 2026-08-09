@@ -11,6 +11,7 @@ import app.webora.browser.browser.ExternalNavigation
 import app.webora.browser.browser.externalNavigation
 
 internal class HardenedWebViewClient(
+    private val onPageStarted: (WebView, String) -> Unit = { _, _ -> },
     private val onPageChanged: (WebView, String, Boolean) -> Unit = { _, _, _ -> },
     private val onMainFrameFailed: (String, LoadErrorKind) -> Unit = { _, _ -> },
     private val onExternalNavigation: (ExternalNavigation) -> Unit = {},
@@ -25,7 +26,7 @@ internal class HardenedWebViewClient(
         url?.let { shouldOverrideNavigation(it, true, onExternalNavigation) } ?: true
 
     override fun onPageStarted(view: WebView, url: String?, favicon: android.graphics.Bitmap?) {
-        onPageChanged(view, url.orEmpty(), true)
+        onPageStarted(view, url.orEmpty())
     }
 
     override fun onPageFinished(view: WebView, url: String?) {
