@@ -27,4 +27,7 @@
     <string name="cancel">Cancel</string>
     <string name="download_started">Download started</string>
     <string name="download_failed">Download could not be started</string>
+    <string name="siteskin_site_menu_heading">Site navigation</string>
+    <string name="siteskin_browser_menu_heading">Webora controls</string>
+    <string name="siteskin_quick_actions">Quick actions</string>
 </resources>

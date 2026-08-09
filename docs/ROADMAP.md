@@ -39,7 +39,7 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 - [x] `NET-003` Brand asset pipeline
 - [x] `SKIN-001` Dynamic theming and contrast guard
 - [x] `SKIN-002` SiteSkin top bar
-- [ ] `SKIN-003` Bottom navigation, quick actions, menu
+- [x] `SKIN-003` Bottom navigation, quick actions, menu
 - [ ] `SKIN-004` Mode transitions and origin-change deactivation
 
 ## M4 — Hardening, privacy, demo

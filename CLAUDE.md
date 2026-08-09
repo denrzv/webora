@@ -155,6 +155,20 @@ within one segment and a complete `**` segment across zero or more whole segment
 beat globs; otherwise the longest literal prefix wins, then document order. No match means no active
 item — never default to the first navigation entry.
 
+### SiteSkin navigation presentation (SKIN-003)
+
+Bottom navigation, quick actions, and the SiteSkin menu are standalone app-layer components backed
+by a pure `SiteSkinChromeModel`. The model consumes only trusted `SiteSkinConfiguration` plus the
+browser-observed current page URL, applies defense-in-depth 5/5/20 caps, and uses `NavMatcher` for
+an active id; no match means no selection. Components emit the original trusted `NavigationItem`,
+never raw URI or intent fields. The menu always appends a separately labelled closed browser section
+for page information and settings, which manifest entries cannot suppress or replace. Symbolic
+icons use a closed local decorative mapping with cleared accessibility semantics.
+
+These components deliberately are not wired into `BrowserScreen`. `SKIN-004` owns consent-aware,
+origin-bound activation and connects typed selections to `ActionResolver` and browser-owned effect
+dispatch.
+
 ### Total validation and `siteskin-lint` (SPEC-003)
 
 `SiteSkinValidator` is the shared activation seam for browser and tooling. It consumes one
