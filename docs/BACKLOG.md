@@ -65,7 +65,7 @@ Unknown type drops the item and keeps the manifest (`ADR-007`). Acceptance: each
 the right typed result; unknown type drops exactly one item; `phone` resolves to a dial intent
 description, never a call.
 
-**`CORE-006` Navigation active-state matching.** Exact path, then longest glob (`/cart/**`).
+**`CORE-006` ✅ Navigation active-state matching.** Exact path, then longest glob (`/cart/**`).
 Deterministic tie-breaking. Acceptance: exact beats glob; longest glob wins; no match yields no
 selection rather than a default.
 

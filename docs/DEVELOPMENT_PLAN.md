@@ -175,7 +175,7 @@ release signing config `app/build.gradle.kts` never implemented. Also set
 | `CORE-003` | ✅ `SchemaValidator` over parsed JSON → `ManifestValidationResult(errors, warnings)`, executing the version table and structural corpus with stable diagnostic codes |
 | `CORE-004` | ✅ `SecurityValidator` + normalisation → trusted `SiteSkinConfiguration`: origin binding, scheme allow-list (`https`/`mailto`/`tel`/`geo`), icon allow-list, colour parse + WCAG AA contrast correction, limit clamping |
 | `CORE-005` | ✅ Action model: `internal_url`, `external_url`, `phone`, `email`, `map`, `share`, `home`, `refresh`, `open_menu` → sealed `ResolvedAction`; unknown type drops the item, never the manifest |
-| `CORE-006` | `NavMatcher` — active-item detection, exact path + `/cart/**` glob |
+| `CORE-006` | ✅ `NavMatcher` — active-item detection, exact path + `/cart/**` glob |
 | `SPEC-003` | `siteskin-lint` CLI — `siteskin-lint https://site.example` — the tool a site owner runs. Same validator as the browser, so "passes lint" means "will activate" |
 
 **`SPEC-003` runs last in M1, not third.** This table originally grouped it with the other `SPEC-*`

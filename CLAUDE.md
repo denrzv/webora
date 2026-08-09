@@ -143,6 +143,18 @@ handler selection, permissions, WebView operations, and SiteSkin menu UI belong 
 Do not add a generic URI, intent, package, component, flag, MIME-type, or extras variant to the
 sealed model; that would turn the action allow-list back into arbitrary native capability.
 
+### Navigation matching (CORE-006)
+
+`NavMatcher` consumes trusted ordered `NavigationItem` values and a browser-observed absolute page
+URL, then returns at most one active item. It uses only the decoded HTTP(S) path; query, fragment,
+authority, malformed URLs, and unsupported schemes cannot become match content. Runtime origin
+activation remains a separate mandatory boundary.
+
+Manifest patterns are never compiled as regex. A handwritten bounded matcher implements `*`
+within one segment and a complete `**` segment across zero or more whole segments. Exact literals
+beat globs; otherwise the longest literal prefix wins, then document order. No match means no active
+item — never default to the first navigation entry.
+
 ---
 
 ## Java version — two knobs, do not conflate them
