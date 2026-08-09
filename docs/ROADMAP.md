@@ -38,7 +38,7 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 - [x] `NET-002` Manifest cache
 - [x] `NET-003` Brand asset pipeline
 - [x] `SKIN-001` Dynamic theming and contrast guard
-- [ ] `SKIN-002` SiteSkin top bar
+- [x] `SKIN-002` SiteSkin top bar
 - [ ] `SKIN-003` Bottom navigation, quick actions, menu
 - [ ] `SKIN-004` Mode transitions and origin-change deactivation
 

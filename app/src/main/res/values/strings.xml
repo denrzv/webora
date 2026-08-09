@@ -12,6 +12,9 @@
     <string name="security_secure">Secure</string>
     <string name="security_not_secure">Not secure</string>
     <string name="security_identity">%1$s · %2$s</string>
+    <string name="siteskin_tls_secure">Secure</string>
+    <string name="siteskin_tls_not_secure">Not secure</string>
+    <string name="siteskin_security_description">%1$s connection to %2$s</string>
     <string name="error_title">This page could not be loaded</string>
     <string name="error_connection">Check your connection and try again.</string>
     <string name="error_network">A network problem interrupted this page.</string>
