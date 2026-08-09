@@ -30,7 +30,7 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 - [x] `BROWSE-002` Browser state machine, URL bar, navigation
 - [x] `BROWSE-003` Home screen and onboarding
 - [x] `BROWSE-004` Regular-mode chrome, security indicator, error pages
-- [ ] `BROWSE-005` External navigation, downloads, uploads
+- [x] `BROWSE-005` External navigation, downloads, uploads
 
 ## M3 — SiteSkin runtime
 

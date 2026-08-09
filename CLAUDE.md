@@ -387,3 +387,13 @@ origin displays its registrable domain. WebView errors cross into Compose only f
 `isForMainFrame`; legacy SSL callbacks are cancelled but cannot replace a page because they do not
 identify the main frame. Error UI maps framework codes to closed browser-owned reasons, displays at
 most the registrable domain, and retains a retry capability only for the exact observed HTTP(S) URL.
+
+### External navigation and transfers (BROWSE-005)
+
+Only main-frame `mailto`, `tel`, and `geo` navigation may leave the renderer, and each request first
+becomes inert typed data shown in a browser-owned confirmation; subframes and arbitrary schemes
+cannot prompt or launch. Android intents are constructed from a closed mapping and never parsed from
+remote intent syntax. Downloads accept absolute HTTP(S) only and use browser-selected
+`DownloadManager` policy. Uploads use a single-result SAF picker only when page accept hints reduce
+to the browser MIME allow-list; unsafe hints cancel rather than widening to `*/*`, and only a
+system-selected `content:` URI returns to the page. None of these flows grants a runtime permission.

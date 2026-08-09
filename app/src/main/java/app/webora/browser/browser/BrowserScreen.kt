@@ -9,6 +9,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.LinearProgressIndicator
@@ -21,6 +24,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
@@ -28,13 +32,22 @@ import app.webora.browser.R
 import app.webora.browser.web.BrowserWebViewController
 import app.webora.browser.web.HardenedWebView
 import app.webora.browser.web.WebViewEvent
+import kotlinx.coroutines.launch
 
 @Composable
 internal fun BrowserScreen(
     modifier: Modifier = Modifier,
+    onLaunchExternal: (ExternalNavigation) -> Boolean = { false },
+    onDownload: (String) -> Boolean = { false },
+    onFileChooser: (String, (String?) -> Unit) -> Unit = { _, complete -> complete(null) },
 ) {
     val controller = remember { BrowserWebViewController() }
     var state by remember { mutableStateOf(BrowserState()) }
+    var pendingExternal by remember { mutableStateOf<ExternalNavigation?>(null) }
+    val snackbar = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val downloadStarted = stringResource(R.string.download_started)
+    val downloadFailed = stringResource(R.string.download_failed)
 
     BrowserBackHandler(enabled = state.canGoBack, controller = controller)
     if (state.mode == BrowserMode.Home) {
@@ -48,7 +61,41 @@ internal fun BrowserScreen(
         state = state,
         controller = controller,
         onStateChanged = { state = it },
+        onExternalNavigation = { pendingExternal = it },
+        onDownload = { url ->
+            val message = if (onDownload(url)) downloadStarted else downloadFailed
+            scope.launch { snackbar.showSnackbar(message) }
+        },
+        onFileChooser = onFileChooser,
         modifier = modifier,
+    )
+    SnackbarHost(snackbar)
+    pendingExternal?.let { navigation -> ExternalNavigationDialog(
+        navigation = navigation,
+        onConfirm = {
+            onLaunchExternal(navigation)
+            pendingExternal = null
+        },
+        onDismiss = { pendingExternal = null },
+    ) }
+}
+
+@Composable
+private fun ExternalNavigationDialog(
+    navigation: ExternalNavigation,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.external_navigation_title)) },
+        text = { Text(stringResource(R.string.external_navigation_message, navigation.kind.name.lowercase())) },
+        confirmButton = {
+            Button(onClick = onConfirm) { Text(stringResource(R.string.open_external)) }
+        },
+        dismissButton = {
+            Button(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+        },
     )
 }
 
@@ -57,6 +104,9 @@ private fun RegularBrowser(
     state: BrowserState,
     controller: BrowserWebViewController,
     onStateChanged: (BrowserState) -> Unit,
+    onExternalNavigation: (ExternalNavigation) -> Unit,
+    onDownload: (String) -> Unit,
+    onFileChooser: (String, (String?) -> Unit) -> Unit,
     modifier: Modifier,
 ) {
     Column(modifier = modifier) {
@@ -85,6 +135,9 @@ private fun RegularBrowser(
             onEvent = { event ->
                 onStateChanged(state.observe(event.toBrowserObservation()))
             },
+            onExternalNavigation = onExternalNavigation,
+            onDownload = onDownload,
+            onFileChooser = onFileChooser,
             modifier = Modifier.fillMaxSize(),
         )
     }
