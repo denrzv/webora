@@ -27,7 +27,7 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 ## M2 — Browser foundation
 
 - [x] `BROWSE-001` WebView host and hardening
-- [ ] `BROWSE-002` Browser state machine, URL bar, navigation
+- [x] `BROWSE-002` Browser state machine, URL bar, navigation
 - [ ] `BROWSE-003` Home screen and onboarding
 - [ ] `BROWSE-004` Regular-mode chrome, security indicator, error pages
 - [ ] `BROWSE-005` External navigation, downloads, uploads
