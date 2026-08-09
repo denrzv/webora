@@ -446,3 +446,19 @@ canonical opaque trusted values, fills omissions with compiled defaults, derives
 and runs a final WCAG guard over every newly formed pair before returning it (4.5:1 body, 3:1 UI).
 Do not parse manifest colours in composables or bypass this projector when `SKIN-002`/`003` render
 the integrated chrome.
+
+### SiteSkin top bar (SKIN-002)
+
+The standalone integrated top bar is constructed from four closed inputs: a core-trusted
+`SiteSkinConfiguration`, the decoded-or-monogram `BrandAsset`, a projected `SiteSkinColorScheme`,
+and `SecurityPresentation` derived from the committed browser origin. Its model requires the
+browser-observed registrable domain and TLS enum; rendering has no manifest-controlled branch that
+can hide, replace, or reorder the security identity. The domain/TLS row uses browser-authored
+semantics and the theme's 4.5:1 body pair, not its 3:1 non-text UI pair.
+
+Logos always render through the same clipped 40 dp slot with fit scaling, regardless of bitmap
+intrinsics. The top bar has a minimum rather than fixed height so scaled title, subtitle, and
+security text can expand without overlap. Manifest discovery, asset decoding, and colour parsing
+remain outside composition. The component is intentionally not selected from discovery results;
+`SKIN-004` owns consent, activation, and origin-change deactivation before this chrome reaches the
+runtime browser screen.
