@@ -7,17 +7,22 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import app.webora.browser.browser.LoadErrorKind
+import app.webora.browser.browser.ExternalNavigation
+import app.webora.browser.browser.externalNavigation
 
 internal class HardenedWebViewClient(
     private val onPageChanged: (WebView, String, Boolean) -> Unit = { _, _, _ -> },
     private val onMainFrameFailed: (String, LoadErrorKind) -> Unit = { _, _ -> },
+    private val onExternalNavigation: (ExternalNavigation) -> Unit = {},
 ) : WebViewClient() {
     override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean =
-        request?.url?.toString()?.let { !isWebViewOwnedUrl(it) } ?: true
+        request?.url?.toString()?.let {
+            shouldOverrideNavigation(it, request.isForMainFrame, onExternalNavigation)
+        } ?: true
 
     @Deprecated("Used by WebView providers on older Android versions")
     override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean =
-        url?.let { !isWebViewOwnedUrl(it) } ?: true
+        url?.let { shouldOverrideNavigation(it, true, onExternalNavigation) } ?: true
 
     override fun onPageStarted(view: WebView, url: String?, favicon: android.graphics.Bitmap?) {
         onPageChanged(view, url.orEmpty(), true)
@@ -48,6 +53,17 @@ internal class HardenedWebViewClient(
     private companion object {
         const val COMPLETE_PROGRESS = 100
     }
+}
+
+internal fun shouldOverrideNavigation(
+    url: String,
+    isMainFrame: Boolean,
+    onExternalNavigation: (ExternalNavigation) -> Unit,
+): Boolean {
+    if (!isMainFrame) return false
+    if (isWebViewOwnedUrl(url)) return false
+    externalNavigation(url)?.let(onExternalNavigation)
+    return true
 }
 
 internal fun classifyWebViewError(errorCode: Int): LoadErrorKind = when (errorCode) {

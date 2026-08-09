@@ -1,6 +1,7 @@
 package app.webora.browser
 
 import android.os.Bundle
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -16,8 +17,16 @@ import app.webora.browser.browser.LaunchDestination
 import app.webora.browser.browser.OnboardingScreen
 import app.webora.browser.browser.OnboardingStore
 import app.webora.browser.browser.launchDestination
+import app.webora.browser.web.enqueueDownload
+import app.webora.browser.web.launchExternal
 
 class MainActivity : ComponentActivity() {
+    private var uploadResult: ((String?) -> Unit)? = null
+    private val filePicker = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        uploadResult?.invoke(uri?.toString())
+        uploadResult = null
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // Android 15+ enforces edge-to-edge; opting in here rather than at PLAY-001
         // avoids retrofitting insets handling into a finished UI.
@@ -37,7 +46,16 @@ class MainActivity : ComponentActivity() {
                         },
                         modifier = Modifier.fillMaxSize(),
                     )
-                    LaunchDestination.Home -> BrowserScreen(Modifier.fillMaxSize())
+                    LaunchDestination.Home -> BrowserScreen(
+                        modifier = Modifier.fillMaxSize(),
+                        onLaunchExternal = { launchExternal(this, it) },
+                        onDownload = { enqueueDownload(this, it) },
+                        onFileChooser = { mimeType, complete ->
+                            uploadResult?.invoke(null)
+                            uploadResult = complete
+                            filePicker.launch(mimeType)
+                        },
+                    )
                 }
             }
         }

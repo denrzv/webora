@@ -18,4 +18,10 @@
     <string name="error_tls">Webora could not establish a secure connection.</string>
     <string name="error_unknown">The page encountered a problem.</string>
     <string name="retry">Retry</string>
+    <string name="external_navigation_title">Open another app?</string>
+    <string name="external_navigation_message">This page wants to open a %1$s app.</string>
+    <string name="open_external">Open</string>
+    <string name="cancel">Cancel</string>
+    <string name="download_started">Download started</string>
+    <string name="download_failed">Download could not be started</string>
 </resources>
