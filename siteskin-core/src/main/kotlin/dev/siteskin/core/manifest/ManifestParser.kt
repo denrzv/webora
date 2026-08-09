@@ -50,19 +50,34 @@ public object ManifestParser {
      * Reads at most 131,073 bytes and does not close [input], which remains caller-owned.
      */
     public fun parse(input: InputStream): ManifestParseResult {
+        return when (val result = parseDocument(input)) {
+            is ManifestDocumentResult.Parsed -> decodeManifest(result.element, result.warnings)
+            is ManifestDocumentResult.Rejected -> ManifestParseResult.Rejected(result.error)
+        }
+    }
+
+    internal fun parseDocument(input: InputStream): ManifestDocumentResult {
         val bytes = try {
             readBounded(input)
         } catch (_: IOException) {
-            return rejected(ManifestDiagnosticCode.PARSE)
-        } ?: return rejected(ManifestDiagnosticCode.SIZE_EXCEEDED)
-        val text = decodeUtf8(bytes) ?: return rejected(ManifestDiagnosticCode.PARSE)
-        return decodeManifest(text)
+            return documentRejected(ManifestDiagnosticCode.PARSE)
+        } ?: return documentRejected(ManifestDiagnosticCode.SIZE_EXCEEDED)
+        val text = decodeUtf8(bytes) ?: return documentRejected(ManifestDiagnosticCode.PARSE)
+        return try {
+            val element = json.parseToJsonElement(text)
+            ManifestDocumentResult.Parsed(element, UnknownFieldScanner.scan(element))
+        } catch (_: SerializationException) {
+            documentRejected(ManifestDiagnosticCode.PARSE)
+        } catch (_: IllegalArgumentException) {
+            documentRejected(ManifestDiagnosticCode.PARSE)
+        }
     }
 
-    private fun decodeManifest(text: String): ManifestParseResult =
+    private fun decodeManifest(
+        element: JsonElement,
+        warnings: List<ManifestDiagnostic>,
+    ): ManifestParseResult =
         try {
-            val element = json.parseToJsonElement(text)
-            val warnings = UnknownFieldScanner.scan(element)
             ManifestParseResult.Parsed(
                 manifest = json.decodeFromJsonElement<SiteSkinManifestDto>(element),
                 warnings = warnings,
@@ -101,6 +116,18 @@ public object ManifestParser {
 
     private fun rejected(code: ManifestDiagnosticCode): ManifestParseResult.Rejected =
         ManifestParseResult.Rejected(ManifestDiagnostic(code))
+
+    private fun documentRejected(code: ManifestDiagnosticCode): ManifestDocumentResult.Rejected =
+        ManifestDocumentResult.Rejected(ManifestDiagnostic(code))
+}
+
+internal sealed interface ManifestDocumentResult {
+    data class Parsed(
+        val element: JsonElement,
+        val warnings: List<ManifestDiagnostic>,
+    ) : ManifestDocumentResult
+
+    data class Rejected(val error: ManifestDiagnostic) : ManifestDocumentResult
 }
 
 
@@ -120,12 +147,6 @@ private object UnknownFieldScanner {
         if (element !is JsonObject) return emptyList()
         return buildList {
             inspectObject(element, "$", rootFields, this)
-            inspectObject(element["site"], "$.site", siteFields, this)
-            inspectObject(element["branding"], "$.branding", brandingFields, this)
-            inspectObject(element["toolbar"], "$.toolbar", toolbarFields, this)
-            inspectItems(element["bottomNavigation"], "$.bottomNavigation", this)
-            inspectItems(element["menu"], "$.menu", this)
-            inspectItems(element["quickActions"], "$.quickActions", this)
         }
     }
 
@@ -137,7 +158,6 @@ private object UnknownFieldScanner {
         (element as? JsonArray)?.forEachIndexed { index, item ->
             val itemPath = "$path[$index]"
             inspectObject(item, itemPath, itemFields, warnings)
-            inspectObject((item as? JsonObject)?.get("action"), "$itemPath.action", actionFields, warnings)
         }
     }
 
@@ -147,8 +167,27 @@ private object UnknownFieldScanner {
         knownFields: Set<String>,
         warnings: MutableList<ManifestDiagnostic>,
     ) {
-        (element as? JsonObject)?.keys?.filterNot(knownFields::contains)?.forEach { field ->
-            warnings += ManifestDiagnostic(ManifestDiagnosticCode.FIELD_UNKNOWN, "$path.$field")
+        (element as? JsonObject)?.forEach { (field, value) ->
+            if (field !in knownFields) {
+                warnings += ManifestDiagnostic(ManifestDiagnosticCode.FIELD_UNKNOWN, "$path.$field")
+            } else {
+                inspectKnownValue(field, value, "$path.$field", warnings)
+            }
+        }
+    }
+
+    private fun inspectKnownValue(
+        field: String,
+        value: JsonElement,
+        path: String,
+        warnings: MutableList<ManifestDiagnostic>,
+    ) {
+        when (field) {
+            "site" -> inspectObject(value, path, siteFields, warnings)
+            "branding" -> inspectObject(value, path, brandingFields, warnings)
+            "toolbar" -> inspectObject(value, path, toolbarFields, warnings)
+            "bottomNavigation", "menu", "quickActions" -> inspectItems(value, path, warnings)
+            "action" -> inspectObject(value, path, actionFields, warnings)
         }
     }
 }
