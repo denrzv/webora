@@ -26,6 +26,12 @@ internal data class BrowserLoadFailure(
 )
 
 internal sealed interface BrowserObservation {
+    data class PageStarted(
+        val url: String,
+        val canGoBack: Boolean,
+        val canGoForward: Boolean,
+    ) : BrowserObservation
+
     data class Page(
         val url: String,
         val isLoading: Boolean,
@@ -42,16 +48,37 @@ internal fun BrowserState.observe(observation: BrowserObservation): BrowserState
     when (observation) {
         is BrowserObservation.AddressEdited -> copy(addressText = observation.text)
         is BrowserObservation.PageFailed -> observeFailure(observation)
-        is BrowserObservation.Page -> copy(
-            mode = BrowserMode.Regular(SiteOrigin.parse(observation.url)),
-            displayedUrl = observation.url,
-            addressText = observation.url,
+        is BrowserObservation.PageStarted -> observePage(
+            url = observation.url,
+            isLoading = true,
+            canGoBack = observation.canGoBack,
+            canGoForward = observation.canGoForward,
+            failure = null,
+        )
+        is BrowserObservation.Page -> observePage(
+            url = observation.url,
             isLoading = observation.isLoading,
             canGoBack = observation.canGoBack,
             canGoForward = observation.canGoForward,
-            loadFailure = if (observation.isLoading) null else loadFailure,
+            failure = loadFailure,
         )
     }
+
+private fun BrowserState.observePage(
+    url: String,
+    isLoading: Boolean,
+    canGoBack: Boolean,
+    canGoForward: Boolean,
+    failure: BrowserLoadFailure?,
+): BrowserState = copy(
+    mode = BrowserMode.Regular(SiteOrigin.parse(url)),
+    displayedUrl = url,
+    addressText = url,
+    isLoading = isLoading,
+    canGoBack = canGoBack,
+    canGoForward = canGoForward,
+    loadFailure = failure,
+)
 
 private fun BrowserState.observeFailure(failure: BrowserObservation.PageFailed): BrowserState {
     val retryUrl = resolveAddressInput(failure.url)?.takeIf { it == failure.url }

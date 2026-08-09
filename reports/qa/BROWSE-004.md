@@ -3,7 +3,7 @@ Status: QA_PASSED
 
 ## Scope
 
-Regular-mode security identity, navigation/overflow chrome, main-frame error recovery, JVM regression coverage, Android compilation, lint, and repository guardrails.
+Regular-mode security identity, navigation/overflow chrome, main-frame error recovery, JVM and real Android regression coverage, Android compilation, lint, and repository guardrails.
 
 ## Test scenarios
 
@@ -15,7 +15,8 @@ Regular-mode security identity, navigation/overflow chrome, main-frame error rec
 | 4 | Unsafe failure URL cannot become Retry | JVM unit test | PASS |
 | 5 | New page start clears a stale failure | JVM unit test | PASS |
 | 6 | Chrome, resources, Android tests, and APK compile | Gradle compile/assemble | PASS |
-| 7 | Runtime visual and TalkBack inspection | Connected-device check | NOT RUN — no device and no `/dev/kvm`; instrumentation was compiled per managed-cloud policy. |
+| 7 | Main-frame connection failure keeps browser-owned recovery UI and a live Retry controller | Pixel 6 API 33 instrumentation | PASS |
+| 8 | Original `https://127.0.0.1:44444/` failure, Retry, Home, screenshot, and crash/ANR inspection | Pixel 6 API 33 manual validation | PASS — [recovery screenshot](BROWSE-004-runtime-recovery.png) |
 
 ## Edge cases
 
@@ -23,9 +24,9 @@ Regular-mode security identity, navigation/overflow chrome, main-frame error rec
 - origin change / redirect → PASS — each main-frame observation reparses and replaces the exact committed origin.
 - offline with cached manifest → N/A — no manifest cache exists in this ticket; network failure uses the regular error state.
 - oversized or malformed payload → N/A — no payload parsing change.
-- accessibility (TalkBack, font scale) → Compile PASS; runtime inspection unavailable without a connected device or KVM.
+- accessibility (TalkBack, font scale) → unchanged by TASK-FIX-2; existing compile coverage remains green.
 
 ## Result
 
 Status: QA_PASSED
-Notes: Automated acceptance checks pass. Runtime instrumentation and screenshot capture are an environment limitation, not a product-test failure.
+Notes: Automated acceptance checks pass. Runtime instrumentation and manual recovery validation pass on the Pixel 6 API 33 emulator, with no crash or ANR markers in logcat.
