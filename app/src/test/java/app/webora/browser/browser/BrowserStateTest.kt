@@ -8,6 +8,14 @@ import org.junit.Test
 
 class BrowserStateTest {
     @Test
+    fun `home navigation enters regular mode with resolved destination`() {
+        val state = BrowserState().navigateFromHome("https://example.com/path")
+
+        assertEquals("https://example.com/path", state.displayedUrl)
+        assertEquals("https://example.com/path", state.addressText)
+        assertTrue(state.mode is BrowserMode.Regular)
+    }
+    @Test
     fun `page observation creates regular mode and renderer state`() {
         val state = BrowserState().observe(
             BrowserObservation.Page(

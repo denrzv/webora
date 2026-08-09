@@ -34,3 +34,10 @@ internal fun BrowserState.observe(observation: BrowserObservation): BrowserState
             canGoForward = observation.canGoForward,
         )
     }
+
+internal fun BrowserState.navigateFromHome(url: String): BrowserState = copy(
+    mode = BrowserMode.Regular(SiteOrigin.parse(url)),
+    displayedUrl = url,
+    addressText = url,
+    isLoading = true,
+)
