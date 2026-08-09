@@ -60,7 +60,7 @@ parsing with WCAG AA contrast correction, limit clamping with truncation warning
 rejected; each denied scheme is rejected; a hostile colour pair is corrected and flagged; over-limit
 collections truncate. Needs a negative control per protection.
 
-**`CORE-005` Action model and resolution.** Nine allow-listed types → sealed `ResolvedAction`.
+**`CORE-005` ✅ Action model and resolution.** Nine allow-listed types → sealed `ResolvedAction`.
 Unknown type drops the item and keeps the manifest (`ADR-007`). Acceptance: each type resolves to
 the right typed result; unknown type drops exactly one item; `phone` resolves to a dial intent
 description, never a call.

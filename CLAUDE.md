@@ -131,6 +131,18 @@ malformed UTF-8 rather than accepting replacement characters, and leaves the cal
 open. `ignoreUnknownKeys` is paired with an explicit shape walk that emits
 `SS-W-FIELD-UNKNOWN` paths; enabling it alone would silently discard protocol diagnostics.
 
+### Action-resolution seam (CORE-005)
+
+`ActionResolver` accepts only a trusted `NormalizedAction`, trusted `SiteConfiguration`, and the
+browser-observed current page URL. It maps the nine v1 action types into the closed
+`ResolvedAction` hierarchy; `home` uses `site.homeUrl`, while `share` uses the browser-observed
+page rather than manifest payload. Unknown or internally inconsistent values fail closed.
+
+Resolved actions remain pure data. External-navigation confirmation, Android intent construction,
+handler selection, permissions, WebView operations, and SiteSkin menu UI belong to the app layer.
+Do not add a generic URI, intent, package, component, flag, MIME-type, or extras variant to the
+sealed model; that would turn the action allow-list back into arbitrary native capability.
+
 ---
 
 ## Java version — two knobs, do not conflate them
