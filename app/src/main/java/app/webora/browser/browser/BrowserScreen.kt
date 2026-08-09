@@ -29,9 +29,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import app.webora.browser.R
+import app.webora.browser.siteskin.ManifestDiscoveryCoordinator
+import app.webora.browser.siteskin.OkHttpManifestSource
 import app.webora.browser.web.BrowserWebViewController
 import app.webora.browser.web.HardenedWebView
 import app.webora.browser.web.WebViewEvent
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 @Composable
@@ -46,6 +49,7 @@ internal fun BrowserScreen(
     var pendingExternal by remember { mutableStateOf<ExternalNavigation?>(null) }
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val manifestDiscovery = rememberManifestDiscovery(scope)
     val downloadStarted = stringResource(R.string.download_started)
     val downloadFailed = stringResource(R.string.download_failed)
 
@@ -67,6 +71,7 @@ internal fun BrowserScreen(
             scope.launch { snackbar.showSnackbar(message) }
         },
         onFileChooser = onFileChooser,
+        onPageStarted = manifestDiscovery::onPageStarted,
         modifier = modifier,
     )
     SnackbarHost(snackbar)
@@ -78,6 +83,13 @@ internal fun BrowserScreen(
         },
         onDismiss = { pendingExternal = null },
     ) }
+}
+
+@Composable
+private fun rememberManifestDiscovery(scope: CoroutineScope): ManifestDiscoveryCoordinator {
+    val discovery = remember(scope) { ManifestDiscoveryCoordinator(scope, OkHttpManifestSource()) {} }
+    DisposableEffect(discovery) { onDispose(discovery::cancel) }
+    return discovery
 }
 
 @Composable
@@ -107,6 +119,7 @@ private fun RegularBrowser(
     onExternalNavigation: (ExternalNavigation) -> Unit,
     onDownload: (String) -> Unit,
     onFileChooser: (String, (String?) -> Unit) -> Unit,
+    onPageStarted: (String) -> Unit,
     modifier: Modifier,
 ) {
     Column(modifier = modifier) {
@@ -133,6 +146,9 @@ private fun RegularBrowser(
             initialUrl = state.displayedUrl,
             controller = controller,
             onEvent = { event ->
+                if (event is WebViewEvent.PageChanged && event.observation.isLoading) {
+                    onPageStarted(event.observation.url)
+                }
                 onStateChanged(state.observe(event.toBrowserObservation()))
             },
             onExternalNavigation = onExternalNavigation,

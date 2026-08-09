@@ -397,3 +397,14 @@ remote intent syntax. Downloads accept absolute HTTP(S) only and use browser-sel
 `DownloadManager` policy. Uploads use a single-result SAF picker only when page accept hints reduce
 to the browser MIME allow-list; unsafe hints cancel rather than widening to `*/*`, and only a
 system-selected `content:` URI returns to the page. None of these flows grants a runtime permission.
+
+### Manifest discovery transport (NET-001)
+
+The app observes main-frame page starts without delaying WebView rendering, canonicalizes an HTTPS
+`SiteOrigin`, and asynchronously requests only `/.well-known/siteskin.json`. OkHttp automatic
+redirects stay disabled: the app follows at most two redirects after comparing each target's full
+canonical origin. Explicit call/connect/read/write timeouts and a 128 KiB sentinel read bound remote
+work before bytes enter the shared `SiteSkinValidator`. A new navigation or composition disposal
+cancels both the discovery coroutine and its underlying OkHttp call; rejected, missing, oversized,
+timed-out, or otherwise failed discovery remains regular browser mode. Caching and applying accepted
+configuration are later M3 tickets.
