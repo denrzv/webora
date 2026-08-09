@@ -20,7 +20,7 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 - [ ] `CORE-002` DTOs and parsing
 - [ ] `CORE-003` Schema validation
 - [ ] `CORE-004` Security validation and normalization
-- [ ] `CORE-005` Action model and resolution
+- [x] `CORE-005` Action model and resolution
 - [ ] `CORE-006` Navigation active-state matching
 - [ ] `SPEC-003` `siteskin-lint` CLI — **last in M1**, it wraps what `CORE-001..006` build
 
