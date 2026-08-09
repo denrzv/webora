@@ -172,8 +172,8 @@ release signing config `app/build.gradle.kts` never implemented. Also set
 | `SPEC-002` | ✅ Versioning & compatibility policy: `SPEC.md` §§4.1–4.5 (layer ordering, breaking-change rules with a security carve-out, deprecation lifecycle), the `spec/versions.json` decision table, and four version fixtures. Fixed two defects in the published schema — leading-zero versions, and a trailing-newline bypass in every `^…$` pattern |
 | `CORE-001` | `SiteOrigin` + URL resolution: scheme/host/port, IDN→punycode, mixed-script homograph guard, default ports, relative-path resolution |
 | `CORE-002` | DTOs + kotlinx.serialization parsing; byte-size guard before parse; unknown fields ignored-with-warning; parse success ≠ trust |
-| `CORE-003` | `SchemaValidator` → `ManifestValidationResult(errors, warnings)` with the SPEC-001 diagnostic codes |
-| `CORE-004` | `SecurityValidator` + normalisation → trusted `SiteSkinConfiguration`: origin binding, scheme allow-list (`https`/`mailto`/`tel`/`geo`), icon allow-list, colour parse + WCAG AA contrast correction, limit clamping |
+| `CORE-003` | ✅ `SchemaValidator` over parsed JSON → `ManifestValidationResult(errors, warnings)`, executing the version table and structural corpus with stable diagnostic codes |
+| `CORE-004` | ✅ `SecurityValidator` + normalisation → trusted `SiteSkinConfiguration`: origin binding, scheme allow-list (`https`/`mailto`/`tel`/`geo`), icon allow-list, colour parse + WCAG AA contrast correction, limit clamping |
 | `CORE-005` | Action model: `internal_url`, `external_url`, `phone`, `email`, `map`, `share`, `home`, `refresh`, `open_menu` → sealed `ResolvedAction`; unknown type drops the item, never the manifest |
 | `CORE-006` | `NavMatcher` — active-item detection, exact path + `/cart/**` glob |
 | `SPEC-003` | `siteskin-lint` CLI — `siteskin-lint https://site.example` — the tool a site owner runs. Same validator as the browser, so "passes lint" means "will activate" |
