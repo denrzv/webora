@@ -168,7 +168,7 @@ release signing config `app/build.gradle.kts` never implemented. Also set
 ### M1 — SiteSkin API (spec first, then TDD against it)
 | Ticket | Scope |
 |---|---|
-| `SPEC-001` | **SiteSkin Manifest v1.0**: `spec/SPEC.md` (normative), `spec/siteskin-1.0.schema.json`, and the conformance corpus — `fixtures/valid/*.json` + `fixtures/invalid/*.json`, each invalid case paired with its expected stable diagnostic code (`SS-E-ORIGIN-MISMATCH`, `SS-E-SCHEME-DENIED`, `SS-W-CONTRAST-CORRECTED`, …). **The corpus is the contract; the Kotlin is written to satisfy it.** |
+| `SPEC-001` | ✅ **SiteSkin Manifest v1.0**: `spec/SPEC.md` (normative), `spec/siteskin-1.0.schema.json`, and the conformance corpus — `fixtures/valid/*.json` + `fixtures/invalid/*.json`, each invalid case paired with its expected stable diagnostic code (`SS-E-ORIGIN-MISMATCH`, `SS-E-SCHEME-DENIED`, `SS-W-CONTRAST-CORRECTED`, …). **The corpus is the contract; the Kotlin is written to satisfy it.** Full guardrail and `:app:assembleDebug` verification complete. |
 | `SPEC-002` | ✅ Versioning & compatibility policy: `SPEC.md` §§4.1–4.5 (layer ordering, breaking-change rules with a security carve-out, deprecation lifecycle), the `spec/versions.json` decision table, and four version fixtures. Fixed two defects in the published schema — leading-zero versions, and a trailing-newline bypass in every `^…$` pattern |
 | `CORE-001` | `SiteOrigin` + URL resolution: scheme/host/port, IDN→punycode, mixed-script homograph guard, default ports, relative-path resolution |
 | `CORE-002` | DTOs + kotlinx.serialization parsing; byte-size guard before parse; unknown fields ignored-with-warning; parse success ≠ trust |
