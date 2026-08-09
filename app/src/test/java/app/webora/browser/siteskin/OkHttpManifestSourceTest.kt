@@ -1,0 +1,112 @@
+package app.webora.browser.siteskin
+
+import dev.siteskin.core.SiteSkinLimits
+import java.io.IOException
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runTest
+import okhttp3.OkHttpClient
+import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.MockWebServer
+import okio.Buffer
+import org.junit.After
+import org.junit.Assert.assertArrayEquals
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class OkHttpManifestSourceTest {
+    private val servers = mutableListOf<MockWebServer>()
+
+    @After fun shutDownServers() = servers.forEach(MockWebServer::shutdown)
+
+    @Test fun `fetches only the well known path over https`() = runTest {
+        val server = server().apply { enqueue(MockResponse().setBody("manifest")) }
+
+        assertArrayEquals("manifest".toByteArray(), source().fetch(origin(server)))
+        assertEquals("/.well-known/siteskin.json", server.takeRequest().path)
+        assertNull(source().fetch("http://localhost:${server.port}"))
+        assertEquals(1, server.requestCount)
+    }
+
+    @Test fun `follows two exact origin redirects and refuses a third`() = runTest {
+        val success = server().apply {
+            enqueue(redirect(origin(this) + "/one"))
+            enqueue(redirect(origin(this) + "/two"))
+            enqueue(MockResponse().setBody("ok"))
+        }
+        assertArrayEquals("ok".toByteArray(), source().fetch(origin(success)))
+
+        val overflow = server().apply { repeat(3) { enqueue(redirect(origin(this) + "/next$it")) } }
+        assertNull(source().fetch(origin(overflow)))
+        assertEquals(3, overflow.requestCount)
+    }
+
+    @Test fun `refuses a redirect to another origin`() = runTest {
+        val target = server()
+        val targetUrl = target.url("/stolen").newBuilder().scheme("https").build().toString()
+        val start = server().apply { enqueue(redirect(targetUrl)) }
+
+        assertNull(source().fetch(origin(start)))
+        assertEquals(0, target.requestCount)
+    }
+
+    @Test fun `cancelling fetch cancels the underlying call`() = runTest {
+        val entered = AtomicBoolean(false)
+        val cancelled = AtomicBoolean(false)
+        val client = OkHttpClient.Builder().addInterceptor { chain ->
+            entered.set(true)
+            while (!chain.call().isCanceled()) Thread.sleep(1)
+            cancelled.set(true)
+            throw IOException("cancelled")
+        }.build()
+        val job = launch { OkHttpManifestSource(client).fetch("https://example.test") }
+
+        testScheduler.runCurrent()
+        while (!entered.get()) Thread.yield()
+        job.cancelAndJoin()
+
+        assertTrue(cancelled.get())
+    }
+
+    @Test fun `rejects unsuccessful oversized and stalled responses`() = runTest {
+        val server = server().apply {
+            enqueue(MockResponse().setResponseCode(503).setBody("secret"))
+            enqueue(MockResponse().setBody("x").setHeader("Content-Length", SiteSkinLimits.MAX_MANIFEST_BYTES + 1))
+            enqueue(MockResponse().setBody(Buffer().write(ByteArray(SiteSkinLimits.MAX_MANIFEST_BYTES + 1))))
+            enqueue(MockResponse().setHeadersDelay(1, TimeUnit.SECONDS).setBody("late"))
+        }
+        val source = source(readTimeoutMillis = 50)
+
+        repeat(4) { assertNull(source.fetch(origin(server))) }
+    }
+
+    private fun source(readTimeoutMillis: Long = 5_000) = OkHttpManifestSource(
+        OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                val request = chain.request()
+                val localUrl = request.url.newBuilder().scheme("http").host("localhost").build()
+                chain.proceed(request.newBuilder().url(localUrl).build())
+            }
+            .followRedirects(false)
+            .followSslRedirects(false)
+            .readTimeout(readTimeoutMillis, TimeUnit.MILLISECONDS)
+            .build(),
+    )
+
+    private fun server() = MockWebServer().also {
+        it.start()
+        servers += it
+    }
+
+    private fun origin(server: MockWebServer) = server.url("/").newBuilder()
+        .scheme("https")
+        .host("example.test")
+        .build()
+        .toString()
+        .removeSuffix("/")
+    private fun redirect(location: String) = MockResponse().setResponseCode(302).addHeader("Location", location)
+}

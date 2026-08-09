@@ -34,7 +34,7 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 
 ## M3 — SiteSkin runtime
 
-- [ ] `NET-001` Manifest fetcher
+- [x] `NET-001` Manifest fetcher
 - [ ] `NET-002` Manifest cache
 - [ ] `NET-003` Brand asset pipeline
 - [ ] `SKIN-001` Dynamic theming and contrast guard
