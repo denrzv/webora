@@ -121,6 +121,21 @@ browser-owned allow-list and warning behavior belongs to the later parsing/secur
 production validator mirrors the fixed v1 structural vocabulary directly; the general JSON Schema
 engine remains a test-only independent contract oracle and must not move onto the runtime classpath.
 
+### Security-normalization seam (CORE-004)
+
+`SecurityValidator` accepts a schema-valid `JsonObject` plus the browser-observed HTTPS serving
+origin. It resolves and binds URLs to that exact origin, applies action/icon allow-lists, removes
+later duplicate ids, clamps bounded content, corrects manifest colours, and is the only factory for
+the immutable `SiteSkinConfiguration`. A trusted configuration has no public constructor or
+`copy()` escape hatch; possession is proof that browser-owned security normalization completed.
+
+The parsed-tree input is an intentional adapter seam while CORE-002 remains pending. CORE-002 still
+owns bytes, parsing, DTO mapping, and unknown-field discovery; its adapter must prepend
+`SS-W-FIELD-UNKNOWN` diagnostics before calling security normalization. It must not add another
+trusted-model constructor or reinterpret CORE-004's ordered diagnostics. CORE-005 may map inert
+normalized actions into its sealed action model, but platform execution and permissions never enter
+core.
+
 ---
 
 ## Java version — two knobs, do not conflate them

@@ -58,7 +58,7 @@ parsable corpus document, short-circuiting unsupported majors before structural 
 `CORE-002` is not yet implemented, the seam accepts `JsonElement`; byte parsing, DTO mapping, and
 unknown-field discovery remain there. Security allow-lists deliberately remain `CORE-004`.
 
-**`CORE-004` Security validation and normalization.** The heart of the trust boundary. Origin
+**`CORE-004` ✅ Security validation and normalization.** The heart of the trust boundary. Origin
 binding for every URL, scheme allow-list, icon-name allow-list, asset same-origin check, colour
 parsing with WCAG AA contrast correction, limit clamping with truncation warnings. Produces
 `SiteSkinConfiguration`, constructible **only** here. Acceptance: cross-origin `internal_url` is
