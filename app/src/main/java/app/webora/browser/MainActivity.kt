@@ -7,7 +7,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
-import app.webora.browser.web.HardenedWebView
+import app.webora.browser.browser.BrowserScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -17,8 +17,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             MaterialTheme {
-                HardenedWebView(
-                    url = START_URL,
+                BrowserScreen(
+                    startUrl = START_URL,
                     modifier = Modifier.fillMaxSize(),
                 )
             }

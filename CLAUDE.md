@@ -359,3 +359,12 @@ file-URL escalation, and mixed content; AndroidX WebKit enables Safe Browsing wh
 provider supports it. Top-level HTTP(S) stays renderer-owned and other schemes fail closed for a
 later browser-owned dispatcher. Do not introduce `addJavascriptInterface` or let page, manifest,
 or UI state parameterize these settings.
+
+### Browser state and navigation (BROWSE-002)
+
+Browser chrome uses the sealed `BrowserMode` hierarchy from ADR-008: Home, Regular with an optional
+browser-observed origin, or Integrated with a trusted origin and `SiteSkinConfiguration`. Page
+callbacks may produce only Regular mode; a future validated SiteSkin activation seam must produce
+Integrated mode. Address input is resolved by browser-owned policy into explicit HTTP(S), host-like
+input promoted to HTTPS, or an encoded HTTPS search query; denied schemes never reach the renderer.
+System and predictive back consult live WebView history and delegate when it cannot be consumed.

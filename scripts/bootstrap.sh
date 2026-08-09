@@ -207,6 +207,8 @@ persist_tool_path() {
   [[ "${PERSIST_PATH}" == "1" ]] || return 0
 
   local bashrc="${HOME}/.bashrc"
+  # Write the variables literally for future shells.
+  # shellcheck disable=SC2016
   local path_line='export PATH="$HOME/.local/bin:$PATH"'
 
   touch "${bashrc}"
