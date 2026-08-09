@@ -17,16 +17,16 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 - [x] `SPEC-001` Manifest v1.0 spec, JSON Schema, conformance fixture corpus
 - [x] `SPEC-002` Versioning and compatibility policy
 - [x] `CORE-001` Origin model and URL resolution
-- [ ] `CORE-002` DTOs and parsing
-- [ ] `CORE-003` Schema validation
-- [ ] `CORE-004` Security validation and normalization
+- [x] `CORE-002` DTOs and parsing
+- [x] `CORE-003` Schema validation
+- [x] `CORE-004` Security validation and normalization
 - [x] `CORE-005` Action model and resolution
 - [x] `CORE-006` Navigation active-state matching
 - [x] `SPEC-003` `siteskin-lint` CLI — **last in M1**, it wraps what `CORE-001..006` build
 
 ## M2 — Browser foundation
 
-- [ ] `BROWSE-001` WebView host and hardening
+- [x] `BROWSE-001` WebView host and hardening
 - [ ] `BROWSE-002` Browser state machine, URL bar, navigation
 - [ ] `BROWSE-003` Home screen and onboarding
 - [ ] `BROWSE-004` Regular-mode chrome, security indicator, error pages
