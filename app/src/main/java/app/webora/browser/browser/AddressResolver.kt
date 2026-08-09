@@ -16,7 +16,7 @@ internal fun resolveAddressInput(raw: String): String? {
         explicit?.scheme != null -> explicit.toSafeWebUrl()
         input.contains("://") -> null
         looksLikeHost(input) -> parseUri("https://$input")?.toSafeWebUrl()
-        else -> SEARCH_ENDPOINT + URLEncoder.encode(input, StandardCharsets.UTF_8)
+        else -> SEARCH_ENDPOINT + URLEncoder.encode(input, StandardCharsets.UTF_8.name())
     }
 }
 

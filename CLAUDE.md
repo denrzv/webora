@@ -368,3 +368,13 @@ callbacks may produce only Regular mode; a future validated SiteSkin activation 
 Integrated mode. Address input is resolved by browser-owned policy into explicit HTTP(S), host-like
 input promoted to HTTPS, or an encoded HTTPS search query; denied schemes never reach the renderer.
 System and predictive back consult live WebView history and delegate when it cannot be consumed.
+
+### Home and onboarding (BROWSE-003)
+
+A first launch shows browser-owned product onboarding and persists only a local completion Boolean;
+this never substitutes for ADR-011's future per-origin SiteSkin consent. Returning launches enter
+`BrowserMode.Home`, whose recents and favourites remain honest empty states until their persistence
+contract exists. Suggested integrations are a compiled browser-owned HTTPS-only catalogue: remote
+pages and manifests cannot add, relabel, reorder, theme, or provide artwork for entries. Home does
+not create a WebView or perform network work; explicit destinations pass through `AddressResolver`
+before switching to Regular mode and composing the hardened renderer.

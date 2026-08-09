@@ -25,13 +25,19 @@ import app.webora.browser.web.HardenedWebView
 
 @Composable
 internal fun BrowserScreen(
-    startUrl: String,
     modifier: Modifier = Modifier,
 ) {
     val controller = remember { BrowserWebViewController() }
-    var state by remember { mutableStateOf(BrowserState(addressText = startUrl)) }
+    var state by remember { mutableStateOf(BrowserState()) }
 
     BrowserBackHandler(enabled = state.canGoBack, controller = controller)
+    if (state.mode == BrowserMode.Home) {
+        HomeScreen(
+            onNavigate = { state = state.navigateFromHome(it) },
+            modifier = modifier,
+        )
+        return
+    }
     Column(modifier = modifier) {
         AddressBar(
             state = state,
@@ -43,7 +49,7 @@ internal fun BrowserScreen(
         )
         if (state.isLoading) LinearProgressIndicator(Modifier.fillMaxWidth())
         HardenedWebView(
-            initialUrl = startUrl,
+            initialUrl = state.displayedUrl,
             controller = controller,
             onObservation = { observation ->
                 state = state.observe(
