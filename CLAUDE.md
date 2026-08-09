@@ -420,3 +420,15 @@ conditional discovery. A `304` refreshes the same exact entry, and only explicit
 unavailability may reuse stale accepted bytes; HTTP rejection or invalid replacement content fails
 closed to regular browsing. Cached bytes are validated again for the currently observed origin
 before an outcome is emitted.
+
+### Brand asset pipeline (NET-003)
+
+Later SiteSkin UI receives only a closed decoded `Bitmap` or browser-generated monogram; it never
+receives a remote logo URL to hand to a general-purpose image loader. The app rechecks the trusted
+configuration's logo against its complete canonical HTTPS origin and manually follows at most two
+exact-origin redirects. Only PNG/WebP declarations with matching byte signatures and decoder types
+are accepted; SVG is always refused. Input is capped at 512 KiB, bounds-only decoding enforces 1024
+pixels per axis and 1,048,576 total pixels before full allocation, and all transport/decode work is
+off-main and cancellable. Superseded work cannot publish, while every non-cancellation failure yields
+a deterministic monogram from trusted bounded site identity. Asset persistence and rendering remain
+later-ticket concerns.
