@@ -35,17 +35,44 @@ Recommended environment settings:
 - Setup script:
 
 ```bash
-WEBORA_BOOTSTRAP_PREPARE_GRADLE=1 bash scripts/bootstrap.sh
+WEBORA_BOOTSTRAP_PREPARE_GRADLE=1 WEBORA_BOOTSTRAP_PERSIST_PATH=1 bash scripts/bootstrap.sh
 ```
 
 - Maintenance script:
 
 ```bash
-WEBORA_BOOTSTRAP_PREPARE_GRADLE=1 bash scripts/bootstrap.sh
+WEBORA_BOOTSTRAP_PREPARE_GRADLE=1 WEBORA_BOOTSTRAP_PERSIST_PATH=1 bash scripts/bootstrap.sh
 ```
 
 Running the same idempotent bootstrap as maintenance lets a resumed cached
 container reconcile SDK/tooling state after Codex checks out the chat branch.
+
+Codex runs setup scripts in a separate Bash session from the agent, so a plain
+`export PATH=...` inside setup does not survive into the agent phase. With
+`WEBORA_BOOTSTRAP_PERSIST_PATH=1`, the bootstrap adds `~/.local/bin` to
+`~/.bashrc`. The bootstrap also symlinks the provisioned Android SDK `adb`
+executable into `~/.local/bin`, so `adb version` and `adb devices` work during
+the agent phase without hard-coding the SDK path.
+
+### Android runtime validation
+
+The current Webora Codex Cloud environment is `x86_64` but does not expose
+`/dev/kvm` or CPU virtualization flags (`vmx`/`svm`). Do not provision an
+Android Emulator in the shared bootstrap for this environment. A software-only
+emulator would be too slow and unreliable for the normal ticket loop.
+
+When a managed-cloud environment has neither KVM-backed emulator support nor a
+connected Android device:
+
+- unit tests, Detekt, lint, builds, and Android instrumentation-test compilation
+  remain required when relevant;
+- do not fail a task only because runtime instrumentation cannot be executed;
+- do not fail a task only because a runtime screenshot cannot be captured;
+- report runtime instrumentation/screenshots as `environment-unavailable`;
+- do not spend task time provisioning or debugging a software-only emulator.
+
+If the cloud runtime later exposes `/dev/kvm` or an external device becomes
+available, re-evaluate this policy before adding emulator provisioning.
 
 ### Checkpoints and pull requests
 
@@ -95,6 +122,7 @@ WEBORA_CMDLINE_TOOLS_VERSION=13114758
 WEBORA_GITLEAKS_VERSION=8.29.1
 WEBORA_SHELLCHECK_VERSION=0.11.0
 WEBORA_BOOTSTRAP_PREPARE_GRADLE=0
+WEBORA_BOOTSTRAP_PERSIST_PATH=0
 ```
 
 Override them only when the project toolchain changes. Keep the repository build
