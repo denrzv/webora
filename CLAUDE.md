@@ -350,3 +350,12 @@ The baseline starts empty. Anything added to it is a reviewed exception with a t
 - Subdomains are not trusted. Assets are same-origin only.
 - No telemetry without explicit opt-in.
 - Never block the main thread on network or image decoding.
+
+### WebView host policy (BROWSE-001)
+
+Every app-owned WebView is created through `HardenedWebView` and hardened before its first load.
+The immutable browser policy enables in-renderer JavaScript but disables file/content access,
+file-URL escalation, and mixed content; AndroidX WebKit enables Safe Browsing when the installed
+provider supports it. Top-level HTTP(S) stays renderer-owned and other schemes fail closed for a
+later browser-owned dispatcher. Do not introduce `addJavascriptInterface` or let page, manifest,
+or UI state parameterize these settings.
