@@ -378,3 +378,12 @@ contract exists. Suggested integrations are a compiled browser-owned HTTPS-only 
 pages and manifests cannot add, relabel, reorder, theme, or provide artwork for entries. Home does
 not create a WebView or perform network work; explicit destinations pass through `AddressResolver`
 before switching to Regular mode and composing the hardened renderer.
+
+### Regular chrome and load failures (BROWSE-004)
+
+Regular-mode identity is derived only from the committed main-frame `SiteOrigin`, never editable
+address text or document content. HTTPS displays the browser-owned secure affordance and every valid
+origin displays its registrable domain. WebView errors cross into Compose only for requests marked
+`isForMainFrame`; legacy SSL callbacks are cancelled but cannot replace a page because they do not
+identify the main frame. Error UI maps framework codes to closed browser-owned reasons, displays at
+most the registrable domain, and retains a retry capability only for the exact observed HTTP(S) URL.

@@ -9,8 +9,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -19,9 +22,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
+import app.webora.browser.R
 import app.webora.browser.web.BrowserWebViewController
 import app.webora.browser.web.HardenedWebView
+import app.webora.browser.web.WebViewEvent
 
 @Composable
 internal fun BrowserScreen(
@@ -38,32 +44,60 @@ internal fun BrowserScreen(
         )
         return
     }
+    RegularBrowser(
+        state = state,
+        controller = controller,
+        onStateChanged = { state = it },
+        modifier = modifier,
+    )
+}
+
+@Composable
+private fun RegularBrowser(
+    state: BrowserState,
+    controller: BrowserWebViewController,
+    onStateChanged: (BrowserState) -> Unit,
+    modifier: Modifier,
+) {
     Column(modifier = modifier) {
         AddressBar(
             state = state,
-            onAddressChanged = { state = state.observe(BrowserObservation.AddressEdited(it)) },
+            onAddressChanged = { onStateChanged(state.observe(BrowserObservation.AddressEdited(it))) },
             onSubmit = { resolveAddressInput(state.addressText)?.let(controller::navigate) },
             onBack = controller::goBack,
             onForward = controller::goForward,
             onReload = controller::reload,
+            onHome = { onStateChanged(BrowserState()) },
         )
         if (state.isLoading) LinearProgressIndicator(Modifier.fillMaxWidth())
+        state.loadFailure?.let { failure ->
+            BrowserErrorPage(
+                failure = failure,
+                onRetry = { failure.retryUrl?.let(controller::navigate) },
+                onHome = { onStateChanged(BrowserState()) },
+                modifier = Modifier.fillMaxSize(),
+            )
+            return@Column
+        }
         HardenedWebView(
             initialUrl = state.displayedUrl,
             controller = controller,
-            onObservation = { observation ->
-                state = state.observe(
-                    BrowserObservation.Page(
-                        observation.url,
-                        observation.isLoading,
-                        observation.canGoBack,
-                        observation.canGoForward,
-                    ),
-                )
+            onEvent = { event ->
+                onStateChanged(state.observe(event.toBrowserObservation()))
             },
             modifier = Modifier.fillMaxSize(),
         )
     }
+}
+
+private fun WebViewEvent.toBrowserObservation(): BrowserObservation = when (this) {
+    is WebViewEvent.MainFrameFailed -> BrowserObservation.PageFailed(url, kind)
+    is WebViewEvent.PageChanged -> BrowserObservation.Page(
+        observation.url,
+        observation.isLoading,
+        observation.canGoBack,
+        observation.canGoForward,
+    )
 }
 
 @Composable
@@ -95,21 +129,73 @@ private fun AddressBar(
     onBack: () -> Unit,
     onForward: () -> Unit,
     onReload: () -> Unit,
+    onHome: () -> Unit,
 ) {
+    var menuExpanded by remember { mutableStateOf(false) }
+    val security = securityPresentation(state.mode)
     Column {
         OutlinedTextField(
             value = state.addressText,
             onValueChange = onAddressChanged,
-            label = { Text("Search or enter address") },
+            label = { Text(stringResource(R.string.address_label)) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
             keyboardActions = KeyboardActions(onGo = { onSubmit() }),
             modifier = Modifier.fillMaxWidth(),
         )
+        security?.let {
+            val transport = if (it.transportSecurity == TransportSecurity.SECURE) {
+                stringResource(R.string.security_secure)
+            } else {
+                stringResource(R.string.security_not_secure)
+            }
+            Text(stringResource(R.string.security_identity, transport, it.registrableDomain))
+        }
         Row {
-            BrowserButton("Back", state.canGoBack, onBack)
-            BrowserButton("Forward", state.canGoForward, onForward)
-            BrowserButton("Reload", true, onReload)
+            BrowserButton(stringResource(R.string.back), state.canGoBack, onBack)
+            BrowserButton(stringResource(R.string.forward), state.canGoForward, onForward)
+            BrowserButton(stringResource(R.string.reload), true, onReload)
+            BrowserButton(stringResource(R.string.home), true, onHome)
+            Button(onClick = { menuExpanded = true }) { Text(stringResource(R.string.more)) }
+            DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.page_information)) },
+                    onClick = { menuExpanded = false },
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.settings)) },
+                    onClick = { menuExpanded = false },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun BrowserErrorPage(
+    failure: BrowserLoadFailure,
+    onRetry: () -> Unit,
+    onHome: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(modifier) {
+        Column {
+            Text(stringResource(R.string.error_title))
+            failure.registrableDomain?.let { Text(it) }
+            Text(
+                stringResource(
+                    when (failure.kind) {
+                        LoadErrorKind.CONNECTION -> R.string.error_connection
+                        LoadErrorKind.NETWORK -> R.string.error_network
+                        LoadErrorKind.TLS -> R.string.error_tls
+                        LoadErrorKind.UNKNOWN -> R.string.error_unknown
+                    },
+                ),
+            )
+            Button(onClick = onRetry, enabled = failure.retryUrl != null) {
+                Text(stringResource(R.string.retry))
+            }
+            Button(onClick = onHome) { Text(stringResource(R.string.home)) }
         }
     }
 }
