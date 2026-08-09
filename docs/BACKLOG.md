@@ -47,16 +47,17 @@ breaking change. Fixtures for `1.0`, `1.1`, `2.0`, missing version, malformed ve
 > validated. Both are recorded as breaking changes in `SPEC.md` §4.5, taken deliberately inside the
 > free-change window that section defines and closes.
 
-**`CORE-002` DTOs and parsing.** kotlinx.serialization DTOs mirroring the schema. Byte-size guard
+**`CORE-002` ✅ DTOs and parsing.** kotlinx.serialization DTOs mirroring the schema. Byte-size guard
 *before* parse. Unknown fields ignored with a warning. Acceptance: every `valid/` fixture parses;
 malformed JSON yields `SS-E-PARSE`; a 129 KB payload yields `SS-E-SIZE-EXCEEDED` without being fully
 read. Parse success must not produce a trusted type — the DTO is inert.
 
 **`CORE-003` ✅ Schema validation.** Parsed JSON → `ManifestValidationResult(errors, warnings)`
 carrying the spec's diagnostic codes. The production validator executes the version table and every
-parsable corpus document, short-circuiting unsupported majors before structural validation. Because
-`CORE-002` is not yet implemented, the seam accepts `JsonElement`; byte parsing, DTO mapping, and
-unknown-field discovery remain there. Security allow-lists deliberately remain `CORE-004`.
+parsable corpus document, short-circuiting unsupported majors before structural validation. Its
+layer-specific seam accepts `JsonElement`; the completed `CORE-002` byte parser, DTO mapping, and
+unknown-field discovery feed the shared total-validation pipeline. Security allow-lists deliberately
+remain `CORE-004`.
 
 **`CORE-004` ✅ Security validation and normalization.** The heart of the trust boundary. Origin
 binding for every URL, scheme allow-list, icon-name allow-list, asset same-origin check, colour
