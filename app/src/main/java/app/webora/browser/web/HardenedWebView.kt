@@ -14,19 +14,24 @@ import androidx.compose.ui.viewinterop.AndroidView
 internal fun HardenedWebView(
     initialUrl: String,
     controller: BrowserWebViewController,
-    onObservation: (WebViewObservation) -> Unit,
+    onEvent: (WebViewEvent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val currentObserver = rememberUpdatedState(onObservation)
+    val currentObserver = rememberUpdatedState(onEvent)
     var attachedWebView: WebView? = null
     AndroidView(
         modifier = modifier,
         factory = { context ->
             WebView(context).apply {
                 applyWebViewHardening(this)
-                webViewClient = HardenedWebViewClient { view, url, isLoading ->
-                    currentObserver.value(view.toObservation(url, isLoading))
-                }
+                webViewClient = HardenedWebViewClient(
+                    onPageChanged = { view, url, isLoading ->
+                        currentObserver.value(WebViewEvent.PageChanged(view.toObservation(url, isLoading)))
+                    },
+                    onMainFrameFailed = { url, kind ->
+                        currentObserver.value(WebViewEvent.MainFrameFailed(url, kind))
+                    },
+                )
                 controller.attach(this)
                 attachedWebView = this
                 loadUrl(initialUrl)

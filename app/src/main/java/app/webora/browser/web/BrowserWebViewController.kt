@@ -1,6 +1,7 @@
 package app.webora.browser.web
 
 import android.webkit.WebView
+import app.webora.browser.browser.LoadErrorKind
 
 internal data class WebViewObservation(
     val url: String,
@@ -8,6 +9,12 @@ internal data class WebViewObservation(
     val canGoBack: Boolean,
     val canGoForward: Boolean,
 )
+
+internal sealed interface WebViewEvent {
+    data class PageChanged(val observation: WebViewObservation) : WebViewEvent
+
+    data class MainFrameFailed(val url: String, val kind: LoadErrorKind) : WebViewEvent
+}
 
 internal class BrowserWebViewController {
     private var webView: WebView? = null
