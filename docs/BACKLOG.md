@@ -17,6 +17,11 @@ Every ticket's acceptance criteria end with the same final item, per repo conven
 
 ## M1 — SiteSkin API
 
+**`SPEC-001` SiteSkin Manifest v1.0.** ✅ **Done.** Published the normative specification, JSON
+Schema, machine-readable diagnostic registry, and conformance corpus. The corpus is wired into
+`:siteskin-core:test`, and the full repository guardrail plus `:app:assembleDebug` have now been
+verified on an Android-SDK-equipped checkout.
+
 **`SPEC-002` Versioning and compatibility policy.** ✅ **Done.** Accept `1.x`, reject `2.x`. Unknown
 fields ignored with `SS-W-FIELD-UNKNOWN`. Documented deprecation path and what constitutes a
 breaking change. Fixtures for `1.0`, `1.1`, `2.0`, missing version, malformed version.

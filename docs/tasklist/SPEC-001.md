@@ -277,14 +277,11 @@ did not happen.
     the webora side
 
 - [x] **TASK-8: Close out — roadmap, deferred-coverage record**
-  - **Done** except acceptance criterion 1. `docs/ROADMAP.md` ticked, `CLAUDE.md` carries the corpus
+  - **Done.** `docs/ROADMAP.md` is ticked, `CLAUDE.md` carries the corpus
     wiring note and the three schema invariants a future session would otherwise have to rediscover.
-  - **Not done, and blocking `/validate`:** the full `bash scripts/pre-commit-check.sh` has never
-    run. This container has no Android SDK, so `./gradlew test` cannot build `:app`, and it has
-    neither `gitleaks` nor `shellcheck`. Every task above was verified with the core subset only.
-    Run the full script on an SDK-equipped machine before `/validate`, together with
-    `:app:assembleDebug` from `BOOTSTRAP.md` § 6 — which is still the one genuinely unverified
-    thing in this repository.
+  - **Deferred verification resolved on 2026-08-09:** `bash scripts/pre-commit-check.sh` passed in
+    an Android-SDK-equipped checkout with gitleaks and shellcheck installed, and
+    `./gradlew --quiet :app:assembleDebug` passed. The close-out is no longer blocked.
   - Modified: `docs/ROADMAP.md` — tick `SPEC-001`
   - Modified: `CLAUDE.md` — a short note that the corpus lives at `spec/fixtures/` and is executed
     by `:siteskin-core:test` via `siteskin.spec.dir`, so the next session does not go looking for
@@ -293,6 +290,17 @@ did not happen.
     1. Full `bash scripts/pre-commit-check.sh` run on a machine **with** an Android SDK, green.
     2. The deferred-coverage section below is accurate as-left.
   - Tests: full gate
+
+- [x] **TASK-FIX-1: Reconcile shipped-status documentation**
+  - Source: user-requested post-merge audit of the `SPEC-001` and `SPEC-002` completion markers.
+  - Modified: `docs/BACKLOG.md` — add the missing explicit `SPEC-001` done entry and verification
+    result; `SPEC-002` was already marked done.
+  - Modified: `docs/DEVELOPMENT_PLAN.md` — mark `SPEC-001` complete and record the deferred
+    verification result; `SPEC-002` was already marked complete.
+  - Modified: this tasklist — replace the stale TASK-8 verification blocker with the actual green
+    results.
+  - Result: `bash scripts/pre-commit-check.sh` and `./gradlew --quiet :app:assembleDebug` passed on
+    2026-08-09 before the documentation reconciliation.
 
 ---
 
