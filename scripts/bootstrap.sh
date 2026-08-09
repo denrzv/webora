@@ -208,6 +208,7 @@ persist_tool_path() {
 
   local bashrc="${HOME}/.bashrc"
   local path_line='export PATH="$HOME/.local/bin:$PATH"'
+  path_line='export PATH="$HOME/.local/bin:$PATH"'
 
   touch "${bashrc}"
   if ! grep -Fqx "${path_line}" "${bashrc}"; then
