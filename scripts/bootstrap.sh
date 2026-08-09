@@ -17,6 +17,7 @@ BUILD_TOOLS="${WEBORA_BUILD_TOOLS:-36.0.0}"
 GITLEAKS_VERSION="${WEBORA_GITLEAKS_VERSION:-8.29.1}"
 SHELLCHECK_VERSION="${WEBORA_SHELLCHECK_VERSION:-0.11.0}"
 PREPARE_GRADLE="${WEBORA_BOOTSTRAP_PREPARE_GRADLE:-0}"
+PERSIST_PATH="${WEBORA_BOOTSTRAP_PERSIST_PATH:-0}"
 USER_BIN_DIR="${HOME}/.local/bin"
 
 log() { echo "[bootstrap] $*"; }
@@ -192,6 +193,29 @@ provision_android_sdk() {
   log "Android SDK ready"
 }
 
+expose_adb() {
+  ensure_user_bin_path
+
+  local adb="${ANDROID_SDK_DIR}/platform-tools/adb"
+  [[ -x "${adb}" ]] || fail "adb missing after Android SDK provisioning: ${adb}"
+
+  ln -sf "${adb}" "${USER_BIN_DIR}/adb"
+  log "adb ready at ${USER_BIN_DIR}/adb"
+}
+
+persist_tool_path() {
+  [[ "${PERSIST_PATH}" == "1" ]] || return 0
+
+  local bashrc="${HOME}/.bashrc"
+  local path_line='export PATH="$HOME/.local/bin:$PATH"'
+
+  touch "${bashrc}"
+  if ! grep -Fqx "${path_line}" "${bashrc}"; then
+    printf '\n# Webora bootstrap tools\n%s\n' "${path_line}" >> "${bashrc}"
+  fi
+  log "persisted Webora tool PATH in ${bashrc}"
+}
+
 write_local_properties() {
   local lp="${ROOT}/local.properties"
   local tmp
@@ -229,6 +253,8 @@ prepare_gradle() {
 report_java
 provision_guardrail_tools
 provision_android_sdk
+expose_adb
+persist_tool_path
 write_local_properties
 prepare_gradle
 log "bootstrap complete"
