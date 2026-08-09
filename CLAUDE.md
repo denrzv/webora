@@ -432,3 +432,17 @@ pixels per axis and 1,048,576 total pixels before full allocation, and all trans
 off-main and cancellable. Superseded work cannot publish, while every non-cancellation failure yields
 a deterministic monogram from trusted bounded site identity. Asset persistence and rendering remain
 later-ticket concerns.
+
+### SiteSkin theme projection (SKIN-001)
+
+Integrated UI colour roles are created only by `SiteSkinTheme.from(SiteSkinConfiguration)` in the
+app layer. The projector exposes a closed six-role light/dark model rather than a general Material
+`ColorScheme`: primary/secondary/background containers and their content colours are the entire
+website-influenceable surface. Regular-browser, system-bar, domain, and TLS presentation stay
+browser-owned and absent from this model.
+
+Core still owns remote colour parsing and normative manifest correction. The app parses only its
+canonical opaque trusted values, fills omissions with compiled defaults, derives the dark surface,
+and runs a final WCAG guard over every newly formed pair before returning it (4.5:1 body, 3:1 UI).
+Do not parse manifest colours in composables or bypass this projector when `SKIN-002`/`003` render
+the integrated chrome.
