@@ -69,7 +69,7 @@ description, never a call.
 Deterministic tie-breaking. Acceptance: exact beats glob; longest glob wins; no match yields no
 selection rather than a default.
 
-**`SPEC-003` `siteskin-lint` CLI.** Fetches a live origin's manifest and validates it with the same
+**`SPEC-003` ✅ `siteskin-lint` CLI.** Fetches a live origin's manifest and validates it with the same
 `:siteskin-core` code path the browser uses. Exit 0 = will activate. Prints diagnostic codes.
 Acceptance: running it against `bloom-flowers` exits 0; against each `invalid/` fixture served
 locally, it exits non-zero with the expected code. Must share the validator with the browser — a

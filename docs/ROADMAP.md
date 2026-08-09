@@ -22,7 +22,7 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 - [ ] `CORE-004` Security validation and normalization
 - [x] `CORE-005` Action model and resolution
 - [x] `CORE-006` Navigation active-state matching
-- [ ] `SPEC-003` `siteskin-lint` CLI — **last in M1**, it wraps what `CORE-001..006` build
+- [x] `SPEC-003` `siteskin-lint` CLI — **last in M1**, it wraps what `CORE-001..006` build
 
 ## M2 — Browser foundation
 

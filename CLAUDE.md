@@ -155,6 +155,20 @@ within one segment and a complete `**` segment across zero or more whole segment
 beat globs; otherwise the longest literal prefix wins, then document order. No match means no active
 item — never default to the first navigation entry.
 
+### Total validation and `siteskin-lint` (SPEC-003)
+
+`SiteSkinValidator` is the shared activation seam for browser and tooling. It consumes one
+caller-owned stream without closing it, preserves raw JSON through the normative
+`parse → version → schema → security` order, and returns either a trusted configuration with
+non-rejecting diagnostics or rejection with no configuration. Do not assemble those validators
+again in a caller or decode to a DTO before structural validation; both create diagnostic drift.
+
+`:siteskin-lint` owns only command/transport policy. Its public command accepts an origin-only HTTPS
+URL, fetches `/.well-known/siteskin.json`, follows at most two exact-origin redirects, rejects an
+explicitly non-JSON response type, and streams into `SiteSkinValidator`. Exit 0 means a trusted
+configuration exists, even when warnings or dropped items are reported. DNS/TLS/HTTP/usage failures
+are tool errors, not synthetic `SS-*` diagnostics.
+
 ---
 
 ## Java version — two knobs, do not conflate them
