@@ -48,7 +48,10 @@ public enum class DiagnosticCode(public val value: String) {
 }
 
 /** One diagnostic produced while validating an untrusted manifest. */
-public data class ManifestDiagnostic(public val code: DiagnosticCode)
+public data class ManifestDiagnostic(
+    public val code: DiagnosticCode,
+    public val pointer: String? = null,
+)
 
 /**
  * The outcome of validating an untrusted manifest.

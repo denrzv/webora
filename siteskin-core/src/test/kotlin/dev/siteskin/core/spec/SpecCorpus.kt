@@ -43,6 +43,10 @@ internal object SpecCorpus {
     }
 
     /** Validates a fixture body against [schema], returning the failures as readable strings. */
+    /** Parses one corpus body for production-validator conformance tests. */
+    fun parsedBody(fixture: Fixture): JsonObject =
+        json.parseToJsonElement(fixture.bodyFile.readText()).jsonObject
+
     fun schemaErrorsFor(fixture: Fixture): List<String> {
         val body = json.parseToJsonElement(fixture.bodyFile.readText())
         val errors = mutableListOf<String>()
