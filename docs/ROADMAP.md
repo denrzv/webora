@@ -15,14 +15,14 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 ## M1 — SiteSkin API (spec first, then TDD against it)
 
 - [x] `SPEC-001` Manifest v1.0 spec, JSON Schema, conformance fixture corpus
-- [ ] `SPEC-002` Versioning and compatibility policy
-- [ ] `SPEC-003` `siteskin-lint` CLI
-- [ ] `CORE-001` Origin model and URL resolution
+- [x] `SPEC-002` Versioning and compatibility policy
+- [x] `CORE-001` Origin model and URL resolution
 - [ ] `CORE-002` DTOs and parsing
 - [ ] `CORE-003` Schema validation
 - [ ] `CORE-004` Security validation and normalization
 - [ ] `CORE-005` Action model and resolution
 - [ ] `CORE-006` Navigation active-state matching
+- [ ] `SPEC-003` `siteskin-lint` CLI — **last in M1**, it wraps what `CORE-001..006` build
 
 ## M2 — Browser foundation
 

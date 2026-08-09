@@ -7,7 +7,8 @@ starts, using the entry below as its input. Pre-writing twenty-three full PRDs w
 artifacts that are stale before anyone reads them — the AIDD flow deliberately writes the PRD at
 ticket start, when the preceding tickets have already taught you something.
 
-`SPEC-001` and `CORE-001` have full PRDs at `Status: PRD_READY` already, because they are next.
+`SPEC-001` and `CORE-001` were given full PRDs at `Status: PRD_READY` during the bootstrap, because
+they were next. `SPEC-001` and `SPEC-002` have since shipped; **`CORE-001` is the current ticket**.
 
 Every ticket's acceptance criteria end with the same final item, per repo convention:
 `bash scripts/pre-commit-check.sh` passes.
@@ -41,12 +42,6 @@ breaking change. Fixtures for `1.0`, `1.1`, `2.0`, missing version, malformed ve
 > validated. Both are recorded as breaking changes in `SPEC.md` §4.5, taken deliberately inside the
 > free-change window that section defines and closes.
 
-**`SPEC-003` `siteskin-lint` CLI.** Fetches a live origin's manifest and validates it with the same
-`:siteskin-core` code path the browser uses. Exit 0 = will activate. Prints diagnostic codes.
-Acceptance: running it against `bloom-flowers` exits 0; against each `invalid/` fixture served
-locally, it exits non-zero with the expected code. Must share the validator with the browser — a
-second implementation is the failure this ticket exists to prevent.
-
 **`CORE-002` DTOs and parsing.** kotlinx.serialization DTOs mirroring the schema. Byte-size guard
 *before* parse. Unknown fields ignored with a warning. Acceptance: every `valid/` fixture parses;
 malformed JSON yields `SS-E-PARSE`; a 129 KB payload yields `SS-E-SIZE-EXCEEDED` without being fully
@@ -73,6 +68,25 @@ description, never a call.
 **`CORE-006` Navigation active-state matching.** Exact path, then longest glob (`/cart/**`).
 Deterministic tie-breaking. Acceptance: exact beats glob; longest glob wins; no match yields no
 selection rather than a default.
+
+**`SPEC-003` `siteskin-lint` CLI.** Fetches a live origin's manifest and validates it with the same
+`:siteskin-core` code path the browser uses. Exit 0 = will activate. Prints diagnostic codes.
+Acceptance: running it against `bloom-flowers` exits 0; against each `invalid/` fixture served
+locally, it exits non-zero with the expected code. Must share the validator with the browser — a
+second implementation is the failure this ticket exists to prevent.
+
+> **Moved to the end of M1**, from its original position between `SPEC-002` and `CORE-002`. The
+> `SPEC-*` prefix grouped it with the spec tickets; its dependencies put it after the `CORE-*` ones.
+> "Exits non-zero with the expected code against each `invalid/` fixture" is a claim about all five
+> validation layers, and the corpus splits 1 transport / 1 parse / 2 version / 3 schema / 23
+> security. Everything past `version` is `CORE-003` and `CORE-004` work. Starting the CLI first buys
+> nothing that starting it last does not, and it creates the one outcome the ticket's own scope note
+> forbids: a lint that answers questions the browser's validator has not yet been taught, from code
+> that is therefore not the browser's validator.
+>
+> The dependency is on the *validator*, not on the CLI's own concerns — argument handling, the
+> exit-code contract, diagnostic rendering and the fixture-server harness are all still `SPEC-003`'s
+> to build, and none of them is blocked by anything except the thing they are built to exercise.
 
 ---
 

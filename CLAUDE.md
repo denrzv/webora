@@ -93,6 +93,25 @@ Two mechanisms enforce it, because a documented rule is not a rule:
 Core declares `interface ManifestSource` and consumes bytes. OkHttp lives in `:app`. Core never
 learns what a `Context` is.
 
+### Origin model
+
+`SiteOrigin` is the sole origin-comparison type. It canonicalizes scheme, host and port before it
+can be constructed; origin binding compares that complete tuple, never suffixes or registrable
+domains. The registrable domain and mixed-script signal are browser-owned display properties and
+do not participate in equality. See `ADR-004` for the canonicalization and bundled Public Suffix
+List decisions.
+
+Use `java.net.URI`, never `java.net.URL`: `URL.equals` may perform DNS resolution. JDK 25's URI/IDN
+behaviour also has several non-obvious constraints pinned by the core tests:
+
+- `IDN.toASCII` does not lowercase an ASCII host, so canonicalization lowercases its ASCII output.
+- `URI.host` is null for a valid Unicode hostname, so parsing starts from the raw authority.
+- `URI.resolve` accepts protocol-relative references and inherits the base scheme; reject them
+  before resolution.
+- `URI.normalize` preserves a leading traversal as a residual `..`; reject that residue rather
+  than treating normalization as permission to accept the URL.
+- IPv6 literals keep their brackets and bypass IDN conversion.
+
 ### Trust pipeline
 
 ```
@@ -106,35 +125,11 @@ back into a code-review guarantee.
 
 Parsing success is not validity. A DTO is untrusted remote input that happens to be well-formed.
 
-### Schema-validation seam (CORE-003)
 
-`SchemaValidator` accepts an already parsed `JsonElement` and returns only
-`ManifestValidationResult(errors, warnings)`. It implements the `version → schema` portion of the
-pipeline: a canonical unsupported major short-circuits before the v1 shape is inspected, while an
-absent or malformed version is a schema error. A valid result is still untrusted and is not a
-`SiteSkinConfiguration`.
-
-This input seam is deliberate while `CORE-002` remains pending. Do not add byte parsing, size
-guarding, DTO mapping, or unknown-field discovery to `SchemaValidator`; those belong to CORE-002.
-Likewise, unknown action/icon values and unknown properties pass structural validation because their
-browser-owned allow-list and warning behavior belongs to the later parsing/security layers. The
-production validator mirrors the fixed v1 structural vocabulary directly; the general JSON Schema
-engine remains a test-only independent contract oracle and must not move onto the runtime classpath.
-
-### Security-normalization seam (CORE-004)
-
-`SecurityValidator` accepts a schema-valid `JsonObject` plus the browser-observed HTTPS serving
-origin. It resolves and binds URLs to that exact origin, applies action/icon allow-lists, removes
-later duplicate ids, clamps bounded content, corrects manifest colours, and is the only factory for
-the immutable `SiteSkinConfiguration`. A trusted configuration has no public constructor or
-`copy()` escape hatch; possession is proof that browser-owned security normalization completed.
-
-The parsed-tree input is an intentional adapter seam while CORE-002 remains pending. CORE-002 still
-owns bytes, parsing, DTO mapping, and unknown-field discovery; its adapter must prepend
-`SS-W-FIELD-UNKNOWN` diagnostics before calling security normalization. It must not add another
-trusted-model constructor or reinterpret CORE-004's ordered diagnostics. CORE-005 may map inert
-normalized actions into its sealed action model, but platform execution and permissions never enter
-core.
+Manifest parsing is a bounded stream operation: core consumes no more than 131,073 bytes, rejects
+malformed UTF-8 rather than accepting replacement characters, and leaves the caller-owned stream
+open. `ignoreUnknownKeys` is paired with an explicit shape walk that emits
+`SS-W-FIELD-UNKNOWN` paths; enabling it alone would silently discard protocol diagnostics.
 
 ---
 
