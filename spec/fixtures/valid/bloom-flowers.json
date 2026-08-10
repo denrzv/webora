@@ -22,7 +22,8 @@
       "id": "home",
       "label": "Home",
       "icon": "home",
-      "action": { "type": "internal_url", "url": "/" }
+      "action": { "type": "internal_url", "url": "/" },
+      "match": ["/"]
     },
     {
       "id": "catalog",

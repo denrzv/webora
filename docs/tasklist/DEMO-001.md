@@ -12,31 +12,35 @@ exists before the check that reads it.
 
 ## Tasks
 
-- [ ] TASK-1: Pin the reference manifest's route contract by test
+- [x] TASK-1: Pin the reference manifest's route contract, and give `home` a `match`
   - New: `siteskin-core/src/test/kotlin/dev/siteskin/core/nav/ReferenceIntegrationNavTest.kt`
-  - Acceptance: reads `spec/fixtures/valid/bloom-flowers.json` through the existing
-    `siteskin.spec.dir` wiring — not a copied literal — validates it against
-    `https://bloomflowers.example`, and asserts the id `NavMatcher.activeItem` selects for `/`,
-    `/catalog`, `/catalog/`, `/catalog/roses`, `/cart`, `/cart/`, `/account`, `/account/orders`.
-    The `/` case asserts `home`, and **fails at this point**, which is the finding. Written first
-    per `/implement`; TASK-2 makes it pass.
-  - Tests: `ReferenceIntegrationNavTest`
-  - Note: also asserts a path the manifest does not describe (`/about`) selects nothing, so the test
-    cannot pass by making everything match.
-
-- [ ] TASK-2: Give `home` a `match`, across all three webora copies
   - Modified: `spec/fixtures/valid/bloom-flowers.json`,
     `spec/fixtures/valid/bloom-flowers.expected.json`,
     `siteskin-core/src/test/kotlin/dev/siteskin/core/spec/SpecCorpusTest.kt`
-  - Acceptance: `"match": ["/"]` on `bottomNavigation[0]` in both the body and the canonical result;
-    `BLOOM_FLOWERS_SHA256` recomputed with `sha256sum` from the file rather than transcribed;
-    `ReferenceIntegrationNavTest` now green including `/`; `SpecCorpusTest` and
-    `OriginCorpusTest.theBloomFlowersManifestResolvesEndToEnd` still green.
-  - Tests: `ReferenceIntegrationNavTest`, `SpecCorpusTest`, `OriginCorpusTest`
-  - Negative control: revert the `.json` edit alone ⇒ `SpecCorpusTest`'s SHA assertion must fail;
-    revert the constant alone ⇒ it must fail from the other side. Record both.
+  - Acceptance: the test reads the fixture through the existing `siteskin.spec.dir` wiring — not a
+    copied literal — validates it against `https://bloomflowers.example`, and asserts the id
+    `NavMatcher.activeItem` selects for `/`, `/catalog`, `/catalog/`, `/catalog/roses`, `/cart`,
+    `/cart/`, `/account`, `/account/orders`. `"match": ["/"]` is added to `bottomNavigation[0]` in
+    both the body and the canonical result, and `BLOOM_FLOWERS_SHA256` is recomputed with
+    `sha256sum` from the file rather than transcribed.
+  - Tests: `ReferenceIntegrationNavTest`, `SpecCorpusTest`, `SecurityConformanceTest`,
+    `OriginCorpusTest`
+  - Result: the test was written first and failed exactly as predicted — `/ must make \`home\` the
+    active item ... expected:<home> but was:<null>` — which is the finding the ticket exists to
+    close. Green after the fixture edit; full `:siteskin-core:test` green.
+  - Negative control: reverting the fixture edit alone fails three tests from three directions —
+    `ReferenceIntegrationNavTest` (behaviour), `SpecCorpusTest.bloomFlowersFixtureMatchesThePublishedCopy`
+    (the SHA pin), and `SecurityConformanceTest` (the canonical result). Reverting the SHA constant
+    alone fails `SpecCorpusTest` from the other side. Restored, all green.
+  - Deviation: the plan split this into TASK-1 (a deliberately red test) and TASK-2 (the fix).
+    Merged, because `PROJECT_RULES.md` requires `scripts/pre-commit-check.sh` to pass before every
+    commit and a knowingly-red checkpoint cannot satisfy it. "Write the test first" is ordering
+    *within* a task; the red-then-green evidence is recorded above instead of in a commit.
+  - Deviation: `SecurityConformanceTest` also guards `.expected.json`, so the canonical result has a
+    third independent guard the research note did not list. Recorded here rather than silently
+    relied on.
 
-- [ ] TASK-3: Point the browser's suggestion catalogue at the deployment origin
+- [ ] TASK-2: Point the browser's suggestion catalogue at the deployment origin
   - Modified: `app/src/main/java/app/webora/browser/browser/SuggestedSite.kt`
   - Acceptance: Bloom Flowers reads `https://bloomflowers.webora.app/`, consistent with the
     `pixelplay.` and `journal.` entries; `.example` survives only in `spec/fixtures/`, where a
@@ -44,7 +48,7 @@ exists before the check that reads it.
     its resource ids.
   - Tests: `HomeModelsTest` (unchanged — it constructs its own suggestion), `:app:test`
 
-- [ ] TASK-4: The reference site — pages, stylesheet, and the logo
+- [ ] TASK-3: The reference site — pages, stylesheet, and the logo
   - Repository: `denrzv/bloom-flowers`
   - New: `index.html`, `catalog/index.html`, `cart/index.html`, `account/index.html`,
     `assets/site.css`, `assets/siteskin/logo.png`, `tools/make-logo.py`
@@ -54,10 +58,10 @@ exists before the check that reads it.
     third-party origin, cookie, form submission, service worker or storage anywhere; semantic
     landmarks, a skip link, visible focus, and no meaning carried by colour alone. The logo is a
     512×512 PNG under 64 KB, generated deterministically by the committed script.
-  - Tests: none yet — TASK-5 is the check, and it is written against a site that already exists so
+  - Tests: none yet — TASK-4 is the check, and it is written against a site that already exists so
     that it can be run in both directions.
 
-- [ ] TASK-5: Offline route conformance in CI
+- [ ] TASK-4: Offline route conformance in CI
   - Repository: `denrzv/bloom-flowers`
   - New: `tools/check-routes.py`
   - Modified: `.github/workflows/manifest-guard.yml`
@@ -71,17 +75,17 @@ exists before the check that reads it.
   - Negative control: `git mv catalog/index.html catalog/index.html.bak` ⇒ the check must fail
     naming `/catalog`; restore ⇒ green. Record the output.
 
-- [ ] TASK-6: The served manifest copy and its checksum
+- [ ] TASK-5: The served manifest copy and its checksum
   - Repository: `denrzv/bloom-flowers`
   - Modified: `.well-known/siteskin.json`, `.well-known/siteskin.json.sha256`
-  - Acceptance: byte-identical to webora's `spec/fixtures/valid/bloom-flowers.json` after TASK-2 —
+  - Acceptance: byte-identical to webora's `spec/fixtures/valid/bloom-flowers.json` after TASK-1 —
     verified by comparing hashes across the two checkouts, not by eye; `.sha256` recomputed with
     `sha256sum` from the file; `sha256sum --check` passes in `.well-known/`; the hash equals
     `BLOOM_FLOWERS_SHA256`.
   - Tests: `sha256sum --check`, `tools/check-routes.py`
   - Negative control: edit one byte of the served copy ⇒ `sha256sum --check` fails. Record it.
 
-- [ ] TASK-7: Deployment — Pages, custom domain, and the manual lint job
+- [ ] TASK-6: Deployment — Pages, custom domain, and the manual lint job
   - Repository: `denrzv/bloom-flowers`
   - New: `CNAME`, `.github/workflows/pages.yml`, `.github/workflows/siteskin-lint.yml`
   - Acceptance: `CNAME` pins `bloomflowers.webora.app` so the site is served from an origin root
@@ -95,7 +99,7 @@ exists before the check that reads it.
   - Tests: workflow YAML parses; the lint job is not runnable until DNS exists and is recorded as
     the ticket's one blocked criterion.
 
-- [ ] TASK-8: `INTEGRATION.md` and the repository README
+- [ ] TASK-7: `INTEGRATION.md` and the repository README
   - Repository: `denrzv/bloom-flowers`
   - New: `INTEGRATION.md`, `README.md`
   - Acceptance: `INTEGRATION.md` covers, with the reference site as the worked example — where the
@@ -108,7 +112,7 @@ exists before the check that reads it.
     `spec/siteskin-1.0.schema.json`. `README.md` stays short and points at `INTEGRATION.md`.
   - Tests: snippets checked against the schema by hand against `spec/siteskin-1.0.schema.json`.
 
-- [ ] TASK-9: Roadmap and architecture notes
+- [ ] TASK-8: Roadmap and architecture notes
   - Modified: `docs/ROADMAP.md`, `CLAUDE.md`
   - Acceptance: `DEMO-001` ticked; `CLAUDE.md` gains a "Reference integration (DEMO-001)" section
     covering the five pinned copies and the recompute-never-transcribe rule, why the deployment must

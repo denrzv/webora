@@ -27,7 +27,8 @@
         "id": "home",
         "label": "Home",
         "icon": "home",
-        "action": { "type": "internal_url", "url": "https://bloomflowers.example/" }
+        "action": { "type": "internal_url", "url": "https://bloomflowers.example/" },
+        "match": ["/"]
       },
       {
         "id": "catalog",
