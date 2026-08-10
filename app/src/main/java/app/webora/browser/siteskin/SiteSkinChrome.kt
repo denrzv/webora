@@ -3,7 +3,6 @@ package app.webora.browser.siteskin
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FloatingActionButton
@@ -24,8 +23,9 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import app.webora.browser.R
+import app.webora.browser.browser.MINIMUM_TOUCH_TARGET
+import app.webora.browser.browser.browserTouchTarget
 import dev.siteskin.core.model.NavigationItem
 
 @Composable
@@ -62,7 +62,7 @@ internal fun SiteSkinQuickActions(
         FloatingActionButton(
             onClick = { expanded = true },
             modifier = Modifier
-                .sizeIn(minWidth = MIN_TOUCH_TARGET, minHeight = MIN_TOUCH_TARGET)
+                .browserTouchTarget()
                 .semantics { contentDescription = description },
         ) { Text(glyph) }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
@@ -119,7 +119,7 @@ private fun MenuItem(label: String, icon: String?, onClick: () -> Unit) {
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = MIN_TOUCH_TARGET),
+            .heightIn(min = MINIMUM_TOUCH_TARGET),
     )
 }
 
@@ -148,4 +148,3 @@ internal const val SITESKIN_MENU_SECTION_PREFIX = "siteskin_menu_section_"
 private const val MAX_VISIBLE_NAVIGATION = 5
 private const val MAX_VISIBLE_QUICK_ACTIONS = 5
 private const val MAX_VISIBLE_MENU_ITEMS = 20
-private val MIN_TOUCH_TARGET = 48.dp

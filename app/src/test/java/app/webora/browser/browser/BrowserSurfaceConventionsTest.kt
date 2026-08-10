@@ -47,6 +47,23 @@ class BrowserSurfaceConventionsTest {
     }
 
     @Test
+    fun `browser controls use the touch target wrapper`() {
+        // Material 3 Button applies defaultMinSize(minHeight = 40.dp) and, unlike Switch and
+        // IconButton, never calls minimumInteractiveComponentSize(). Reaching it directly is
+        // therefore a 40 dp target every time, which is why the raw component is out of bounds
+        // rather than merely discouraged.
+        val offenders = composableSources()
+            .filterNot { it.readText().contains(TOUCH_TARGET_WRAPPER_DECLARATION) }
+            .flatMap { source -> source.violations(RAW_BUTTON_IMPORT) { "imports a Material button directly" } }
+
+        assertTrue(
+            "Browser-owned controls must go through the touch-target wrapper so the 48 dp minimum " +
+                "cannot be forgotten at a call site:\n" + offenders.joinToString("\n"),
+            offenders.isEmpty(),
+        )
+    }
+
+    @Test
     fun `the scan actually covers the compose surface`() {
         // A scan that silently matches nothing passes forever. Pin the floor so a broken source
         // path or a changed layout fails here rather than quietly disabling both rules above.
@@ -82,5 +99,10 @@ class BrowserSurfaceConventionsTest {
 
         /** A literal bound to an argument whose value is read aloud or displayed as a name. */
         val NAMED_LITERAL = Regex("""\b(label|text|title|description|contentDescription)\s*=\s*"""")
+
+        /** The wrapper's own file is the one place the raw component may be reached. */
+        const val TOUCH_TARGET_WRAPPER_DECLARATION = "fun WeboraButton("
+
+        val RAW_BUTTON_IMPORT = Regex("""^import androidx\.compose\.material3\.(Text)?Button$""")
     }
 }

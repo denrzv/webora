@@ -2,7 +2,6 @@ package app.webora.browser.browser
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,12 +28,13 @@ internal fun PrivacySettingsScreen(
         if (decisions.isEmpty()) Text(stringResource(R.string.no_site_permissions))
         decisions.forEach { stored ->
             Text(stored.origin.canonical)
-            Button(onClick = { onRemoveDecision(stored) }) {
-                Text(stringResource(R.string.reset_site_permission))
-            }
+            WeboraButton(
+                label = stringResource(R.string.reset_site_permission),
+                onClick = { onRemoveDecision(stored) },
+            )
         }
-        Button(onClick = onClearBrowsingData) { Text(stringResource(R.string.clear_browsing_data)) }
-        Button(onClick = onClose) { Text(stringResource(R.string.close)) }
+        WeboraButton(stringResource(R.string.clear_browsing_data), onClearBrowsingData)
+        WeboraButton(stringResource(R.string.close), onClose)
     }
 }
 
@@ -44,7 +44,7 @@ internal fun ClearBrowsingDataDialog(onConfirm: () -> Unit, onDismiss: () -> Uni
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.clear_browsing_data)) },
         text = { Text(stringResource(R.string.clear_browsing_data_message)) },
-        confirmButton = { Button(onClick = onConfirm) { Text(stringResource(R.string.clear_data)) } },
-        dismissButton = { Button(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
+        confirmButton = { WeboraButton(stringResource(R.string.clear_data), onConfirm) },
+        dismissButton = { WeboraButton(stringResource(R.string.cancel), onDismiss) },
     )
 }

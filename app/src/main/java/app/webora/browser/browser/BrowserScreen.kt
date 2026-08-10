@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -270,8 +269,8 @@ internal fun ExternalUrlDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.external_url_title)) },
         text = { Text(stringResource(R.string.external_url_message)) },
-        confirmButton = { Button(onClick = onConfirm) { Text(stringResource(R.string.open_external)) } },
-        dismissButton = { Button(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
+        confirmButton = { WeboraButton(stringResource(R.string.open_external), onConfirm) },
+        dismissButton = { WeboraButton(stringResource(R.string.cancel), onDismiss) },
     )
 }
 
@@ -299,11 +298,11 @@ internal fun SiteSkinConsentDialog(
         onDismissRequest = onNotNow,
         title = { Text(stringResource(R.string.siteskin_consent_title, origin)) },
         text = { Text(stringResource(R.string.siteskin_consent_message)) },
-        confirmButton = { Button(onClick = onAllow) { Text(stringResource(R.string.siteskin_allow)) } },
+        confirmButton = { WeboraButton(stringResource(R.string.siteskin_allow), onAllow) },
         dismissButton = {
             Row {
-                Button(onClick = onNotNow) { Text(stringResource(R.string.siteskin_not_now)) }
-                Button(onClick = onNever) { Text(stringResource(R.string.siteskin_never)) }
+                WeboraButton(stringResource(R.string.siteskin_not_now), onNotNow)
+                WeboraButton(stringResource(R.string.siteskin_never), onNever)
             }
         },
     )
@@ -319,12 +318,8 @@ private fun ExternalNavigationDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.external_navigation_title)) },
         text = { Text(stringResource(R.string.external_navigation_message, navigation.kind.name.lowercase())) },
-        confirmButton = {
-            Button(onClick = onConfirm) { Text(stringResource(R.string.open_external)) }
-        },
-        dismissButton = {
-            Button(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
-        },
+        confirmButton = { WeboraButton(stringResource(R.string.open_external), onConfirm) },
+        dismissButton = { WeboraButton(stringResource(R.string.cancel), onDismiss) },
     )
 }
 
@@ -468,7 +463,7 @@ private fun AddressBar(
             BrowserButton(stringResource(R.string.forward), state.canGoForward, onForward)
             BrowserButton(stringResource(R.string.reload), true, onReload)
             BrowserButton(stringResource(R.string.home), true, onHome)
-            Button(onClick = { menuExpanded = true }) { Text(stringResource(R.string.more)) }
+            WeboraButton(stringResource(R.string.more), { menuExpanded = true })
             DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.page_information)) },
@@ -504,19 +499,17 @@ private fun BrowserErrorPage(
                     },
                 ),
             )
-            Button(
+            WeboraButton(
+                label = stringResource(R.string.retry),
                 onClick = onRetry,
                 enabled = failure.retryUrl != null,
                 modifier = Modifier.testTag(BROWSER_ERROR_RETRY_TAG),
-            ) {
-                Text(stringResource(R.string.retry))
-            }
-            Button(
+            )
+            WeboraButton(
+                label = stringResource(R.string.home),
                 onClick = onHome,
                 modifier = Modifier.testTag(BROWSER_ERROR_HOME_TAG),
-            ) {
-                Text(stringResource(R.string.home))
-            }
+            )
         }
     }
 }
@@ -526,5 +519,5 @@ internal const val BROWSER_ERROR_HOME_TAG = "browser_error_home"
 
 @Composable
 private fun BrowserButton(label: String, enabled: Boolean, action: () -> Unit) {
-    Button(onClick = action, enabled = enabled) { Text(label) }
+    WeboraButton(label = label, onClick = action, enabled = enabled)
 }

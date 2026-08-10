@@ -9,10 +9,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -56,8 +54,8 @@ internal fun OnboardingScreen(onComplete: () -> Unit, modifier: Modifier = Modif
         Text(stringResource(R.string.onboarding_step, pageIndex + 1, onboardingPages.size))
         Spacer(Modifier.height(16.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            TextButton(onClick = onComplete) { Text(stringResource(R.string.onboarding_skip)) }
-            Button(onClick = { if (lastPage) onComplete() else pageIndex += 1 }) {
+            WeboraTextButton(onClick = onComplete) { Text(stringResource(R.string.onboarding_skip)) }
+            WeboraButton(onClick = { if (lastPage) onComplete() else pageIndex += 1 }) {
                 Text(stringResource(if (lastPage) R.string.onboarding_start else R.string.onboarding_next))
             }
         }

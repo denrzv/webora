@@ -10,7 +10,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -55,9 +54,10 @@ internal fun HomeScreen(onNavigate: (String) -> Unit, modifier: Modifier = Modif
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(name, style = MaterialTheme.typography.titleMedium)
                     Text(stringResource(site.descriptionRes))
-                    Button(onClick = { resolveAddressInput(site.url)?.let(onNavigate) }) {
-                        Text(stringResource(R.string.home_open_site, name))
-                    }
+                    WeboraButton(
+                        label = stringResource(R.string.home_open_site, name),
+                        onClick = { resolveAddressInput(site.url)?.let(onNavigate) },
+                    )
                 }
             }
         }
