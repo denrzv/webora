@@ -1,3 +1,4 @@
+import java.io.File
 import java.util.Properties
 
 plugins {
@@ -174,11 +175,22 @@ tasks.named("check") { dependsOn(assertInspectorAbsentFromReleaseVariants) }
 
 tasks.withType<Test>().configureEach {
     // BrowserSurfaceConventionsTest reads the Compose sources to enforce conventions no single
-    // call site owns. Declared as an input so editing a composable reruns the scan instead of
+    // call site owns. Declared as inputs so editing a composable reruns the scan instead of
     // hitting an up-to-date check, mirroring how :siteskin-core wires the conformance corpus.
-    val appSource = layout.projectDirectory.dir("src/main/java")
-    inputs.dir(appSource).withPropertyName("appComposeSources")
-    systemProperty("webora.app.src", appSource.asFile.absolutePath)
+    //
+    // Every variant source root that can declare a composable is listed. A debug-only screen is
+    // still browser-owned UI, and leaving it outside the accessibility gate would make the source
+    // set an escape hatch from the rule the gate exists to enforce. `debugRelease` compiles
+    // `src/release/java`, so these three roots cover all four variants.
+    val composeSourceRoots = listOf("src/main/java", "src/debug/java", "src/release/java")
+        .map(layout.projectDirectory::dir)
+    composeSourceRoots.forEach { root ->
+        inputs.dir(root).withPropertyName("appComposeSources-${root.asFile.parentFile.name}")
+    }
+    systemProperty(
+        "webora.app.src",
+        composeSourceRoots.joinToString(File.pathSeparator) { it.asFile.absolutePath },
+    )
 }
 
 fun resolveSigning(key: String): String? =

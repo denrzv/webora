@@ -176,7 +176,7 @@ References:
   - Deviation: also added to `.github/workflows/ci.yml`'s android job. `./gradlew test` there covers
     the debug variant only, so without this line CI would have had no coverage of the claim at all.
 
-- [ ] TASK-7: Bring the debug surface inside the accessibility gate, and document
+- [x] TASK-7: Bring the debug surface inside the accessibility gate, and document
   - Modified: `app/src/test/java/app/webora/browser/browser/BrowserSurfaceConventionsTest.kt`,
     `app/build.gradle.kts`, `CLAUDE.md`, `docs/ROADMAP.md`
   - Acceptance: the conventions scan takes an explicit list of source roots covering
@@ -187,6 +187,11 @@ References:
     that availability comes from the variant source set rather than `BuildConfig.DEBUG` and that the
     absence check asserts both directions; `docs/ROADMAP.md` ticks `DEVX-001`.
   - Tests: `BrowserSurfaceConventionsTest`, unchanged rules over widened roots.
-  - Negative control: place `Text("debug")` in `SiteSkinInspectorPanel.kt`; the literal rule must
-    fail. Then point a root at a non-existent directory; the coverage floor must fail rather than
-    the scan passing on fewer files. Restore and record both results here.
+  - Negative control A: `Text("debug")` in `SiteSkinInspectorPanel.kt` failed
+    `browser copy resolves from resources`, which it could not have done before this task.
+  - Negative control B: pointing a root at `src/nowhere/java` failed the scan at its `require`,
+    rather than the scan quietly covering two roots instead of three. Both restored, all green.
+  - Deviation: the coverage floor rose from 6 to 10, and a second assertion was added — every
+    scanned root must contribute at least one composable source. The global floor cannot notice one
+    root going quiet while the others grow, which is exactly the regression the widening could
+    introduce.

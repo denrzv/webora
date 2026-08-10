@@ -66,10 +66,28 @@ class BrowserSurfaceConventionsTest {
     @Test
     fun `the scan actually covers the compose surface`() {
         // A scan that silently matches nothing passes forever. Pin the floor so a broken source
-        // path or a changed layout fails here rather than quietly disabling both rules above.
+        // path or a changed layout fails here rather than quietly disabling the rules above. The
+        // floor rises with each added source root; a root that stops contributing must fail.
         val sources = composableSources()
 
         assertTrue("expected the app to declare composables; found ${sources.size}", sources.size >= MIN_SOURCES)
+    }
+
+    @Test
+    fun `every scanned source root actually contributes`() {
+        // The global floor above cannot notice one root going quiet while the others grow. A root
+        // that contributes nothing is a source set outside the gate, which is the whole reason the
+        // scan was widened past src/main/java.
+        val empty = sourceRoots.filter { root ->
+            root.walkTopDown().none { file ->
+                file.isFile && file.extension == "kt" && file.readText().contains(COMPOSABLE_ANNOTATION)
+            }
+        }
+
+        assertTrue(
+            "these scanned source roots declare no composable, so they are covered only in name: $empty",
+            empty.isEmpty(),
+        )
     }
 
     private fun File.violations(pattern: Regex, describe: () -> String): List<String> =
@@ -77,22 +95,32 @@ class BrowserSurfaceConventionsTest {
             if (pattern.containsMatchIn(line)) "$name:${index + 1} ${describe()}: ${line.trim()}" else null
         }
 
-    private fun composableSources(): List<File> = sourceRoot.walkTopDown()
+    private fun composableSources(): List<File> = sourceRoots
+        .flatMap { root -> root.walkTopDown() }
         .filter { it.isFile && it.extension == "kt" }
         .filter { it.readText().contains(COMPOSABLE_ANNOTATION) }
         .sortedBy(File::getName)
-        .toList()
 
     private companion object {
-        val sourceRoot: File = File(
+        /**
+         * Every variant source root that can declare a composable, not just `src/main/java`.
+         *
+         * A debug-only screen is browser-owned UI too. Scanning one root would have made a variant
+         * source set an escape hatch from the rule this scan exists to enforce — and `DEVX-001`
+         * adds exactly such a screen. A missing root fails here rather than silently shrinking the
+         * scan, which is the same reason the coverage floor below exists.
+         */
+        val sourceRoots: List<File> =
             requireNotNull(System.getProperty(SOURCE_ROOT_PROPERTY)) {
-                "$SOURCE_ROOT_PROPERTY is unset; app/build.gradle.kts must pass the app source root"
-            },
-        ).also { require(it.isDirectory) { "app source root is not a directory: $it" } }
+                "$SOURCE_ROOT_PROPERTY is unset; app/build.gradle.kts must pass the app source roots"
+            }
+                .split(File.pathSeparator)
+                .map(::File)
+                .onEach { require(it.isDirectory) { "app source root is not a directory: $it" } }
 
         const val SOURCE_ROOT_PROPERTY = "webora.app.src"
         const val COMPOSABLE_ANNOTATION = "@Composable"
-        const val MIN_SOURCES = 6
+        const val MIN_SOURCES = 10
 
         /** `Text("…")` and `Text(text = "…")`, the direct route from a literal to the screen. */
         val TEXT_LITERAL = Regex("""\bText\(\s*(text\s*=\s*)?"""")
