@@ -1,6 +1,7 @@
 package app.webora.browser.browser
 
 import dev.siteskin.core.origin.SiteOrigin
+import dev.siteskin.core.model.SiteSkinConfiguration
 
 internal data class BrowserState(
     val mode: BrowserMode = BrowserMode.Home,
@@ -71,7 +72,7 @@ private fun BrowserState.observePage(
     canGoForward: Boolean,
     failure: BrowserLoadFailure?,
 ): BrowserState = copy(
-    mode = BrowserMode.Regular(SiteOrigin.parse(url)),
+    mode = mode.forObservedOrigin(SiteOrigin.parse(url)),
     displayedUrl = url,
     addressText = url,
     isLoading = isLoading,
@@ -79,6 +80,18 @@ private fun BrowserState.observePage(
     canGoForward = canGoForward,
     loadFailure = failure,
 )
+
+private fun BrowserMode.forObservedOrigin(origin: SiteOrigin?): BrowserMode =
+    if (this is BrowserMode.Integrated && this.origin == origin) this else BrowserMode.Regular(origin)
+
+internal fun BrowserState.activateSiteSkin(
+    origin: SiteOrigin,
+    configuration: SiteSkinConfiguration,
+): BrowserState = if ((mode as? BrowserMode.Regular)?.origin == origin) {
+    copy(mode = BrowserMode.Integrated(origin, configuration))
+} else {
+    this
+}
 
 private fun BrowserState.observeFailure(failure: BrowserObservation.PageFailed): BrowserState {
     val retryUrl = resolveAddressInput(failure.url)?.takeIf { it == failure.url }

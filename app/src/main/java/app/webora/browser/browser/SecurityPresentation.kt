@@ -11,7 +11,11 @@ internal data class SecurityPresentation(
 )
 
 internal fun securityPresentation(mode: BrowserMode): SecurityPresentation? {
-    val origin = (mode as? BrowserMode.Regular)?.origin ?: return null
+    val origin = when (mode) {
+        BrowserMode.Home -> null
+        is BrowserMode.Regular -> mode.origin
+        is BrowserMode.Integrated -> mode.origin
+    } ?: return null
     return SecurityPresentation(
         registrableDomain = origin.registrableDomain,
         transportSecurity = if (origin.scheme == "https") {

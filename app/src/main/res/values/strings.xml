@@ -23,6 +23,8 @@
     <string name="retry">Retry</string>
     <string name="external_navigation_title">Open another app?</string>
     <string name="external_navigation_message">This page wants to open a %1$s app.</string>
+    <string name="external_url_title">Leave this site?</string>
+    <string name="external_url_message">This action opens an HTTPS page outside the current site.</string>
     <string name="open_external">Open</string>
     <string name="cancel">Cancel</string>
     <string name="download_started">Download started</string>
@@ -30,4 +32,9 @@
     <string name="siteskin_site_menu_heading">Site navigation</string>
     <string name="siteskin_browser_menu_heading">Webora controls</string>
     <string name="siteskin_quick_actions">Quick actions</string>
+    <string name="siteskin_consent_title">Allow %1$s to customise Webora?</string>
+    <string name="siteskin_consent_message">The site can customise navigation and appearance. The address and security indicator stay under Webora control.</string>
+    <string name="siteskin_allow">Allow</string>
+    <string name="siteskin_not_now">Not now</string>
+    <string name="siteskin_never">Never for this site</string>
 </resources>

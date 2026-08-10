@@ -9,8 +9,19 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 
 internal sealed interface ManifestDiscoveryOutcome {
-    data class Available(val validation: SiteSkinValidationOutcome.Accepted) : ManifestDiscoveryOutcome
-    data object Unavailable : ManifestDiscoveryOutcome
+    val origin: SiteOrigin?
+    val generation: Long
+
+    data class Available(
+        override val origin: SiteOrigin,
+        override val generation: Long,
+        val validation: SiteSkinValidationOutcome.Accepted,
+    ) : ManifestDiscoveryOutcome
+
+    data class Unavailable(
+        override val origin: SiteOrigin?,
+        override val generation: Long,
+    ) : ManifestDiscoveryOutcome
 }
 
 internal class ManifestDiscoveryCoordinator(
@@ -21,19 +32,19 @@ internal class ManifestDiscoveryCoordinator(
 ) {
     private var discoveryJob: Job? = null
 
-    fun onPageStarted(pageUrl: String) {
+    fun onPageStarted(pageUrl: String, generation: Long = 0) {
         val origin = SiteOrigin.parse(pageUrl)?.takeIf { it.scheme == HTTPS }
         discoveryJob?.cancel()
         if (origin == null) {
-            onOutcome(ManifestDiscoveryOutcome.Unavailable)
+            onOutcome(ManifestDiscoveryOutcome.Unavailable(null, generation))
             return
         }
         discoveryJob = scope.launch {
             val cached = cache.active(origin.canonical)
             val outcome = if (cached != null && cache.isFresh(cached)) {
-                validate(cached.bytes, origin.canonical)
+                validate(cached.bytes, origin, generation)
             } else {
-                discover(origin.canonical, cached)
+                discover(origin, generation, cached)
             }
             ensureActive()
             onOutcome(outcome)
@@ -44,44 +55,50 @@ internal class ManifestDiscoveryCoordinator(
         discoveryJob?.cancel()
     }
 
-    private suspend fun discover(origin: String, cached: CachedManifest?): ManifestDiscoveryOutcome {
+    private suspend fun discover(
+        origin: SiteOrigin,
+        generation: Long,
+        cached: CachedManifest?,
+    ): ManifestDiscoveryOutcome {
         val validators = ManifestRequestValidators(cached?.metadata?.etag, cached?.metadata?.lastModified)
-        return when (val result = source.fetch(origin, validators)) {
-            is ManifestFetchResult.Fetched -> validateAndCache(result, origin)
-            is ManifestFetchResult.NotModified -> reuseNotModified(result, cached, origin)
-            ManifestFetchResult.Unavailable -> cached?.let { validate(it.bytes, origin) }
-                ?: ManifestDiscoveryOutcome.Unavailable
-            ManifestFetchResult.Rejected -> ManifestDiscoveryOutcome.Unavailable
+        return when (val result = source.fetch(origin.canonical, validators)) {
+            is ManifestFetchResult.Fetched -> validateAndCache(result, origin, generation)
+            is ManifestFetchResult.NotModified -> reuseNotModified(result, cached, origin, generation)
+            ManifestFetchResult.Unavailable -> cached?.let { validate(it.bytes, origin, generation) }
+                ?: ManifestDiscoveryOutcome.Unavailable(origin, generation)
+            ManifestFetchResult.Rejected -> ManifestDiscoveryOutcome.Unavailable(origin, generation)
         }
     }
 
     private fun validateAndCache(
         result: ManifestFetchResult.Fetched,
-        origin: String,
-    ): ManifestDiscoveryOutcome = when (val outcome = validate(result.bytes, origin)) {
+        origin: SiteOrigin,
+        generation: Long,
+    ): ManifestDiscoveryOutcome = when (val outcome = validate(result.bytes, origin, generation)) {
         is ManifestDiscoveryOutcome.Available -> {
-            val key = ManifestCacheKey(origin, outcome.validation.configuration.schemaVersion)
+            val key = ManifestCacheKey(origin.canonical, outcome.validation.configuration.schemaVersion)
             cache.put(key, result.bytes, result.metadata)
             outcome
         }
-        ManifestDiscoveryOutcome.Unavailable -> outcome
+        is ManifestDiscoveryOutcome.Unavailable -> outcome
     }
 
     private fun reuseNotModified(
         result: ManifestFetchResult.NotModified,
         cached: CachedManifest?,
-        origin: String,
+        origin: SiteOrigin,
+        generation: Long,
     ): ManifestDiscoveryOutcome {
-        if (cached == null) return ManifestDiscoveryOutcome.Unavailable
+        if (cached == null) return ManifestDiscoveryOutcome.Unavailable(origin, generation)
         val metadata = result.metadata.withFallback(cached.metadata)
         cache.refresh(cached, metadata)
-        return validate(cached.bytes, origin)
+        return validate(cached.bytes, origin, generation)
     }
 
-    private fun validate(bytes: ByteArray, origin: String): ManifestDiscoveryOutcome {
-        return when (val validation = SiteSkinValidator.validate(bytes.inputStream(), origin)) {
-            is SiteSkinValidationOutcome.Accepted -> ManifestDiscoveryOutcome.Available(validation)
-            is SiteSkinValidationOutcome.Rejected -> ManifestDiscoveryOutcome.Unavailable
+    private fun validate(bytes: ByteArray, origin: SiteOrigin, generation: Long): ManifestDiscoveryOutcome {
+        return when (val validation = SiteSkinValidator.validate(bytes.inputStream(), origin.canonical)) {
+            is SiteSkinValidationOutcome.Accepted -> ManifestDiscoveryOutcome.Available(origin, generation, validation)
+            is SiteSkinValidationOutcome.Rejected -> ManifestDiscoveryOutcome.Unavailable(origin, generation)
         }
     }
 

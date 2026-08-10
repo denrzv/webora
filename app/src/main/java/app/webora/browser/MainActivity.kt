@@ -19,6 +19,8 @@ import app.webora.browser.browser.OnboardingStore
 import app.webora.browser.browser.launchDestination
 import app.webora.browser.web.enqueueDownload
 import app.webora.browser.web.launchExternal
+import app.webora.browser.web.launchExternalUrl
+import app.webora.browser.web.sharePage
 
 class MainActivity : ComponentActivity() {
     private var uploadResult: ((String?) -> Unit)? = null
@@ -50,6 +52,8 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.fillMaxSize(),
                         onLaunchExternal = { launchExternal(this, it) },
                         onDownload = { enqueueDownload(this, it) },
+                        onOpenExternalUrl = { launchExternalUrl(this, it) },
+                        onShare = { sharePage(this, it) },
                         onFileChooser = { mimeType, complete ->
                             uploadResult?.invoke(null)
                             uploadResult = complete
