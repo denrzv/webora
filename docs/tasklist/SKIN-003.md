@@ -40,3 +40,21 @@ instrumentation and the screenshot are unavailable; Android test sources compile
 - [x] Clear semantics from SiteSkin's closed decorative glyphs so item labels remain the only
   browser-useful announcement.
 - [x] Compile Compose instrumentation, run app unit tests, and pass the full pre-commit gate.
+
+## TASK-FIX-2 — Keep SiteSkin navigation surfaces in the viewport
+
+- Source: local runtime validation on API 33 emulator after completion of `SKIN-001..004`.
+- [x] Make the WebView/content area consume only the browser column's remaining height so bottom
+  navigation stays visible as its sibling with and without SiteSkin.
+- [x] Preserve a visible, non-overlapping quick-action FAB and reachable SiteSkin menu and external
+  HTTPS confirmation at normal and large font scales without regressing BROWSE or recovery UI.
+- [x] Add browser-layout regression coverage, run focused tests, lint, assemble, connected
+  instrumentation, the full pre-commit gate, and capture emulator screenshots.
+
+Negative-control result: `integratedBrowserKeepsBottomNavigationAndQuickActionsVisible` failed
+deterministically because the five-item bottom-navigation node was outside the displayed viewport
+while the content box used `fillMaxSize`. Giving that box the browser column's remaining weight made
+the focused test pass; unit tests, lint, assembly, and the 12-test connected suite also passed. API
+33 emulator captures at 1.0x and 1.5x confirmed all five items, the quick-action FAB, the SiteSkin
+menu, same-origin navigation, and the browser-owned external HTTPS confirmation remained visible
+and reachable without overlap.

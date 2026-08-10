@@ -282,7 +282,7 @@ private fun ExternalNavigationDialog(
 
 @Composable
 @Suppress("LongMethod")
-private fun RegularBrowser(
+internal fun RegularBrowser(
     state: BrowserState,
     controller: BrowserWebViewController,
     onObservation: (BrowserObservation) -> Unit,
@@ -313,7 +313,7 @@ private fun RegularBrowser(
             )
         }
         if (state.isLoading) LinearProgressIndicator(Modifier.fillMaxWidth())
-        Box(Modifier.fillMaxSize()) {
+        Box(Modifier.fillMaxWidth().weight(1f)) {
             HardenedWebView(
                 initialUrl = state.displayedUrl,
                 controller = controller,
