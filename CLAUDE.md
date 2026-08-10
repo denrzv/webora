@@ -496,3 +496,13 @@ trusted configuration, bounded decoded-or-monogram brand asset, projected theme,
 domain/TLS identity. All site item selections pass through `ActionResolver` into an exhaustive
 browser dispatcher; external HTTPS and Android capabilities confirm through browser-owned UI before
 leaving the renderer.
+
+### Brand-impersonation controls (HARDEN-002)
+
+SiteSkin branding is always presentation beside browser identity, never identity itself. Active
+chrome shows browser-derived registrable domain and TLS state through a dedicated semantics node;
+the bounded 40 dp logo and its descendants are explicitly decorative. First-use consent displays
+the complete canonical origin (including scheme and a non-default port) so the visible grant matches
+the exact `SiteOrigin` persistence key. Regular chrome remains active until Allow, Not now never
+persists, Never persists only for that origin, and every Allow action rechecks current origin and
+navigation generation before applying branding.

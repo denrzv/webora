@@ -23,6 +23,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -76,6 +77,7 @@ private fun BrandLogo(asset: BrandAsset, colors: SiteSkinColorScheme) {
             .size(LOGO_SLOT_SIZE)
             .clip(RoundedCornerShape(8.dp))
             .background(colors.background)
+            .clearAndSetSemantics { }
             .testTag(SITESKIN_LOGO_TAG),
     ) {
         when (asset) {
