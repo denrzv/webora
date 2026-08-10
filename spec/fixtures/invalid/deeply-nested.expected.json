@@ -1,0 +1,12 @@
+{
+  "origin": "https://depth.example",
+  "note": "Syntactically valid JSON whose root plus nested arrays reach depth 65, one beyond the browser-owned limit. It is rejected before a JSON tree is constructed so a small body cannot exhaust the parser stack.",
+  "parses": true,
+  "schemaValid": true,
+  "diagnostics": [
+    {
+      "code": "SS-E-PARSE",
+      "disposition": "reject"
+    }
+  ]
+}

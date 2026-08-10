@@ -26,10 +26,12 @@ public object SiteSkinSchema {
  * over-eager site still gets a working integration.
  *
  * [MAX_MANIFEST_BYTES] is different: it is enforced *before* parsing, so an oversized payload is
- * never fully read into memory.
+ * never fully read into memory. [MAX_JSON_DEPTH] bounds structural nesting before a JSON tree is
+ * constructed, preventing parser-stack exhaustion from hostile but size-compliant input.
  */
 public object SiteSkinLimits {
     public const val MAX_MANIFEST_BYTES: Int = 128 * 1024
+    public const val MAX_JSON_DEPTH: Int = 64
     public const val MAX_NAVIGATION_ITEMS: Int = 5
     public const val MAX_MENU_ITEMS: Int = 20
     public const val MAX_QUICK_ACTIONS: Int = 5

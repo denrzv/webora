@@ -1,0 +1,182 @@
+{
+  "origin": "https://bloomflowers.example",
+  "note": "21 menu items exceed the limit of 20; the first 20 survive in document order.",
+  "diagnostics": [
+    {
+      "code": "SS-W-LIMIT-TRUNCATED",
+      "disposition": "warn",
+      "pointer": "/menu"
+    }
+  ],
+  "result": {
+    "schemaVersion": "1.0",
+    "origin": "https://bloomflowers.example",
+    "site": {
+      "id": "bloom-flowers",
+      "name": "Bloom Flowers",
+      "homeUrl": "https://bloomflowers.example/"
+    },
+    "menu": [
+      {
+        "id": "item-1",
+        "label": "Item 1",
+        "icon": "home",
+        "action": {
+          "type": "refresh"
+        }
+      },
+      {
+        "id": "item-2",
+        "label": "Item 2",
+        "icon": "home",
+        "action": {
+          "type": "refresh"
+        }
+      },
+      {
+        "id": "item-3",
+        "label": "Item 3",
+        "icon": "home",
+        "action": {
+          "type": "refresh"
+        }
+      },
+      {
+        "id": "item-4",
+        "label": "Item 4",
+        "icon": "home",
+        "action": {
+          "type": "refresh"
+        }
+      },
+      {
+        "id": "item-5",
+        "label": "Item 5",
+        "icon": "home",
+        "action": {
+          "type": "refresh"
+        }
+      },
+      {
+        "id": "item-6",
+        "label": "Item 6",
+        "icon": "home",
+        "action": {
+          "type": "refresh"
+        }
+      },
+      {
+        "id": "item-7",
+        "label": "Item 7",
+        "icon": "home",
+        "action": {
+          "type": "refresh"
+        }
+      },
+      {
+        "id": "item-8",
+        "label": "Item 8",
+        "icon": "home",
+        "action": {
+          "type": "refresh"
+        }
+      },
+      {
+        "id": "item-9",
+        "label": "Item 9",
+        "icon": "home",
+        "action": {
+          "type": "refresh"
+        }
+      },
+      {
+        "id": "item-10",
+        "label": "Item 10",
+        "icon": "home",
+        "action": {
+          "type": "refresh"
+        }
+      },
+      {
+        "id": "item-11",
+        "label": "Item 11",
+        "icon": "home",
+        "action": {
+          "type": "refresh"
+        }
+      },
+      {
+        "id": "item-12",
+        "label": "Item 12",
+        "icon": "home",
+        "action": {
+          "type": "refresh"
+        }
+      },
+      {
+        "id": "item-13",
+        "label": "Item 13",
+        "icon": "home",
+        "action": {
+          "type": "refresh"
+        }
+      },
+      {
+        "id": "item-14",
+        "label": "Item 14",
+        "icon": "home",
+        "action": {
+          "type": "refresh"
+        }
+      },
+      {
+        "id": "item-15",
+        "label": "Item 15",
+        "icon": "home",
+        "action": {
+          "type": "refresh"
+        }
+      },
+      {
+        "id": "item-16",
+        "label": "Item 16",
+        "icon": "home",
+        "action": {
+          "type": "refresh"
+        }
+      },
+      {
+        "id": "item-17",
+        "label": "Item 17",
+        "icon": "home",
+        "action": {
+          "type": "refresh"
+        }
+      },
+      {
+        "id": "item-18",
+        "label": "Item 18",
+        "icon": "home",
+        "action": {
+          "type": "refresh"
+        }
+      },
+      {
+        "id": "item-19",
+        "label": "Item 19",
+        "icon": "home",
+        "action": {
+          "type": "refresh"
+        }
+      },
+      {
+        "id": "item-20",
+        "label": "Item 20",
+        "icon": "home",
+        "action": {
+          "type": "refresh"
+        }
+      }
+    ]
+  }
+}

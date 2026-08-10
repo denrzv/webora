@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "1.0",
+  "site": {
+    "id": "bloom-flowers",
+    "name": "Bloom Flowers"
+  },
+  "quickActions": [
+    {
+      "id": "duplicate",
+      "label": "First",
+      "icon": "home",
+      "action": {
+        "type": "refresh"
+      }
+    },
+    {
+      "id": "duplicate",
+      "label": "Later",
+      "icon": "home",
+      "action": {
+        "type": "refresh"
+      }
+    }
+  ]
+}
