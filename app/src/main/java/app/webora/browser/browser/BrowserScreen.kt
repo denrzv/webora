@@ -59,6 +59,8 @@ import app.webora.browser.siteskin.SiteSkinTopBar
 import app.webora.browser.siteskin.SiteSkinTopBarModel
 import app.webora.browser.siteskin.brandMonogram
 import app.webora.browser.siteskin.BrowserMenuCommand
+import app.webora.browser.privacy.PrivacySettingsStore
+import app.webora.browser.privacy.BrowsingDataCleaner
 import app.webora.browser.web.BrowserWebViewController
 import app.webora.browser.web.HardenedWebView
 import app.webora.browser.web.WebViewEvent
@@ -84,6 +86,8 @@ internal fun BrowserScreen(
     var generation by remember { mutableStateOf(0L) }
     var pendingConsent by remember { mutableStateOf<SiteSkinCandidate?>(null) }
     var siteMenuExpanded by remember { mutableStateOf(false) }
+    var settingsVisible by remember { mutableStateOf(false) }
+    var clearConfirmation by remember { mutableStateOf(false) }
     var pendingExternal by remember { mutableStateOf<ExternalNavigation?>(null) }
     var pendingExternalUrl by remember { mutableStateOf<String?>(null) }
     val snackbar = remember { SnackbarHostState() }
@@ -92,6 +96,9 @@ internal fun BrowserScreen(
     val assetLoader = remember { BrandAssetLoader(OkHttpBrandAssetSource(), BitmapBrandAssetDecoder()) }
     var brandAsset by remember { mutableStateOf<BrandAsset?>(null) }
     val consentStore = remember(context) { SiteConsentStore(context) }
+    val privacyStore = remember(context) { PrivacySettingsStore(context) }
+    var siteSkinEnabled by remember { mutableStateOf(privacyStore.isSiteSkinEnabled()) }
+    var storedDecisions by remember { mutableStateOf(consentStore.decisions()) }
     val manifestDiscovery = rememberManifestDiscovery(scope) { outcome ->
         val origin = when (val mode = state.mode) {
             BrowserMode.Home -> null
@@ -99,7 +106,7 @@ internal fun BrowserScreen(
             is BrowserMode.Integrated -> mode.origin
         }
         val decision = outcome.origin?.let(consentStore::decision)
-        when (val disposition = candidateDisposition(outcome, origin, generation, decision)) {
+        when (val disposition = candidateDisposition(outcome, origin, generation, decision, siteSkinEnabled)) {
             is CandidateDisposition.Activate -> {
                 state = state.activateSiteSkin(disposition.candidate.origin, disposition.candidate.configuration)
             }
@@ -159,8 +166,9 @@ internal fun BrowserScreen(
         onPageStarted = { url ->
             generation += 1
             pendingConsent = null
-            manifestDiscovery.onPageStarted(url, generation)
+            if (siteSkinEnabled) manifestDiscovery.onPageStarted(url, generation)
         },
+        onSettings = { settingsVisible = true },
         modifier = browserModifier,
     )
     SnackbarHost(snackbar)
@@ -183,12 +191,13 @@ internal fun BrowserScreen(
         origin = candidate.origin.canonical,
         onAllow = {
             consentStore.save(candidate.origin, SiteConsentDecision.ALLOW)
+            storedDecisions = consentStore.decisions()
             val currentOrigin = when (val mode = state.mode) {
                 is BrowserMode.Regular -> mode.origin
                 is BrowserMode.Integrated -> mode.origin
                 BrowserMode.Home -> null
             }
-            if (candidate.isCurrent(currentOrigin, generation)) {
+            if (siteSkinEnabled && candidate.isCurrent(currentOrigin, generation)) {
                 state = state.activateSiteSkin(candidate.origin, candidate.configuration)
             }
             pendingConsent = null
@@ -196,6 +205,7 @@ internal fun BrowserScreen(
         onNotNow = { pendingConsent = null },
         onNever = {
             consentStore.save(candidate.origin, SiteConsentDecision.NEVER)
+            storedDecisions = consentStore.decisions()
             pendingConsent = null
         },
     ) }
@@ -210,8 +220,46 @@ internal fun BrowserScreen(
             },
             onBrowserSelect = { command ->
                 siteMenuExpanded = false
-                if (command == BrowserMenuCommand.SETTINGS) Unit
+                if (command == BrowserMenuCommand.SETTINGS) settingsVisible = true
             },
+        )
+    }
+    if (settingsVisible) {
+        PrivacySettingsScreen(
+            siteSkinEnabled = siteSkinEnabled,
+            decisions = storedDecisions,
+            onSiteSkinEnabledChange = { enabled ->
+                privacyStore.setSiteSkinEnabled(enabled)
+                siteSkinEnabled = enabled
+                if (!enabled) {
+                    manifestDiscovery.cancel()
+                    pendingConsent = null
+                    state = state.deactivateSiteSkin()
+                }
+            },
+            onRemoveDecision = { stored ->
+                consentStore.remove(stored.origin)
+                storedDecisions = consentStore.decisions()
+            },
+            onClearBrowsingData = { clearConfirmation = true },
+            onClose = { settingsVisible = false },
+            modifier = browserModifier,
+        )
+    }
+    if (clearConfirmation) {
+        val clearedMessage = stringResource(R.string.browsing_data_cleared)
+        val incompleteMessage = stringResource(R.string.browsing_data_clear_incomplete)
+        ClearBrowsingDataDialog(
+            onConfirm = {
+                clearConfirmation = false
+                scope.launch {
+                    val complete = BrowsingDataCleaner.android(controller, manifestDiscovery, consentStore).clear()
+                    storedDecisions = consentStore.decisions()
+                    state = state.deactivateSiteSkin()
+                    snackbar.showSnackbar(if (complete) clearedMessage else incompleteMessage)
+                }
+            },
+            onDismiss = { clearConfirmation = false },
         )
     }
 }
@@ -293,6 +341,7 @@ internal fun RegularBrowser(
     brandAsset: BrandAsset?,
     onSiteSelect: (NavigationItem) -> Unit,
     onPageStarted: (String) -> Unit,
+    onSettings: () -> Unit = {},
     modifier: Modifier,
 ) {
     Column(modifier = modifier) {
@@ -310,6 +359,7 @@ internal fun RegularBrowser(
                 onForward = controller::goForward,
                 onReload = controller::reload,
                 onHome = onHome,
+                onSettings = onSettings,
             )
         }
         if (state.isLoading) LinearProgressIndicator(Modifier.fillMaxWidth())
@@ -391,6 +441,7 @@ private fun AddressBar(
     onForward: () -> Unit,
     onReload: () -> Unit,
     onHome: () -> Unit,
+    onSettings: () -> Unit,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
     val security = securityPresentation(state.mode)
@@ -425,7 +476,7 @@ private fun AddressBar(
                 )
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.settings)) },
-                    onClick = { menuExpanded = false },
+                    onClick = { menuExpanded = false; onSettings() },
                 )
             }
         }

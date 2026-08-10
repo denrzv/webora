@@ -58,6 +58,11 @@ internal class ManifestCache(
         put(entry.key, entry.bytes, metadata)
 
     fun isFresh(entry: CachedManifest): Boolean = entry.isFresh(nowMillis())
+
+    fun clear() {
+        entries.clear()
+        activeByOrigin.clear()
+    }
 }
 
 internal fun cacheTtlMillis(cacheControl: String?): Long {

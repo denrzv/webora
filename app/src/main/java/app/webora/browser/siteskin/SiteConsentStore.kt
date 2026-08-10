@@ -8,6 +8,9 @@ import java.util.Base64
 internal interface SiteConsentPreferences {
     fun get(key: String): String?
     fun put(key: String, value: String)
+    fun entries(): Map<String, String>
+    fun remove(key: String)
+    fun clear()
 }
 
 internal class SiteConsentStore(private val preferences: SiteConsentPreferences) {
@@ -21,7 +24,24 @@ internal class SiteConsentStore(private val preferences: SiteConsentPreferences)
     fun save(origin: SiteOrigin, decision: SiteConsentDecision) {
         preferences.put(origin.consentKey(), decision.name)
     }
+
+    fun decisions(): List<StoredSiteConsent> = preferences.entries().mapNotNull { (key, value) ->
+        val canonical = runCatching {
+            String(Base64.getUrlDecoder().decode(key), StandardCharsets.UTF_8)
+        }.getOrNull() ?: return@mapNotNull null
+        val origin = SiteOrigin.parse(canonical)?.takeIf { it.canonical == canonical }
+            ?: return@mapNotNull null
+        val decision = SiteConsentDecision.entries.singleOrNull { it.name == value }
+            ?: return@mapNotNull null
+        StoredSiteConsent(origin, decision)
+    }.sortedBy { it.origin.canonical }
+
+    fun remove(origin: SiteOrigin) = preferences.remove(origin.consentKey())
+
+    fun clear() = preferences.clear()
 }
+
+internal data class StoredSiteConsent(val origin: SiteOrigin, val decision: SiteConsentDecision)
 
 private class SharedSiteConsentPreferences(context: Context) : SiteConsentPreferences {
     private val preferences = context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
@@ -31,6 +51,14 @@ private class SharedSiteConsentPreferences(context: Context) : SiteConsentPrefer
     override fun put(key: String, value: String) {
         preferences.edit().putString(key, value).apply()
     }
+
+    override fun entries(): Map<String, String> = preferences.all.mapNotNull { (key, value) ->
+        (value as? String)?.let { key to it }
+    }.toMap()
+
+    override fun remove(key: String) { preferences.edit().remove(key).apply() }
+
+    override fun clear() { preferences.edit().clear().apply() }
 }
 
 private fun SiteOrigin.consentKey(): String = Base64.getUrlEncoder().withoutPadding()

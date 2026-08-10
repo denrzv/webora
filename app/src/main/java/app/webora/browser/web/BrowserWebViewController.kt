@@ -45,4 +45,10 @@ internal class BrowserWebViewController {
     fun reload() {
         webView?.reload()
     }
+
+    fun clearBrowsingData() {
+        webView?.clearCache(true)
+        webView?.clearFormData()
+        webView?.clearHistory()
+    }
 }

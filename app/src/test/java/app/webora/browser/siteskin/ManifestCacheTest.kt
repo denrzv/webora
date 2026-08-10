@@ -75,6 +75,17 @@ class ManifestCacheTest {
         }
     }
 
+    @Test fun `clear removes entries and active version index`() {
+        val cache = ManifestCache { 0 }
+        val key = key()
+        cache.put(key, byteArrayOf(1), metadata())
+
+        cache.clear()
+
+        assertNull(cache.get(key))
+        assertNull(cache.active(key.origin))
+    }
+
     private fun key(origin: String = "https://shop.example", version: String = "1.0") =
         ManifestCacheKey(origin, version)
 
