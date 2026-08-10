@@ -53,7 +53,7 @@ exists before the check that reads it.
     new URL on the same terms as the two entries beside it, so the catalogue stays HTTPS-only with
     no user-info and no fragment.
 
-- [ ] TASK-3: The reference site — pages, stylesheet, and the logo
+- [x] TASK-3: The reference site — pages, stylesheet, and the logo
   - Repository: `denrzv/bloom-flowers`
   - New: `index.html`, `catalog/index.html`, `cart/index.html`, `account/index.html`,
     `assets/site.css`, `assets/siteskin/logo.png`, `tools/make-logo.py`
@@ -65,6 +65,19 @@ exists before the check that reads it.
     512×512 PNG under 64 KB, generated deterministically by the committed script.
   - Tests: none yet — TASK-4 is the check, and it is written against a site that already exists so
     that it can be run in both directions.
+  - Result: `python3 -m http.server` confirms the layout decision from the research note — `/`,
+    `/catalog/`, `/cart/`, `/account/`, the logo and the manifest all return 200, and `/catalog`,
+    `/cart`, `/account` return 301 to their trailing-slash form, which the published `match` arrays
+    already cover. Rendered in Chromium at 1280 and at phone width: the landing page is mockup
+    screen 3. The logo is 512×512 and 5,702 bytes — 1.1% of `NET-003`'s 512 KiB budget. Grep
+    confirms no `src`/`href` leaves the origin except the INTEGRATION.md link on GitHub.
+  - Deviation: tables are wrapped in an `overflow-x: auto` container with a `min-width`. Below about
+    390 px a three-column table's min-content width exceeds the available column and would widen the
+    whole page, clipping the prose beside it rather than only the table.
+  - Note: headless Chromium clamps its layout viewport to 500 px on Linux, so a `--window-size=412`
+    screenshot renders at 500 and crops — which looks exactly like horizontal overflow. Measured
+    `scrollWidth` (485) against `innerWidth` (500) with an injected probe before concluding
+    anything; there was no overflow.
 
 - [ ] TASK-4: Offline route conformance in CI
   - Repository: `denrzv/bloom-flowers`
