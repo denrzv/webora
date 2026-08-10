@@ -3,12 +3,14 @@ package app.webora.browser.browser
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.text.KeyboardActions
@@ -34,8 +36,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.unit.dp
 import app.webora.browser.R
 import app.webora.browser.siteskin.ManifestDiscoveryCoordinator
 import app.webora.browser.siteskin.ManifestDiscoveryOutcome
@@ -362,7 +370,7 @@ internal fun RegularBrowser(
                 onSettings = onSettings,
             )
         }
-        if (state.isLoading) LinearProgressIndicator(Modifier.fillMaxWidth())
+        BrowserStatusRegion(state)
         Box(Modifier.fillMaxWidth().weight(1f)) {
             HardenedWebView(
                 initialUrl = state.displayedUrl,
@@ -456,14 +464,7 @@ private fun AddressBar(
             keyboardActions = KeyboardActions(onGo = { onSubmit() }),
             modifier = Modifier.fillMaxWidth(),
         )
-        security?.let {
-            val transport = if (it.transportSecurity == TransportSecurity.SECURE) {
-                stringResource(R.string.security_secure)
-            } else {
-                stringResource(R.string.security_not_secure)
-            }
-            Text(stringResource(R.string.security_identity, transport, it.registrableDomain))
-        }
+        security?.let { BrowserSecurityIdentity(it) }
         FlowRow {
             BrowserButton(stringResource(R.string.back), state.canGoBack, onBack)
             BrowserButton(stringResource(R.string.forward), state.canGoForward, onForward)
@@ -493,7 +494,7 @@ private fun BrowserErrorPage(
 ) {
     Surface(modifier) {
         Column {
-            Text(stringResource(R.string.error_title))
+            Text(stringResource(R.string.error_title), modifier = Modifier.semantics { heading() })
             failure.registrableDomain?.let { Text(it) }
             Text(
                 stringResource(
@@ -520,6 +521,65 @@ private fun BrowserErrorPage(
     }
 }
 
+/**
+ * The browser's identity claim, in regular mode.
+ *
+ * `ADR-006` says the registrable domain and TLS state are never suppressible. Assistive technology
+ * reads the semantics tree rather than the pixels, so "visible" is only half of that guarantee —
+ * this node is the other half, and it is the same one `SiteSkinTopBar` publishes in integrated
+ * mode. Its inputs are the committed `SiteOrigin` only: never the editable address text, never
+ * anything the page or a manifest supplied.
+ */
+@Composable
+private fun BrowserSecurityIdentity(security: SecurityPresentation) {
+    val transport = if (security.transportSecurity == TransportSecurity.SECURE) {
+        stringResource(R.string.security_secure)
+    } else {
+        stringResource(R.string.security_not_secure)
+    }
+    val description = stringResource(R.string.security_description, transport, security.registrableDomain)
+    Row(
+        modifier = Modifier
+            .semantics { contentDescription = description }
+            .testTag(BROWSER_SECURITY_TAG),
+    ) {
+        Text(stringResource(R.string.security_identity, transport, security.registrableDomain))
+    }
+}
+
+/**
+ * A persistent region that announces load progress and failure.
+ *
+ * Persistent on purpose: hanging the live region on the progress indicator would destroy the node
+ * the moment loading finished, and a destroyed node cannot announce that it finished.
+ */
+@Composable
+private fun BrowserStatusRegion(state: BrowserState) {
+    val announcement = browserAnnouncement(state)
+    val text = when (announcement) {
+        BrowserAnnouncement.LOADING -> stringResource(R.string.browser_loading)
+        BrowserAnnouncement.LOADED -> stringResource(R.string.browser_loaded)
+        BrowserAnnouncement.FAILED -> stringResource(R.string.browser_load_failed)
+        null -> ""
+    }
+    val mode = announcement?.liveRegionMode() ?: LiveRegionMode.Polite
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(STATUS_REGION_HEIGHT)
+            .semantics {
+                liveRegion = mode
+                contentDescription = text
+            }
+            .testTag(BROWSER_STATUS_TAG),
+    ) {
+        if (state.isLoading) LinearProgressIndicator(Modifier.fillMaxWidth())
+    }
+}
+
+internal const val BROWSER_SECURITY_TAG = "browser_security"
+internal const val BROWSER_STATUS_TAG = "browser_status"
+private val STATUS_REGION_HEIGHT = 4.dp
 internal const val BROWSER_ERROR_RETRY_TAG = "browser_error_retry"
 internal const val BROWSER_ERROR_HOME_TAG = "browser_error_home"
 

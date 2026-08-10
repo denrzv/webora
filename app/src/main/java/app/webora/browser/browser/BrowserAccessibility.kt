@@ -7,6 +7,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -64,4 +65,42 @@ internal fun WeboraTextButton(
 @Composable
 internal fun WeboraButton(label: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) {
     WeboraButton(onClick = onClick, enabled = enabled, modifier = modifier) { Text(label) }
+}
+
+/** What the browser has to say about the current page, in browser-owned copy. */
+internal enum class BrowserAnnouncement {
+    LOADING,
+    LOADED,
+    FAILED,
+}
+
+/**
+ * The announcement describing [state], or `null` when the browser has nothing to say.
+ *
+ * Derived from the state rather than from a transition, and deliberately so: a Compose live region
+ * announces when its content *changes*, so the derived value already is the transition. Tracking a
+ * previous state alongside it would add a second place for the announcement to go stale — and a
+ * stale announcement is worse than none, because assistive technology presents it as current.
+ *
+ * Home has nothing to announce, and neither does a browser that has not committed a page: an empty
+ * announcement would be a claim about a page that does not exist.
+ */
+internal fun browserAnnouncement(state: BrowserState): BrowserAnnouncement? = when {
+    state.mode == BrowserMode.Home -> null
+    state.loadFailure != null -> BrowserAnnouncement.FAILED
+    state.isLoading -> BrowserAnnouncement.LOADING
+    state.displayedUrl.isNotEmpty() -> BrowserAnnouncement.LOADED
+    else -> null
+}
+
+/**
+ * Failure interrupts; progress waits its turn.
+ *
+ * Announcing every load politely would bury a failure the user needs now, and announcing every load
+ * assertively would interrupt them on every navigation. The distinction is the point of having two
+ * modes at all.
+ */
+internal fun BrowserAnnouncement.liveRegionMode(): LiveRegionMode = when (this) {
+    BrowserAnnouncement.FAILED -> LiveRegionMode.Assertive
+    BrowserAnnouncement.LOADING, BrowserAnnouncement.LOADED -> LiveRegionMode.Polite
 }

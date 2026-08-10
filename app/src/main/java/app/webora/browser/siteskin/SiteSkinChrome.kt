@@ -22,6 +22,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import app.webora.browser.R
 import app.webora.browser.browser.MINIMUM_TOUCH_TARGET
@@ -35,6 +36,8 @@ internal fun SiteSkinBottomNavigation(
     modifier: Modifier = Modifier,
 ) {
     if (items.isEmpty()) return
+    val selected = stringResource(R.string.siteskin_nav_selected)
+    val notSelected = stringResource(R.string.siteskin_nav_not_selected)
     NavigationBar(modifier.testTag(SITESKIN_BOTTOM_NAV_TAG)) {
         items.take(MAX_VISIBLE_NAVIGATION).forEach { item ->
             NavigationBarItem(
@@ -42,7 +45,10 @@ internal fun SiteSkinBottomNavigation(
                 onClick = { onSelect(item.item) },
                 icon = { SiteSkinIcon(item.icon) },
                 label = { BoundedLabel(item.label) },
-                modifier = Modifier.semantics { contentDescription = item.label },
+                modifier = Modifier.semantics {
+                    contentDescription = item.label
+                    stateDescription = if (item.isActive) selected else notSelected
+                },
             )
         }
     }

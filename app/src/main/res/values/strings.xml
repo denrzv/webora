@@ -14,7 +14,9 @@
     <string name="security_identity">%1$s · %2$s</string>
     <string name="siteskin_tls_secure">Secure</string>
     <string name="siteskin_tls_not_secure">Not secure</string>
-    <string name="siteskin_security_description">%1$s connection to %2$s</string>
+    <!-- Browser-owned identity copy, shared by regular and integrated chrome: the same
+         guarantee should not depend on which mode the user happens to be in. -->
+    <string name="security_description">%1$s connection to %2$s</string>
     <string name="error_title">This page could not be loaded</string>
     <string name="error_connection">Check your connection and try again.</string>
     <string name="error_network">A network problem interrupted this page.</string>
@@ -41,7 +43,7 @@
     <string name="siteskin_global_toggle">Allow SiteSkin customisation</string>
     <string name="site_permissions">Site permissions</string>
     <string name="no_site_permissions">No saved SiteSkin decisions</string>
-    <string name="reset_site_permission">Reset decision</string>
+    <string name="reset_site_permission">Reset decision for %1$s</string>
     <string name="clear_browsing_data">Clear browsing data</string>
     <string name="clear_browsing_data_message">Clear cookies, site storage, caches, form data, history, and saved SiteSkin decisions? Webora settings stay unchanged.</string>
     <string name="clear_data">Clear data</string>
@@ -74,4 +76,11 @@
          marked untranslatable because they are iconography rather than copy. -->
     <string name="siteskin_quick_actions_glyph" translatable="false">+</string>
     <string name="siteskin_security_separator" translatable="false">" \u00B7 "</string>
+    <string name="browser_loading">Loading page</string>
+    <string name="browser_loaded">Page loaded</string>
+    <string name="browser_load_failed">Page could not be loaded</string>
+    <string name="state_on">On</string>
+    <string name="state_off">Off</string>
+    <string name="siteskin_nav_selected">Selected</string>
+    <string name="siteskin_nav_not_selected">Not selected</string>
 </resources>

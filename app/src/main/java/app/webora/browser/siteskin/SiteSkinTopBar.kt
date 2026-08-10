@@ -98,7 +98,7 @@ private fun SecurityIdentity(security: SecurityPresentation, colors: SiteSkinCol
         TransportSecurity.SECURE -> stringResource(R.string.siteskin_tls_secure)
         TransportSecurity.NOT_SECURE -> stringResource(R.string.siteskin_tls_not_secure)
     }
-    val description = stringResource(R.string.siteskin_security_description, transport, security.registrableDomain)
+    val description = stringResource(R.string.security_description, transport, security.registrableDomain)
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier

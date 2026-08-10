@@ -1,5 +1,6 @@
 package app.webora.browser.siteskin
 
+import dev.siteskin.core.SiteSkinLimits
 import dev.siteskin.core.SiteSkinValidationOutcome
 import dev.siteskin.core.SiteSkinValidator
 import org.junit.Assert.assertEquals
@@ -45,6 +46,22 @@ class SiteSkinChromeModelTest {
             listOf(BrowserMenuCommand.PAGE_INFORMATION, BrowserMenuCommand.SETTINGS),
             model.browserMenu,
         )
+    }
+
+    @Test
+    fun `manifest text reaching the accessibility tree is bounded`() {
+        // The model's label is both the visible label and the contentDescription, so this bound is
+        // what stops a hostile manifest from narrating an unbounded string to a TalkBack user
+        // regardless of how the pixels were clipped.
+        val hostile = "Secure connection to yourbank.example ".repeat(20)
+
+        assertTrue(accessibleLabel(hostile).length <= SiteSkinLimits.MAX_LABEL_LENGTH)
+        assertEquals(hostile.take(SiteSkinLimits.MAX_LABEL_LENGTH), accessibleLabel(hostile))
+    }
+
+    @Test
+    fun `labels within the bound are untouched`() {
+        assertEquals("Cart", accessibleLabel("Cart"))
     }
 
     private fun configuration(nav: Int, quick: Int, menu: Int) = SiteSkinValidator.validate(
