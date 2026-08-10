@@ -103,6 +103,9 @@ class BrowserSurfaceConventionsTest {
         /** The wrapper's own file is the one place the raw component may be reached. */
         const val TOUCH_TARGET_WRAPPER_DECLARATION = "fun WeboraButton("
 
-        val RAW_BUTTON_IMPORT = Regex("""^import androidx\.compose\.material3\.(Text)?Button$""")
+        // Any Material button-like type, and any alias for one. The narrower spelling this
+        // replaced named only Button and TextButton, so OutlinedButton, IconButton, an aliased
+        // import, and the FloatingActionButton already in the tree all walked straight through it.
+        val RAW_BUTTON_IMPORT = Regex("""^import androidx\.compose\.material3\.\w*Button( as \w+)?$""")
     }
 }

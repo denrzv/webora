@@ -37,7 +37,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
@@ -562,18 +561,23 @@ private fun BrowserStatusRegion(state: BrowserState) {
         BrowserAnnouncement.LOADING -> stringResource(R.string.browser_loading)
         BrowserAnnouncement.LOADED -> stringResource(R.string.browser_loaded)
         BrowserAnnouncement.FAILED -> stringResource(R.string.browser_load_failed)
-        null -> ""
+        null -> null
     }
-    val mode = announcement?.liveRegionMode() ?: LiveRegionMode.Polite
+    val region = Modifier
+        .fillMaxWidth()
+        .height(STATUS_REGION_HEIGHT)
+        .testTag(BROWSER_STATUS_TAG)
+    // No announcement means no semantics at all. An empty description is not silence: it publishes
+    // a nameless node into the accessibility tree, the same mistake as a blank security claim.
     Box(
-        Modifier
-            .fillMaxWidth()
-            .height(STATUS_REGION_HEIGHT)
-            .semantics {
-                liveRegion = mode
+        if (text == null || announcement == null) {
+            region
+        } else {
+            region.semantics {
+                liveRegion = announcement.liveRegionMode()
                 contentDescription = text
             }
-            .testTag(BROWSER_STATUS_TAG),
+        },
     ) {
         if (state.isLoading) LinearProgressIndicator(Modifier.fillMaxWidth())
     }

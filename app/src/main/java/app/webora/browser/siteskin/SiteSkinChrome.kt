@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.NavigationBar
@@ -26,7 +25,7 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import app.webora.browser.R
 import app.webora.browser.browser.MINIMUM_TOUCH_TARGET
-import app.webora.browser.browser.browserTouchTarget
+import app.webora.browser.browser.WeboraFloatingActionButton
 import dev.siteskin.core.model.NavigationItem
 
 @Composable
@@ -65,11 +64,9 @@ internal fun SiteSkinQuickActions(
     val description = stringResource(R.string.siteskin_quick_actions)
     val glyph = stringResource(R.string.siteskin_quick_actions_glyph)
     Column(modifier.testTag(SITESKIN_QUICK_ACTIONS_TAG)) {
-        FloatingActionButton(
+        WeboraFloatingActionButton(
             onClick = { expanded = true },
-            modifier = Modifier
-                .browserTouchTarget()
-                .semantics { contentDescription = description },
+            modifier = Modifier.semantics { contentDescription = description },
         ) { Text(glyph) }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             items.take(MAX_VISIBLE_QUICK_ACTIONS).forEach { item ->

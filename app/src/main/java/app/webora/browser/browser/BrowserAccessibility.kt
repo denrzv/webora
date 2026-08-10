@@ -3,6 +3,7 @@ package app.webora.browser.browser
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.material3.Button
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -59,6 +60,15 @@ internal fun WeboraTextButton(
         modifier = modifier.browserTouchTarget(),
         content = content,
     )
+}
+
+@Composable
+internal fun WeboraFloatingActionButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    FloatingActionButton(onClick = onClick, modifier = modifier.browserTouchTarget(), content = content)
 }
 
 /** A labelled button, the shape most browser chrome needs. */
