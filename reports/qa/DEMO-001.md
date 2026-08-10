@@ -93,11 +93,11 @@ exists, with no further change. `FINDING-1` from `/review` was fixed in `TASK-FI
 | QA `QA_PASSED` | ✅ |
 | Review `RESOLVED` | ✅ |
 | `scripts/gate-workflow.sh` | ✅ `[GATE] OK for DEMO-001` |
-| Every task ticked | ✅ 9 of 9 (TASK-1..8 plus TASK-FIX-1); none deferred |
+| Every task ticked | ✅ 10 of 10 (TASK-1..8 plus TASK-FIX-1 and TASK-FIX-2); none deferred |
 | `bash scripts/pre-commit-check.sh` | ✅ green — gitleaks, shellcheck, core-without-SDK, unit tests, inspector absence, detekt |
 | `CLAUDE.md` updated | ✅ "Reference integration (DEMO-001)" — the five pinned copies, recompute-never-transcribe, origin-rooted discovery, the route-layout decision and the `**`-zero-segment consequence |
 | Every commit pushed | ✅ both branches; working trees clean |
-| **CI green on the branch** | ⚠️ **Not observable.** Both repositories' workflows trigger only on `pull_request` and on pushes to `main`/`master`, so no run exists for `claude/bloom-flowers-reference-y5ybs7` in either — confirmed via the Actions API (`total_count: 0` for both). This is the repositories' configuration, not a failure: CI will run when a pull request is opened. The local gate is the equivalent evidence available now, and `manifest-guard.yml`'s two jobs were both executed by hand against this tree. |
+| **CI green on the branch** | ✅ Both PRs green. `denrzv/webora#43` — `guardrails`, `core`, `detekt`, `android` (`test`, `assertInspectorAbsentFromReleaseVariants`, `assembleDebug`, `lintDebug`) and `deps-osv`. `denrzv/bloom-flowers#1` — `checksum` and `routes`. The first run was **red**: see below. |
 
 ### Remaining external dependencies
 
@@ -109,3 +109,21 @@ Neither is blocked on code, and neither requires a further change to either repo
 2. **A device or emulator.** Unblocks scenario 24 — on-device rendering of mockup screen 3, the
    first-use consent dialog, and the tab-highlight transitions this ticket's `home`/`match` fix
    exists to make correct.
+
+### The gate and CI are not the same check
+
+The first CI run failed `guardrails` on `end-of-file-fixer` — a scripted append had left two trailing
+newlines in `docs/tasklist/DEMO-001.md`. Fixed in `TASK-FIX-2`; green on the re-run.
+
+`scripts/pre-commit-check.sh` could not have caught it, and that is the durable finding. The script
+invokes gitleaks, shellcheck, the Gradle tasks and detekt **directly**; CI's `guardrails` job runs
+`pre-commit run --all-files`, which is what owns `end-of-file-fixer`, `trailing-whitespace`,
+`check-yaml` and `check-json`. The two gates therefore check different sets, and a green local run
+does not imply a green `guardrails`.
+
+That contradicts the script's own header, which argues a gate you cannot tell apart from a passing
+build is not a gate. Closing it means changing the shared gate script, which is outside this
+ticket's scope — recorded here and in the tasklist for a ticket of its own.
+
+Every tracked text file in both repositories was scanned for the same class of violation before the
+fix was pushed; the tasklist was the only one this ticket introduced.
