@@ -148,7 +148,7 @@ References:
     `SITESKIN_INSPECTOR_AVAILABLE` is a `const val`, so in the release variants the assembly folds
     out at compile time instead of running and being thrown away.
 
-- [ ] TASK-6: Assert the absence, do not assume it
+- [x] TASK-6: Assert the absence, do not assume it
   - Modified: `app/build.gradle.kts`, `scripts/pre-commit-check.sh`
   - Acceptance: `assertInspectorAbsentFromReleaseVariants` is a `verification`-group task consuming
     the `compileReleaseKotlin` and `compileDebugReleaseKotlin` output directories as
@@ -159,9 +159,22 @@ References:
     `assertNoAndroidDependencies`, and invoked unconditionally by `scripts/pre-commit-check.sh` for
     the reason that script already documents about detekt.
   - Tests: this task's test is the Gradle task itself.
-  - Negative control: move `SiteSkinInspectorPanel.kt` into `src/main/java`; the task must fail on
-    both variants. Then rename the panel class without moving it; the stub-presence half must still
-    hold and the absence half must not silently pass. Restore and record both results here.
+  - Negative control A: moving `SiteSkinInspectorPanel.kt` into `src/main/java` did not reach the
+    check — it failed `compileDebugReleaseKotlin` on twenty-eight unresolved string resources,
+    because the inspector's copy lives in `src/debug/res`. That is a second, unplanned layer of the
+    same guarantee and worth knowing, but it meant the control proved nothing about the check. So
+    the control was redone with a compilable `SiteSkinInspectorPanelProbe` class in `src/main`:
+    both `assertInspectorAbsentFromRelease` and `assertInspectorAbsentFromDebugRelease` failed and
+    named the offending class.
+  - Negative control B: renaming `SiteSkinInspectorHost.kt` in both variant source sets — which
+    renames the anchor class without changing behaviour — failed both tasks with "this check was
+    about to pass without proving anything". Restored; both pass.
+  - Deviation: the check is a typed `AssertInspectorAbsent` task with lazy properties rather than an
+    ad-hoc `doLast`. Capturing a `Task` in a closure is a configuration-cache violation, which
+    `:siteskin-core`'s `assertNoAndroidDependencies` already documents; a typed task with
+    `@InputFiles` sidesteps it and gets up-to-date checks for free.
+  - Deviation: also added to `.github/workflows/ci.yml`'s android job. `./gradlew test` there covers
+    the debug variant only, so without this line CI would have had no coverage of the claim at all.
 
 - [ ] TASK-7: Bring the debug surface inside the accessibility gate, and document
   - Modified: `app/src/test/java/app/webora/browser/browser/BrowserSurfaceConventionsTest.kt`,

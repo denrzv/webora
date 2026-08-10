@@ -53,6 +53,13 @@ fi
 run "siteskin-core tests (no Android SDK)" bash -c "cd '${ROOT}' && ANDROID_HOME= ANDROID_SDK_ROOT= ./gradlew --quiet :siteskin-core:test"
 
 run "unit tests" bash -c "cd '${ROOT}' && ./gradlew --quiet test"
+
+# Unconditional, and it cannot be covered by the line above: AGP 9 creates
+# testDebugUnitTest and nothing else, so no JUnit run ever executes in a release
+# variant. This asserts against the release variants' compiled classes instead.
+run "inspector absent from release variants" \
+  bash -c "cd '${ROOT}' && ./gradlew --quiet :app:assertInspectorAbsentFromReleaseVariants"
+
 run "detekt" bash -c "cd '${ROOT}' && ./gradlew --quiet detekt"
 
 if [[ "${fail}" -ne 0 ]]; then

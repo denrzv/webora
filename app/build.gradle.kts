@@ -102,6 +102,76 @@ android {
     }
 }
 
+/**
+ * Fails when the developer inspector's panel reaches a variant that must not contain it.
+ *
+ * Asserted against compiled output rather than against where a source file lives, because the
+ * question is what ends up in the artifact. `./gradlew test` cannot answer it: AGP 9.1 creates
+ * `testDebugUnitTest` and nothing else, so no JUnit run ever executes in a release variant.
+ * Enabling host tests for `release` was tried and fails inside AGP with a NullPointerException at
+ * `VariantManager.createTestComponents` — see `docs/research/DEVX-001.md`.
+ *
+ * [requiredClass] is not decoration. Without it, renaming or deleting the panel would make the
+ * absence check pass while proving nothing, which is how a gate stops being a gate. Requiring the
+ * stub's own class keeps the check anchored to a variant that really did compile the seam.
+ */
+abstract class AssertInspectorAbsent : DefaultTask() {
+    @get:InputFiles
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val compiledClasses: ConfigurableFileCollection
+
+    @get:Input abstract val variantName: Property<String>
+
+    @get:Input abstract val forbiddenClassPrefix: Property<String>
+
+    @get:Input abstract val requiredClass: Property<String>
+
+    @TaskAction
+    fun verify() {
+        val names = compiledClasses.asFileTree.files.map { it.name }
+        val forbidden = forbiddenClassPrefix.get()
+        val offenders = names.filter { it.contains(forbidden) }.sorted()
+        if (offenders.isNotEmpty()) {
+            error(
+                "The SiteSkin inspector must not compile into the ${variantName.get()} variant, " +
+                    "but found:\n  " + offenders.joinToString("\n  ") +
+                    "\nKeep the panel in app/src/debug/java; the release stub is app/src/release/java."
+            )
+        }
+        val required = requiredClass.get()
+        if (names.none { it == required }) {
+            error(
+                "Expected ${required} in the ${variantName.get()} variant's compiled output and " +
+                    "found none. Either the variant seam was renamed — in which case this check was " +
+                    "about to pass without proving anything — or it no longer compiles at all."
+            )
+        }
+    }
+}
+
+val inspectorAbsenceChecks = mapOf(
+    "release" to "compileReleaseKotlin",
+    "debugRelease" to "compileDebugReleaseKotlin",
+).map { (variant, compileTask) ->
+    val suffix = variant.replaceFirstChar(Char::uppercaseChar)
+    tasks.register<AssertInspectorAbsent>("assertInspectorAbsentFrom$suffix") {
+        group = "verification"
+        description = "Fails if the SiteSkin inspector panel compiles into the $variant variant."
+        compiledClasses.from(tasks.named(compileTask))
+        variantName.set(variant)
+        forbiddenClassPrefix.set("SiteSkinInspectorPanel")
+        requiredClass.set("SiteSkinInspectorHostKt.class")
+    }
+}
+
+val assertInspectorAbsentFromReleaseVariants by tasks.registering {
+    group = "verification"
+    description = "Fails if the SiteSkin inspector panel compiles into any non-debug variant."
+    dependsOn(inspectorAbsenceChecks)
+}
+
+tasks.named("check") { dependsOn(assertInspectorAbsentFromReleaseVariants) }
+
 tasks.withType<Test>().configureEach {
     // BrowserSurfaceConventionsTest reads the Compose sources to enforce conventions no single
     // call site owns. Declared as an input so editing a composable reruns the scan instead of
