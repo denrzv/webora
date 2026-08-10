@@ -1,8 +1,8 @@
 package app.webora.browser.siteskin
 
 import java.io.IOException
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
@@ -95,21 +95,25 @@ class OkHttpBrandAssetSourceTest {
     }
 
     @Test fun `cancelling fetch cancels underlying call`() = runTest {
-        val entered = AtomicBoolean(false)
-        val cancelled = AtomicBoolean(false)
+        val entered = CountDownLatch(1)
+        val cancelled = CountDownLatch(1)
         val client = OkHttpClient.Builder().addInterceptor { chain ->
-            entered.set(true)
-            while (!chain.call().isCanceled()) Thread.sleep(1)
-            cancelled.set(true)
+            entered.countDown()
+            while (!chain.call().isCanceled()) Thread.sleep(CANCEL_POLL_MILLIS)
+            cancelled.countDown()
             throw IOException("cancelled")
         }.build()
         val job = launch { OkHttpBrandAssetSource(client).fetch("https://example.test", "https://example.test/logo") }
 
         testScheduler.runCurrent()
-        while (!entered.get()) Thread.yield()
+        assertTrue(entered.await(CANCEL_AWAIT_SECONDS, TimeUnit.SECONDS))
         job.cancelAndJoin()
 
-        assertTrue(cancelled.get())
+        // cancelAndJoin returns once the coroutine completes, which happens before the
+        // OkHttp dispatcher thread observes the cancelled call. Reading the flag here
+        // races that thread; awaiting it does not. The await is still a control: drop
+        // invokeOnCancellation and the call is never cancelled, so this times out.
+        assertTrue(cancelled.await(CANCEL_AWAIT_SECONDS, TimeUnit.SECONDS))
     }
 
     private fun assertNullSignature(bytes: ByteArray) = assertEquals(null, brandImageFormat(bytes))
@@ -135,6 +139,8 @@ class OkHttpBrandAssetSourceTest {
         .setHeader("Content-Type", type).setBody(Buffer().write(bytes))
 
     private companion object {
+        const val CANCEL_POLL_MILLIS = 1L
+        const val CANCEL_AWAIT_SECONDS = 5L
         val PNG = byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A)
     }
 }
