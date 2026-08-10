@@ -14,7 +14,9 @@
     <string name="security_identity">%1$s · %2$s</string>
     <string name="siteskin_tls_secure">Secure</string>
     <string name="siteskin_tls_not_secure">Not secure</string>
-    <string name="siteskin_security_description">%1$s connection to %2$s</string>
+    <!-- Browser-owned identity copy, shared by regular and integrated chrome: the same
+         guarantee should not depend on which mode the user happens to be in. -->
+    <string name="security_description">%1$s connection to %2$s</string>
     <string name="error_title">This page could not be loaded</string>
     <string name="error_connection">Check your connection and try again.</string>
     <string name="error_network">A network problem interrupted this page.</string>
@@ -41,11 +43,44 @@
     <string name="siteskin_global_toggle">Allow SiteSkin customisation</string>
     <string name="site_permissions">Site permissions</string>
     <string name="no_site_permissions">No saved SiteSkin decisions</string>
-    <string name="reset_site_permission">Reset decision</string>
+    <string name="reset_site_permission">Reset decision for %1$s</string>
     <string name="clear_browsing_data">Clear browsing data</string>
     <string name="clear_browsing_data_message">Clear cookies, site storage, caches, form data, history, and saved SiteSkin decisions? Webora settings stay unchanged.</string>
     <string name="clear_data">Clear data</string>
     <string name="close">Close</string>
     <string name="browsing_data_cleared">Browsing data cleared</string>
     <string name="browsing_data_clear_incomplete">Some browsing data could not be cleared</string>
+    <string name="home_recent_title">Recent sites</string>
+    <string name="home_recent_empty">Sites you visit will appear here.</string>
+    <string name="home_favourites_title">Favourites</string>
+    <string name="home_favourites_empty">Your saved sites will appear here.</string>
+    <string name="home_suggested_title">Suggested integrations</string>
+    <string name="home_open_site">Open %1$s</string>
+    <string name="suggested_bloom_name">Bloom Flowers</string>
+    <string name="suggested_bloom_description">Fresh flowers delivered today</string>
+    <string name="suggested_pixelplay_name">PixelPlay</string>
+    <string name="suggested_pixelplay_description">Discover independent games</string>
+    <string name="suggested_journal_name">Daily Journal</string>
+    <string name="suggested_journal_description">A focused place to write</string>
+    <string name="onboarding_browsing_title">Browse the whole web</string>
+    <string name="onboarding_browsing_body">Search or enter any web address. Webora is a browser first.</string>
+    <string name="onboarding_adaptation_title">Sites can fit you better</string>
+    <string name="onboarding_adaptation_body">SiteSkin lets supported sites offer native-style navigation.</string>
+    <string name="onboarding_control_title">You stay in control</string>
+    <string name="onboarding_control_body">Webora keeps security details visible and asks before a site changes the browser.</string>
+    <string name="onboarding_step">Step %1$d of %2$d</string>
+    <string name="onboarding_skip">Skip</string>
+    <string name="onboarding_next">Next</string>
+    <string name="onboarding_start">Start browsing</string>
+    <!-- Decorative glyphs. Kept in resources so the literal rule has no exemption to erode, and
+         marked untranslatable because they are iconography rather than copy. -->
+    <string name="siteskin_quick_actions_glyph" translatable="false">+</string>
+    <string name="siteskin_security_separator" translatable="false">" \u00B7 "</string>
+    <string name="browser_loading">Loading page</string>
+    <string name="browser_loaded">Page loaded</string>
+    <string name="browser_load_failed">Page could not be loaded</string>
+    <string name="state_on">On</string>
+    <string name="state_off">Off</string>
+    <string name="siteskin_nav_selected">Selected</string>
+    <string name="siteskin_nav_not_selected">Not selected</string>
 </resources>

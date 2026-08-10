@@ -520,3 +520,40 @@ cache/form/history state, the in-memory manifest cache, and all per-origin SiteS
 deliberately preserves onboarding completion and the global SiteSkin preference. Webora ships no
 telemetry/analytics SDK or remote preference sync; `docs/privacy/DATA_SAFETY.md` is the
 implementation-backed release mapping.
+
+### Accessibility contract (A11Y-001)
+
+Accessibility is infrastructure with a gate, not a per-screen sweep. A sweep is correct once and
+then decays — `HomeScreen` grew inline copy while `strings.xml` was already the rule. Each guarantee
+therefore has one enforcement point plus a test that fails when a call site bypasses it.
+
+Browser-owned controls go through `WeboraButton` / `WeboraTextButton`, which bake in the 48 dp
+`MINIMUM_TOUCH_TARGET`. Material 3 `Button` is a 40 dp target — it applies
+`defaultMinSize(minHeight = 40.dp)` and, unlike `Switch` and `IconButton`, never calls
+`minimumInteractiveComponentSize()` — so the raw component is **out of bounds** in browser-owned
+Compose, not merely discouraged. `BrowserSurfaceConventionsTest` reads the sources and enforces
+that, plus the rule that no string literal reaches `Text(` or an accessible-name argument. Its
+scanned set is discovered from `@Composable` rather than listed, so a screen that does not exist yet
+is already covered, and a coverage floor keeps the scan from passing vacuously.
+
+`browserAnnouncement(state)` derives the status announcement from current state rather than from a
+transition: a Compose live region announces when its content changes, so the derived value already
+is the transition, and carrying a previous state would add a second place for it to go stale.
+Failure is assertive, progress polite. The live region is a persistent node, not the progress
+indicator — hanging it there would destroy the node the moment loading finished.
+
+`SiteSkinTheme.scheme(darkTheme)` selects a projection from the system setting. Both projections
+were always computed and guarded; only the light one was consumed. The choice is browser-owned: a
+manifest supplies colours and does not decide whether the user's dark-theme preference applies.
+
+**Accessibility is a security surface.** Assistive technology reads the semantics tree, not the
+pixels, so every visual bound on manifest content needs a counterpart there. Regular mode publishes
+the same browser-authored security node integrated mode already had, built only from the committed
+`SiteOrigin` — never editable address text, never page content, never a manifest field; no origin
+yields no node rather than a blank one. `SiteSkinChromeModel.accessibleLabel` re-bounds manifest
+label text using `SiteSkinLimits.MAX_LABEL_LENGTH` read from core, because one line and an ellipsis
+bound the pixels, not the string a screen reader speaks. Both bounds carry negative controls.
+
+`docs/accessibility/CONFORMANCE.md` maps each guarantee to its WCAG 2.2 criterion, its code, and its
+test — and marks which are enforced by the JVM gate versus recorded as instrumented evidence. Do not
+promote an instrumented assertion to a gate claim; the gate is JVM-only.

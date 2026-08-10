@@ -28,6 +28,16 @@ internal data class SiteSkinTheme(
     }
 }
 
+/**
+ * The projection matching the user's current system theme.
+ *
+ * Both projections were already computed and guarded; only the light one was ever consumed, so a
+ * user who selected a dark system theme — often for accessibility reasons — was served the light
+ * one regardless. The choice is browser-owned and comes from the platform: a manifest supplies
+ * colours, it does not get to decide whether the user's preference applies to them.
+ */
+internal fun SiteSkinTheme.scheme(darkTheme: Boolean): SiteSkinColorScheme = if (darkTheme) dark else light
+
 /** Website-influenceable colour roles; browser security presentation is intentionally absent. */
 internal data class SiteSkinColorScheme(
     val primary: Color,

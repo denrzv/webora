@@ -3,10 +3,8 @@ package app.webora.browser.siteskin
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.NavigationBar
@@ -23,9 +21,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import app.webora.browser.R
+import app.webora.browser.browser.MINIMUM_TOUCH_TARGET
+import app.webora.browser.browser.WeboraFloatingActionButton
 import dev.siteskin.core.model.NavigationItem
 
 @Composable
@@ -35,6 +35,8 @@ internal fun SiteSkinBottomNavigation(
     modifier: Modifier = Modifier,
 ) {
     if (items.isEmpty()) return
+    val selected = stringResource(R.string.siteskin_nav_selected)
+    val notSelected = stringResource(R.string.siteskin_nav_not_selected)
     NavigationBar(modifier.testTag(SITESKIN_BOTTOM_NAV_TAG)) {
         items.take(MAX_VISIBLE_NAVIGATION).forEach { item ->
             NavigationBarItem(
@@ -42,7 +44,10 @@ internal fun SiteSkinBottomNavigation(
                 onClick = { onSelect(item.item) },
                 icon = { SiteSkinIcon(item.icon) },
                 label = { BoundedLabel(item.label) },
-                modifier = Modifier.semantics { contentDescription = item.label },
+                modifier = Modifier.semantics {
+                    contentDescription = item.label
+                    stateDescription = if (item.isActive) selected else notSelected
+                },
             )
         }
     }
@@ -57,13 +62,12 @@ internal fun SiteSkinQuickActions(
     if (items.isEmpty()) return
     var expanded by remember { mutableStateOf(false) }
     val description = stringResource(R.string.siteskin_quick_actions)
+    val glyph = stringResource(R.string.siteskin_quick_actions_glyph)
     Column(modifier.testTag(SITESKIN_QUICK_ACTIONS_TAG)) {
-        FloatingActionButton(
+        WeboraFloatingActionButton(
             onClick = { expanded = true },
-            modifier = Modifier
-                .sizeIn(minWidth = MIN_TOUCH_TARGET, minHeight = MIN_TOUCH_TARGET)
-                .semantics { contentDescription = description },
-        ) { Text("+") }
+            modifier = Modifier.semantics { contentDescription = description },
+        ) { Text(glyph) }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             items.take(MAX_VISIBLE_QUICK_ACTIONS).forEach { item ->
                 DropdownMenuItem(
@@ -118,7 +122,7 @@ private fun MenuItem(label: String, icon: String?, onClick: () -> Unit) {
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = MIN_TOUCH_TARGET),
+            .heightIn(min = MINIMUM_TOUCH_TARGET),
     )
 }
 
@@ -147,4 +151,3 @@ internal const val SITESKIN_MENU_SECTION_PREFIX = "siteskin_menu_section_"
 private const val MAX_VISIBLE_NAVIGATION = 5
 private const val MAX_VISIBLE_QUICK_ACTIONS = 5
 private const val MAX_VISIBLE_MENU_ITEMS = 20
-private val MIN_TOUCH_TARGET = 48.dp

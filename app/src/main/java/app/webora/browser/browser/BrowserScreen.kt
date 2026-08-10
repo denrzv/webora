@@ -2,17 +2,20 @@ package app.webora.browser.browser
 
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -34,8 +37,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.unit.dp
 import app.webora.browser.R
 import app.webora.browser.siteskin.ManifestDiscoveryCoordinator
 import app.webora.browser.siteskin.ManifestDiscoveryOutcome
@@ -55,6 +63,7 @@ import app.webora.browser.siteskin.SiteSkinChromeModel
 import app.webora.browser.siteskin.SiteSkinQuickActions
 import app.webora.browser.siteskin.SiteSkinMenu
 import app.webora.browser.siteskin.SiteSkinTheme
+import app.webora.browser.siteskin.scheme
 import app.webora.browser.siteskin.SiteSkinTopBar
 import app.webora.browser.siteskin.SiteSkinTopBarModel
 import app.webora.browser.siteskin.brandMonogram
@@ -270,8 +279,8 @@ internal fun ExternalUrlDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.external_url_title)) },
         text = { Text(stringResource(R.string.external_url_message)) },
-        confirmButton = { Button(onClick = onConfirm) { Text(stringResource(R.string.open_external)) } },
-        dismissButton = { Button(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
+        confirmButton = { WeboraButton(stringResource(R.string.open_external), onConfirm) },
+        dismissButton = { WeboraButton(stringResource(R.string.cancel), onDismiss) },
     )
 }
 
@@ -289,6 +298,7 @@ private fun rememberManifestDiscovery(
 }
 
 @Composable
+@OptIn(ExperimentalLayoutApi::class)
 internal fun SiteSkinConsentDialog(
     origin: String,
     onAllow: () -> Unit,
@@ -299,11 +309,14 @@ internal fun SiteSkinConsentDialog(
         onDismissRequest = onNotNow,
         title = { Text(stringResource(R.string.siteskin_consent_title, origin)) },
         text = { Text(stringResource(R.string.siteskin_consent_message)) },
-        confirmButton = { Button(onClick = onAllow) { Text(stringResource(R.string.siteskin_allow)) } },
+        confirmButton = { WeboraButton(stringResource(R.string.siteskin_allow), onAllow) },
         dismissButton = {
-            Row {
-                Button(onClick = onNotNow) { Text(stringResource(R.string.siteskin_not_now)) }
-                Button(onClick = onNever) { Text(stringResource(R.string.siteskin_never)) }
+            // Three buttons plus a long "Never for this site" label do not fit one line at a large
+            // font scale. Wrapping keeps every consent choice reachable; shrinking them would trade
+            // the ADR-011 decision the user has to make against the target size they need to make it.
+            FlowRow {
+                WeboraButton(stringResource(R.string.siteskin_not_now), onNotNow)
+                WeboraButton(stringResource(R.string.siteskin_never), onNever)
             }
         },
     )
@@ -319,12 +332,8 @@ private fun ExternalNavigationDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.external_navigation_title)) },
         text = { Text(stringResource(R.string.external_navigation_message, navigation.kind.name.lowercase())) },
-        confirmButton = {
-            Button(onClick = onConfirm) { Text(stringResource(R.string.open_external)) }
-        },
-        dismissButton = {
-            Button(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
-        },
+        confirmButton = { WeboraButton(stringResource(R.string.open_external), onConfirm) },
+        dismissButton = { WeboraButton(stringResource(R.string.cancel), onDismiss) },
     )
 }
 
@@ -348,7 +357,7 @@ internal fun RegularBrowser(
         val integrated = state.mode as? BrowserMode.Integrated
         val security = securityPresentation(state.mode)
         if (integrated != null && security != null && brandAsset != null) {
-            val colors = SiteSkinTheme.from(integrated.configuration).light
+            val colors = SiteSkinTheme.from(integrated.configuration).scheme(isSystemInDarkTheme())
             SiteSkinTopBar(SiteSkinTopBarModel.from(integrated.configuration, brandAsset, security), colors)
         } else {
             AddressBar(
@@ -362,7 +371,7 @@ internal fun RegularBrowser(
                 onSettings = onSettings,
             )
         }
-        if (state.isLoading) LinearProgressIndicator(Modifier.fillMaxWidth())
+        BrowserStatusRegion(state)
         Box(Modifier.fillMaxWidth().weight(1f)) {
             HardenedWebView(
                 initialUrl = state.displayedUrl,
@@ -432,6 +441,7 @@ private fun BrowserBackHandler(enabled: Boolean, controller: BrowserWebViewContr
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun AddressBar(
     state: BrowserState,
@@ -455,20 +465,13 @@ private fun AddressBar(
             keyboardActions = KeyboardActions(onGo = { onSubmit() }),
             modifier = Modifier.fillMaxWidth(),
         )
-        security?.let {
-            val transport = if (it.transportSecurity == TransportSecurity.SECURE) {
-                stringResource(R.string.security_secure)
-            } else {
-                stringResource(R.string.security_not_secure)
-            }
-            Text(stringResource(R.string.security_identity, transport, it.registrableDomain))
-        }
-        Row {
+        security?.let { BrowserSecurityIdentity(it) }
+        FlowRow {
             BrowserButton(stringResource(R.string.back), state.canGoBack, onBack)
             BrowserButton(stringResource(R.string.forward), state.canGoForward, onForward)
             BrowserButton(stringResource(R.string.reload), true, onReload)
             BrowserButton(stringResource(R.string.home), true, onHome)
-            Button(onClick = { menuExpanded = true }) { Text(stringResource(R.string.more)) }
+            WeboraButton(stringResource(R.string.more), { menuExpanded = true })
             DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.page_information)) },
@@ -492,7 +495,7 @@ private fun BrowserErrorPage(
 ) {
     Surface(modifier) {
         Column {
-            Text(stringResource(R.string.error_title))
+            Text(stringResource(R.string.error_title), modifier = Modifier.semantics { heading() })
             failure.registrableDomain?.let { Text(it) }
             Text(
                 stringResource(
@@ -504,27 +507,89 @@ private fun BrowserErrorPage(
                     },
                 ),
             )
-            Button(
+            WeboraButton(
+                label = stringResource(R.string.retry),
                 onClick = onRetry,
                 enabled = failure.retryUrl != null,
                 modifier = Modifier.testTag(BROWSER_ERROR_RETRY_TAG),
-            ) {
-                Text(stringResource(R.string.retry))
-            }
-            Button(
+            )
+            WeboraButton(
+                label = stringResource(R.string.home),
                 onClick = onHome,
                 modifier = Modifier.testTag(BROWSER_ERROR_HOME_TAG),
-            ) {
-                Text(stringResource(R.string.home))
-            }
+            )
         }
     }
 }
 
+/**
+ * The browser's identity claim, in regular mode.
+ *
+ * `ADR-006` says the registrable domain and TLS state are never suppressible. Assistive technology
+ * reads the semantics tree rather than the pixels, so "visible" is only half of that guarantee —
+ * this node is the other half, and it is the same one `SiteSkinTopBar` publishes in integrated
+ * mode. Its inputs are the committed `SiteOrigin` only: never the editable address text, never
+ * anything the page or a manifest supplied.
+ */
+@Composable
+private fun BrowserSecurityIdentity(security: SecurityPresentation) {
+    val transport = if (security.transportSecurity == TransportSecurity.SECURE) {
+        stringResource(R.string.security_secure)
+    } else {
+        stringResource(R.string.security_not_secure)
+    }
+    val description = stringResource(R.string.security_description, transport, security.registrableDomain)
+    Row(
+        modifier = Modifier
+            .semantics { contentDescription = description }
+            .testTag(BROWSER_SECURITY_TAG),
+    ) {
+        Text(stringResource(R.string.security_identity, transport, security.registrableDomain))
+    }
+}
+
+/**
+ * A persistent region that announces load progress and failure.
+ *
+ * Persistent on purpose: hanging the live region on the progress indicator would destroy the node
+ * the moment loading finished, and a destroyed node cannot announce that it finished.
+ */
+@Composable
+private fun BrowserStatusRegion(state: BrowserState) {
+    val announcement = browserAnnouncement(state)
+    val text = when (announcement) {
+        BrowserAnnouncement.LOADING -> stringResource(R.string.browser_loading)
+        BrowserAnnouncement.LOADED -> stringResource(R.string.browser_loaded)
+        BrowserAnnouncement.FAILED -> stringResource(R.string.browser_load_failed)
+        null -> null
+    }
+    val region = Modifier
+        .fillMaxWidth()
+        .height(STATUS_REGION_HEIGHT)
+        .testTag(BROWSER_STATUS_TAG)
+    // No announcement means no semantics at all. An empty description is not silence: it publishes
+    // a nameless node into the accessibility tree, the same mistake as a blank security claim.
+    Box(
+        if (text == null || announcement == null) {
+            region
+        } else {
+            region.semantics {
+                liveRegion = announcement.liveRegionMode()
+                contentDescription = text
+            }
+        },
+    ) {
+        if (state.isLoading) LinearProgressIndicator(Modifier.fillMaxWidth())
+    }
+}
+
+internal const val BROWSER_SECURITY_TAG = "browser_security"
+internal const val BROWSER_STATUS_TAG = "browser_status"
+private val STATUS_REGION_HEIGHT = 4.dp
 internal const val BROWSER_ERROR_RETRY_TAG = "browser_error_retry"
 internal const val BROWSER_ERROR_HOME_TAG = "browser_error_home"
 
 @Composable
 private fun BrowserButton(label: String, enabled: Boolean, action: () -> Unit) {
-    Button(onClick = action, enabled = enabled) { Text(label) }
+    WeboraButton(label = label, onClick = action, enabled = enabled)
 }
