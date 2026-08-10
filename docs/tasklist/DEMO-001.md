@@ -79,7 +79,7 @@ exists before the check that reads it.
     `scrollWidth` (485) against `innerWidth` (500) with an injected probe before concluding
     anything; there was no overflow.
 
-- [ ] TASK-4: Offline route conformance in CI
+- [x] TASK-4: Offline route conformance in CI
   - Repository: `denrzv/bloom-flowers`
   - New: `tools/check-routes.py`
   - Modified: `.github/workflows/manifest-guard.yml`
@@ -90,10 +90,16 @@ exists before the check that reads it.
     `NET-003`'s 512 KiB / 1024-per-axis / 1,048,576-pixel budget. Runs with no network. Wired as a
     job in `manifest-guard.yml`.
   - Tests: the script itself, run locally.
-  - Negative control: `git mv catalog/index.html catalog/index.html.bak` ⇒ the check must fail
-    naming `/catalog`; restore ⇒ green. Record the output.
+  - Negative control: hiding `catalog/index.html` fails three ways at once —
+    `/bottomNavigation/1/action/url`, `/bottomNavigation/1/match/0` and `/bottomNavigation/1/match/1`
+    — because the action URL and both match patterns name the same route. Prefixing the logo with
+    seven junk bytes fails the PNG-signature check. Restored, exit 0 both times.
+  - Result: 10 manifest paths at the time of writing, 11 after TASK-5 adds `"/"` as a match pattern.
+    Wired as a second job in `manifest-guard.yml` and re-run by `pages.yml` before publishing.
+  - Deviation: the script also guards against passing vacuously — a manifest naming no paths is a
+    failure rather than a silent success, since every assertion in it is a loop over that list.
 
-- [ ] TASK-5: The served manifest copy and its checksum
+- [x] TASK-5: The served manifest copy and its checksum
   - Repository: `denrzv/bloom-flowers`
   - Modified: `.well-known/siteskin.json`, `.well-known/siteskin.json.sha256`
   - Acceptance: byte-identical to webora's `spec/fixtures/valid/bloom-flowers.json` after TASK-1 —
@@ -101,9 +107,11 @@ exists before the check that reads it.
     `sha256sum` from the file; `sha256sum --check` passes in `.well-known/`; the hash equals
     `BLOOM_FLOWERS_SHA256`.
   - Tests: `sha256sum --check`, `tools/check-routes.py`
-  - Negative control: edit one byte of the served copy ⇒ `sha256sum --check` fails. Record it.
+  - Negative control: changing one word of the served copy fails `sha256sum --check`. Restored, OK.
+  - Result: `cmp` confirms byte-identity with the fixture, and the recomputed checksum equals
+    `BLOOM_FLOWERS_SHA256` — so all five pinned copies agree and both independent guards pass.
 
-- [ ] TASK-6: Deployment — Pages, custom domain, and the manual lint job
+- [x] TASK-6: Deployment — Pages, custom domain, and the manual lint job
   - Repository: `denrzv/bloom-flowers`
   - New: `CNAME`, `.github/workflows/pages.yml`, `.github/workflows/siteskin-lint.yml`
   - Acceptance: `CNAME` pins `bloomflowers.webora.app` so the site is served from an origin root
@@ -114,10 +122,15 @@ exists before the check that reads it.
     `./gradlew :siteskin-lint:run --args="https://bloomflowers.webora.app"`. Manual by design: a
     scheduled job would be red until DNS exists, and a job expected to be red teaches people to
     ignore it.
-  - Tests: workflow YAML parses; the lint job is not runnable until DNS exists and is recorded as
-    the ticket's one blocked criterion.
+  - Tests: all three workflows parse; jobs are `checksum`/`routes`, `deploy`, `lint`.
+  - Result: `pages.yml` re-runs `check-routes.py` before uploading, so a deploy cannot publish a
+    manifest whose paths the repository stopped serving. The lint job is not runnable until DNS
+    exists — the ticket's one blocked criterion.
+  - Deviation: `siteskin-lint.yml` takes the origin as a `workflow_dispatch` input defaulting to
+    `https://bloomflowers.webora.app`, so the job can be pointed at a staging origin without an
+    edit. The default keeps the documented command honest.
 
-- [ ] TASK-7: `INTEGRATION.md` and the repository README
+- [x] TASK-7: `INTEGRATION.md` and the repository README
   - Repository: `denrzv/bloom-flowers`
   - New: `INTEGRATION.md`, `README.md`
   - Acceptance: `INTEGRATION.md` covers, with the reference site as the worked example — where the
@@ -128,9 +141,15 @@ exists before the check that reads it.
     major version); and what a manifest never grants (Android permissions, chrome that hides the
     domain or TLS state, arbitrary intents). Every JSON snippet in it is valid against
     `spec/siteskin-1.0.schema.json`. `README.md` stays short and points at `INTEGRATION.md`.
-  - Tests: snippets checked against the schema by hand against `spec/siteskin-1.0.schema.json`.
+  - Tests: both JSON snippets were run through `SiteSkinValidator` itself — accepted, zero
+    diagnostics — via a throwaway test that was deleted after the run. `jsonschema` could not be
+    installed (no PyPI access from this environment), and validating against the real validator is
+    the stronger check anyway: it covers the security layer the schema deliberately does not.
+  - Result: the guide documents the `home`/`match` defect this ticket found, as the worked example
+    for `SPEC.md` §7.1 clause 4. Section 7 ("What a manifest never grants") is given the same weight
+    as the capability list.
 
-- [ ] TASK-8: Roadmap and architecture notes
+- [x] TASK-8: Roadmap and architecture notes
   - Modified: `docs/ROADMAP.md`, `CLAUDE.md`
   - Acceptance: `DEMO-001` ticked; `CLAUDE.md` gains a "Reference integration (DEMO-001)" section
     covering the five pinned copies and the recompute-never-transcribe rule, why the deployment must

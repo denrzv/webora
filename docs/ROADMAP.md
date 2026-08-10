@@ -49,7 +49,7 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 - [x] `PRIV-001` Privacy controls and per-site toggles
 - [x] `A11Y-001` Accessibility
 - [x] `DEVX-001` SiteSkin Integration Inspector
-- [ ] `DEMO-001` Bloom Flowers reference integration
+- [x] `DEMO-001` Bloom Flowers reference integration
 - [ ] `DEMO-002` PixelPlay, Daily Journal, Example News
 
 ## M5 — Google Play

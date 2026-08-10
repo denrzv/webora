@@ -609,3 +609,45 @@ never concatenated with a value.
 `BrowserSurfaceConventionsTest` now scans `src/main/java`, `src/debug/java` and `src/release/java`,
 and asserts every root contributes — a debug-only screen is browser-owned UI, and leaving the source
 set unscanned would make it an escape hatch from the rule the scan exists to enforce.
+
+### Reference integration (DEMO-001)
+
+`denrzv/bloom-flowers` is a real static site, not a fixture with a checksum. It is the first thing
+in the project to exercise the protocol against a document tree, and it immediately found something
+the corpus structurally cannot: **a manifest can be valid, origin-bound and well-formed while
+describing its own site incorrectly.** `home` declared no `match`, so `NavMatcher` left no item
+active on the reference integration's own landing page — legal under `SPEC.md` §7.1, and exactly
+the wrong thing for the artifact site owners copy.
+
+`ReferenceIntegrationNavTest` is the guard. It drives the published fixture through `NavMatcher` for
+every route the site serves and asserts the selected id, plus a path the manifest does not describe
+selecting nothing so it cannot pass by matching everything. `OriginCorpusTest` proves the manifest's
+URLs *resolve*; this proves they resolve to the right tab, and `tools/check-routes.py` in the other
+repository proves they resolve to a file that exists.
+
+**The manifest now lives in five pinned places, not three.** `spec/fixtures/valid/bloom-flowers.json`,
+its `.expected.json`, `BLOOM_FLOWERS_SHA256` in `SpecCorpusTest`, the served copy, and that repo's
+`.sha256`. Three independent guards catch a partial update from three directions —
+`SpecCorpusTest` (the hash), `SecurityConformanceTest` (the canonical result) and the other repo's
+`sha256sum --check`. Always **recompute** a checksum with `sha256sum` from the file; transcribing
+one is how four copies agree and the fifth does not.
+
+**Discovery is origin-rooted, so the deployment origin is a functional requirement.** A GitHub Pages
+*project* site at `denrzv.github.io/bloom-flowers/` cannot host a SiteSkin integration at all:
+`/.well-known/siteskin.json` belongs to whatever owns the user-site root, and `internal_url: "/catalog"`
+resolves outside the deployment. This is stricter than `DEVELOPMENT_PLAN.md`'s argument that a
+shared origin destroys the skin-swap demo — that one is about `DEMO-002`; this one applies to a
+single site. Hence `CNAME` and `bloomflowers.webora.app`.
+
+**Route layout is decided by the manifest, not by taste.** Manifest paths are origin-absolute and
+cannot be re-authored per host, and only the directory layout (`catalog/index.html`) resolves
+everywhere — a flat `catalog.html` serves `/catalog` on GitHub Pages and 404s under
+`python3 -m http.server`. The published `match` arrays already tolerate the redirect, including the
+case that reads like an off-by-one: `**` matches *zero* or more whole segments, so `"/cart/**"`
+selects `/cart` as well as `/cart/`.
+
+**The reference site takes no dependency and no exception.** No CDN, hosted font, icon set,
+analytics, cookie, form or storage — it is the artifact most likely to be copied verbatim, so
+anything it does becomes a pattern. It also derives its own darker brand shades for body text rather
+than shipping white-on-`#D94F8A` at 3.86:1, mirroring the contrast guard `SKIN-001` runs over
+manifest colours so the page and the native chrome agree.
