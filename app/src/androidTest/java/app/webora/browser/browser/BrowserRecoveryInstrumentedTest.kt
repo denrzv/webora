@@ -2,6 +2,7 @@ package app.webora.browser.browser
 
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowInsets
 import android.webkit.WebView
 import app.webora.browser.R
 import androidx.compose.ui.test.assertIsDisplayed
@@ -13,6 +14,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performTextInput
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import java.net.ServerSocket
@@ -20,6 +22,15 @@ import java.net.ServerSocket
 class BrowserRecoveryInstrumentedTest {
     @get:Rule
     val composeRule = createAndroidComposeRule<BrowserRecoveryTestActivity>()
+
+    @Test
+    fun browserRootKeepsHomeContentBelowStatusBar() {
+        val statusBarBottom = composeRule.activity.window.decorView.rootWindowInsets
+            .getInsets(WindowInsets.Type.statusBars()).top
+        val contentTop = composeRule.onNodeWithText(appName).fetchSemanticsNode().boundsInRoot.top
+
+        assertTrue("Browser content starts beneath the status bar", contentTop >= statusBarBottom)
+    }
 
     @Test
     fun mainFrameConnectionFailureKeepsLiveWebViewBehindRecoveryUi() {

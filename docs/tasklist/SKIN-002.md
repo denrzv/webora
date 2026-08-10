@@ -40,3 +40,20 @@ of branding`; the required value was restored and the focused suite passed.
 - [x] Let the bar grow beyond its baseline height so scaled title, subtitle, and security lines do
   not overlap or clip.
 - [x] Run focused model tests, compile instrumentation tests, and pass the full pre-commit gate.
+
+## TASK-FIX-2 — Keep browser chrome below system status bars
+
+- Source: local runtime validation on API 33 emulator after completion of `SKIN-001..004`.
+- [x] Apply system safe-drawing insets exactly once at the browser root, without adding padding to
+  nested SiteSkin components.
+- [x] Preserve regular and integrated browser layout at 1.0x and 1.5x font scales without overlap
+  or clipping.
+- [x] Add edge-to-edge instrumentation regression coverage, run focused tests, lint, assemble,
+  connected instrumentation, the full pre-commit gate, and capture emulator screenshots.
+
+Negative-control result: enabling edge-to-edge in the debug test host without browser-root safe
+drawing caused `browserRootKeepsHomeContentBelowStatusBar` to fail because browser content began
+above the status-bar inset. The root inset restored the expected boundary; the focused test, unit
+tests, lint, assembly, and 11-test connected suite passed. API 33 emulator captures at 1.0x and 1.5x
+font scale confirmed the SiteSkin title, subtitle, logo, and browser-owned TLS/domain row remained
+below system icons without overlap or clipping, and regular browser mode remained correctly inset.

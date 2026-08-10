@@ -5,8 +5,11 @@ import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
@@ -75,6 +78,7 @@ internal fun BrowserScreen(
     onOpenExternalUrl: (String) -> Boolean = { false },
     onShare: (String) -> Boolean = { false },
 ) {
+    val browserModifier = modifier.windowInsetsPadding(WindowInsets.safeDrawing)
     val controller = remember { BrowserWebViewController() }
     var state by remember { mutableStateOf(BrowserState()) }
     var generation by remember { mutableStateOf(0L) }
@@ -120,7 +124,7 @@ internal fun BrowserScreen(
     if (state.mode == BrowserMode.Home) {
         HomeScreen(
             onNavigate = { state = state.navigateFromHome(it) },
-            modifier = modifier,
+            modifier = browserModifier,
         )
         return
     }
@@ -157,7 +161,7 @@ internal fun BrowserScreen(
             pendingConsent = null
             manifestDiscovery.onPageStarted(url, generation)
         },
-        modifier = modifier,
+        modifier = browserModifier,
     )
     SnackbarHost(snackbar)
     pendingExternal?.let { navigation -> ExternalNavigationDialog(
