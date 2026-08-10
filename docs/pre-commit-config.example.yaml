@@ -23,5 +23,5 @@ repos:
       - id: trailing-whitespace
       - id: check-yaml
       - id: check-json
-        exclude: ^docs/claude-settings\.example\.json$
+        exclude: ^(?:docs/claude-settings\.example\.json|spec/fixtures/invalid/malformed-json\.json)$
       - id: check-added-large-files

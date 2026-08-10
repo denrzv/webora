@@ -39,3 +39,8 @@ References:
   - Source: `/review finding 2`
   - Acceptance: no-cookies is success; thrown adapter failures are incomplete; all adapters run.
   - Tests: `BrowsingDataCleanerTest` and pre-commit gate.
+- [x] TASK-FIX-3: Exclude the intentional malformed JSON fixture from syntax guardrails
+  - Source: post-PR guardrails failure
+  - Acceptance: `check-json` skips only the declared non-parsing fixture while continuing to check
+    the other invalid conformance fixtures; the installed and example pre-commit configs agree.
+  - Tests: `pre-commit run --all-files` and the full pre-commit gate.
