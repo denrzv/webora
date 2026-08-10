@@ -171,3 +171,14 @@ exists before the check that reads it.
     `OK -- 2 manifest path(s) all resolve to served files`; after it, both paths fail. The real site
     still passes all 11 and the hidden-catalog control still fires three ways.
 
+- [x] TASK-FIX-2: Restore a single trailing newline in this tasklist
+  - Source: CI `guardrails` job on PR #43 (`pre-commit` / `end-of-file-fixer`)
+  - Modified: `docs/tasklist/DEMO-001.md`
+  - Acceptance: the file ends with exactly one newline, and a scan of every tracked text file in
+    both repositories finds no other `end-of-file-fixer` or `trailing-whitespace` violation
+    introduced by this ticket.
+  - Note: the local gate could not have caught this. `scripts/pre-commit-check.sh` runs gitleaks,
+    shellcheck, the Gradle tasks and detekt directly; it does **not** invoke the `pre-commit`
+    framework, which is what CI's `guardrails` job runs and what owns `end-of-file-fixer`,
+    `trailing-whitespace`, `check-yaml` and `check-json`. So "the local gate is green" and "CI will
+    be green" are not the same claim today. Worth its own ticket; out of scope here.
