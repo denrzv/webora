@@ -44,8 +44,8 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 
 ## M4 — Hardening, privacy, demo
 
-- [ ] `HARDEN-001` Adversarial manifest corpus
-- [ ] `HARDEN-002` Brand-impersonation controls
+- [x] `HARDEN-001` Adversarial manifest corpus
+- [x] `HARDEN-002` Brand-impersonation controls
 - [ ] `PRIV-001` Privacy controls and per-site toggles
 - [ ] `A11Y-001` Accessibility
 - [ ] `DEVX-001` SiteSkin Integration Inspector

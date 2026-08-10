@@ -180,7 +180,7 @@ internal fun BrowserScreen(
         onDismiss = { pendingExternalUrl = null },
     ) }
     pendingConsent?.let { candidate -> SiteSkinConsentDialog(
-        domain = candidate.origin.registrableDomain,
+        origin = candidate.origin.canonical,
         onAllow = {
             consentStore.save(candidate.origin, SiteConsentDecision.ALLOW)
             val currentOrigin = when (val mode = state.mode) {
@@ -242,14 +242,14 @@ private fun rememberManifestDiscovery(
 
 @Composable
 internal fun SiteSkinConsentDialog(
-    domain: String,
+    origin: String,
     onAllow: () -> Unit,
     onNotNow: () -> Unit,
     onNever: () -> Unit,
 ) {
     AlertDialog(
         onDismissRequest = onNotNow,
-        title = { Text(stringResource(R.string.siteskin_consent_title, domain)) },
+        title = { Text(stringResource(R.string.siteskin_consent_title, origin)) },
         text = { Text(stringResource(R.string.siteskin_consent_message)) },
         confirmButton = { Button(onClick = onAllow) { Text(stringResource(R.string.siteskin_allow)) } },
         dismissButton = {

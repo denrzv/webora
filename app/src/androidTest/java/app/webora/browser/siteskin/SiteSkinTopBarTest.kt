@@ -7,6 +7,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertWidthIsEqualTo
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import app.webora.browser.browser.SecurityPresentation
 import app.webora.browser.browser.TransportSecurity
 import org.junit.Rule
@@ -30,6 +31,15 @@ class SiteSkinTopBarTest {
         compose.onNodeWithTag(SITESKIN_LOGO_TAG)
             .assertIsDisplayed()
             .assertWidthIsEqualTo(LOGO_SLOT_SIZE)
+    }
+
+    @Test fun hostileBrandingCannotReplaceIdentityOrExposeDecorativeLogoSemantics() {
+        compose.setContent { SiteSkinTopBar(model(BrandAsset.Monogram("B")), colors) }
+
+        compose.onNodeWithText("B").assertDoesNotExist()
+        compose.onNodeWithTag(SITESKIN_SECURITY_TAG)
+            .assertIsDisplayed()
+            .assertContentDescriptionEquals("Secure connection to example.co.uk")
     }
 
     private fun model(asset: BrandAsset) = SiteSkinTopBarModel(
