@@ -21,8 +21,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import app.webora.browser.R
 
 @Composable
 internal fun HomeScreen(onNavigate: (String) -> Unit, modifier: Modifier = Modifier) {
@@ -32,28 +34,29 @@ internal fun HomeScreen(onNavigate: (String) -> Unit, modifier: Modifier = Modif
         contentPadding = PaddingValues(20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        item { Text("Webora", style = MaterialTheme.typography.headlineLarge) }
+        item { Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineLarge) }
         item {
             OutlinedTextField(
                 value = address,
                 onValueChange = { address = it },
-                label = { Text("Search or enter address") },
+                label = { Text(stringResource(R.string.address_label)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
                 keyboardActions = KeyboardActions(onGo = { resolveAddressInput(address)?.let(onNavigate) }),
                 modifier = Modifier.fillMaxWidth(),
             )
         }
-        item { EmptyHomeSection("Recent sites", "Sites you visit will appear here.") }
-        item { EmptyHomeSection("Favourites", "Your saved sites will appear here.") }
-        item { Text("Suggested integrations", style = MaterialTheme.typography.titleLarge) }
+        item { EmptyHomeSection(R.string.home_recent_title, R.string.home_recent_empty) }
+        item { EmptyHomeSection(R.string.home_favourites_title, R.string.home_favourites_empty) }
+        item { Text(stringResource(R.string.home_suggested_title), style = MaterialTheme.typography.titleLarge) }
         items(defaultSuggestedSites, key = SuggestedSite::url) { site ->
+            val name = stringResource(site.nameRes)
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(site.name, style = MaterialTheme.typography.titleMedium)
-                    Text(site.description)
+                    Text(name, style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(site.descriptionRes))
                     Button(onClick = { resolveAddressInput(site.url)?.let(onNavigate) }) {
-                        Text("Open ${site.name}")
+                        Text(stringResource(R.string.home_open_site, name))
                     }
                 }
             }
@@ -62,9 +65,9 @@ internal fun HomeScreen(onNavigate: (String) -> Unit, modifier: Modifier = Modif
 }
 
 @Composable
-private fun EmptyHomeSection(title: String, message: String) {
+private fun EmptyHomeSection(titleRes: Int, messageRes: Int) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(title, style = MaterialTheme.typography.titleLarge)
-        Text(message, style = MaterialTheme.typography.bodyMedium)
+        Text(stringResource(titleRes), style = MaterialTheme.typography.titleLarge)
+        Text(stringResource(messageRes), style = MaterialTheme.typography.bodyMedium)
     }
 }

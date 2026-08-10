@@ -106,7 +106,11 @@ private fun SecurityIdentity(security: SecurityPresentation, colors: SiteSkinCol
             .testTag(SITESKIN_SECURITY_TAG),
     ) {
         Text(transport, color = colors.onBackground, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-        Text(" · ", color = colors.onBackground, fontSize = 12.sp)
+        Text(
+            stringResource(R.string.siteskin_security_separator),
+            color = colors.onBackground,
+            fontSize = 12.sp,
+        )
         Text(
             security.registrableDomain,
             color = colors.onBackground,

@@ -57,13 +57,14 @@ internal fun SiteSkinQuickActions(
     if (items.isEmpty()) return
     var expanded by remember { mutableStateOf(false) }
     val description = stringResource(R.string.siteskin_quick_actions)
+    val glyph = stringResource(R.string.siteskin_quick_actions_glyph)
     Column(modifier.testTag(SITESKIN_QUICK_ACTIONS_TAG)) {
         FloatingActionButton(
             onClick = { expanded = true },
             modifier = Modifier
                 .sizeIn(minWidth = MIN_TOUCH_TARGET, minHeight = MIN_TOUCH_TARGET)
                 .semantics { contentDescription = description },
-        ) { Text("+") }
+        ) { Text(glyph) }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             items.take(MAX_VISIBLE_QUICK_ACTIONS).forEach { item ->
                 DropdownMenuItem(

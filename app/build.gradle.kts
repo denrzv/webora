@@ -91,6 +91,15 @@ android {
     }
 }
 
+tasks.withType<Test>().configureEach {
+    // BrowserSurfaceConventionsTest reads the Compose sources to enforce conventions no single
+    // call site owns. Declared as an input so editing a composable reruns the scan instead of
+    // hitting an up-to-date check, mirroring how :siteskin-core wires the conformance corpus.
+    val appSource = layout.projectDirectory.dir("src/main/java")
+    inputs.dir(appSource).withPropertyName("appComposeSources")
+    systemProperty("webora.app.src", appSource.asFile.absolutePath)
+}
+
 fun resolveSigning(key: String): String? =
     System.getenv(key)
         ?: providers.gradleProperty(key).orNull

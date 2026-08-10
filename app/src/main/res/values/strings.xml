@@ -48,4 +48,30 @@
     <string name="close">Close</string>
     <string name="browsing_data_cleared">Browsing data cleared</string>
     <string name="browsing_data_clear_incomplete">Some browsing data could not be cleared</string>
+    <string name="home_recent_title">Recent sites</string>
+    <string name="home_recent_empty">Sites you visit will appear here.</string>
+    <string name="home_favourites_title">Favourites</string>
+    <string name="home_favourites_empty">Your saved sites will appear here.</string>
+    <string name="home_suggested_title">Suggested integrations</string>
+    <string name="home_open_site">Open %1$s</string>
+    <string name="suggested_bloom_name">Bloom Flowers</string>
+    <string name="suggested_bloom_description">Fresh flowers delivered today</string>
+    <string name="suggested_pixelplay_name">PixelPlay</string>
+    <string name="suggested_pixelplay_description">Discover independent games</string>
+    <string name="suggested_journal_name">Daily Journal</string>
+    <string name="suggested_journal_description">A focused place to write</string>
+    <string name="onboarding_browsing_title">Browse the whole web</string>
+    <string name="onboarding_browsing_body">Search or enter any web address. Webora is a browser first.</string>
+    <string name="onboarding_adaptation_title">Sites can fit you better</string>
+    <string name="onboarding_adaptation_body">SiteSkin lets supported sites offer native-style navigation.</string>
+    <string name="onboarding_control_title">You stay in control</string>
+    <string name="onboarding_control_body">Webora keeps security details visible and asks before a site changes the browser.</string>
+    <string name="onboarding_step">Step %1$d of %2$d</string>
+    <string name="onboarding_skip">Skip</string>
+    <string name="onboarding_next">Next</string>
+    <string name="onboarding_start">Start browsing</string>
+    <!-- Decorative glyphs. Kept in resources so the literal rule has no exemption to erode, and
+         marked untranslatable because they are iconography rather than copy. -->
+    <string name="siteskin_quick_actions_glyph" translatable="false">+</string>
+    <string name="siteskin_security_separator" translatable="false">" \u00B7 "</string>
 </resources>

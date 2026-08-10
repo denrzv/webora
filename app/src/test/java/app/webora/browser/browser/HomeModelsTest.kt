@@ -1,5 +1,6 @@
 package app.webora.browser.browser
 
+import app.webora.browser.R
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -18,7 +19,7 @@ class HomeModelsTest {
 
     @Test
     fun `suggestions accept absolute credential-free HTTPS destinations`() {
-        val suggestion = SuggestedSite.create("Bloom Flowers", "Flowers delivered", "https://bloomflowers.example/")
+        val suggestion = SuggestedSite.create(NAME, DESCRIPTION, "https://bloomflowers.example/")
 
         assertEquals("https://bloomflowers.example/", suggestion?.url)
     }
@@ -34,12 +35,19 @@ class HomeModelsTest {
             "not a url",
         )
 
-        targets.forEach { target -> assertNull(target, SuggestedSite.create("Site", "Description", target)) }
+        targets.forEach { target ->
+            assertNull(target, SuggestedSite.create(NAME, DESCRIPTION, target))
+        }
     }
 
     @Test
     fun `default suggestions are browser-owned safe destinations`() {
         assertTrue(defaultSuggestedSites.isNotEmpty())
         assertTrue(defaultSuggestedSites.all { resolveAddressInput(it.url) == it.url })
+    }
+
+    private companion object {
+        val NAME = R.string.suggested_bloom_name
+        val DESCRIPTION = R.string.suggested_bloom_description
     }
 }
