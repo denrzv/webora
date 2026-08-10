@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.kotlin.compose) apply false
     alias(libs.plugins.kotlin.serialization) apply false
     alias(libs.plugins.detekt)
+    alias(libs.plugins.cyclonedx)
 }
 
 // Detekt is configured for every module here rather than per-module, so adding a
