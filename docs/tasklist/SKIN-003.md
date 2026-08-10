@@ -58,3 +58,19 @@ the focused test pass; unit tests, lint, assembly, and the 12-test connected sui
 33 emulator captures at 1.0x and 1.5x confirmed all five items, the quick-action FAB, the SiteSkin
 menu, same-origin navigation, and the browser-owned external HTTPS confirmation remained visible
 and reachable without overlap.
+
+## TASK-FIX-3 — Restore CI guardrails and dependency scanning
+
+- Source: CI field observation after the latest merge.
+- [x] Install the repository's documented pre-commit configuration so the guardrails job has an
+  executable configuration.
+- [x] Generate a Gradle dependency SBOM and scan that artifact with OSV Scanner instead of asking
+  OSV Scanner to discover unsupported Gradle package-manager files recursively.
+- [x] Run pre-commit, the focused SBOM/OSV security check, and the full pre-commit gate.
+
+The installed pre-commit runner could parse the restored configuration but this environment's
+GitHub proxy returned HTTP 403 while it fetched hook repositories; equivalent YAML, shell,
+whitespace, and EOF checks passed locally. The full repository pre-commit gate passed. The focused
+security command generated an aggregate SBOM containing 458 packages and OSV Scanner discovered all
+458; the environment's OSV API request was likewise denied by its proxy, so vulnerability lookup
+remains authoritative in CI, where the API is reachable.
