@@ -8,7 +8,7 @@ References:
 
 ## Tasks
 
-- [ ] TASK-1: Trace model, sink, bounded recorder, and the untrusted-value bound
+- [x] TASK-1: Trace model, sink, bounded recorder, and the untrusted-value bound
   - New: `app/src/main/java/app/webora/browser/inspector/SiteSkinTrace.kt`,
     `.../inspector/SiteSkinTraceSink.kt`, `.../inspector/SiteSkinTraceRecorder.kt`,
     `.../inspector/InspectorText.kt`
@@ -24,8 +24,19 @@ References:
     exposes no `ByteArray`. `InspectorTextTest` — a `SS-W-FIELD-UNKNOWN` pointer forged from a
     manifest key containing `"\nHTTP status: 200"` renders as one line, and an over-long value is
     truncated.
-  - Negative control: delete the truncation and the newline collapse from `inspectorValue`; the
-    forged-pointer case must fail. Restore and record the result here.
+  - Negative control: replaced `inspectorValue`'s body with `return raw.orEmpty()`. All seven
+    `InspectorTextTest` cases failed, including the forged-pointer one. Restored, all seven pass.
+  - Deviation: eviction is by least-recently-recorded rather than the plan's first-seen insertion
+    order — re-recording an origin refreshes its position. A developer moving between a handful of
+    origins wants the ones they just visited, and the ordering is pinned by a test rather than left
+    to `LinkedHashMap`'s default.
+  - Deviation: `inspectorValue` also strips Unicode format characters, which are neither whitespace
+    nor control characters. `U+202E RIGHT-TO-LEFT OVERRIDE` reverses the rendering of everything
+    after it, so it can make a value read like a browser-authored label without containing a
+    newline at all. Covered by its own case.
+  - Deviation: the recorder exposes a plain `version` counter instead of holding Compose state.
+    Keeping it free of `androidx.compose.runtime` means the JVM gate drives it directly; TASK-5
+    keys recomposition on the counter.
 
 - [ ] TASK-2: Transport detail — HTTP status, redirect count, and a reason for refusal
   - Modified: `app/src/main/java/app/webora/browser/siteskin/OkHttpManifestSource.kt`
