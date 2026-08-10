@@ -68,7 +68,7 @@ internal class ManifestDiscoveryCoordinator(
             is ManifestFetchResult.NotModified -> reuseNotModified(result, cached, origin, generation)
             ManifestFetchResult.Unavailable -> cached?.let { validate(it.bytes, origin, generation) }
                 ?: ManifestDiscoveryOutcome.Unavailable(origin, generation)
-            ManifestFetchResult.Rejected -> ManifestDiscoveryOutcome.Unavailable(origin, generation)
+            is ManifestFetchResult.Rejected -> ManifestDiscoveryOutcome.Unavailable(origin, generation)
         }
     }
 

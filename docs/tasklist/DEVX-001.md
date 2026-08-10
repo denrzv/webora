@@ -38,7 +38,7 @@ References:
     Keeping it free of `androidx.compose.runtime` means the JVM gate drives it directly; TASK-5
     keys recomposition on the counter.
 
-- [ ] TASK-2: Transport detail — HTTP status, redirect count, and a reason for refusal
+- [x] TASK-2: Transport detail — HTTP status, redirect count, and a reason for refusal
   - Modified: `app/src/main/java/app/webora/browser/siteskin/OkHttpManifestSource.kt`
   - Modified: `app/src/test/java/app/webora/browser/siteskin/OkHttpManifestSourceTest.kt`
   - Acceptance: `ManifestFetchResult.Fetched` and `NotModified` carry the final HTTP status and the
@@ -52,6 +52,12 @@ References:
     cross-origin redirect reporting `CROSS_ORIGIN_REDIRECT`, a third redirect reporting the limit,
     an oversized body reporting oversize, and a success reporting its redirect count. The existing
     cancellation and limit tests must still pass unchanged in behaviour.
+  - Result: `OkHttpManifestSourceTest` is 13 cases, all green. The six existing cases were left
+    untouched in behaviour; `distinguishes HTTP rejection from transport unavailability` moved from
+    `assertSame` to an equality assertion because `Rejected` is no longer a singleton.
+  - Deviation: `FetchRejection` lives beside `ManifestFetchResult` in the `siteskin` package, not in
+    the inspector's trace file as the plan drafted it. The transport is what tells these six cases
+    apart; putting the vocabulary in the observer would mean re-deriving it at the boundary.
 
 - [ ] TASK-3: Record discovery, preserve the diagnostics the pipeline drops today
   - Modified: `app/src/main/java/app/webora/browser/siteskin/ManifestDiscoveryCoordinator.kt`

@@ -1,5 +1,7 @@
 package app.webora.browser.inspector
 
+import app.webora.browser.siteskin.FetchRejection
+
 /**
  * What the browser recorded while deciding whether one origin's manifest could activate.
  *
@@ -62,16 +64,6 @@ internal enum class TraceTransportOutcome {
 
     /** No answer arrived at all. */
     UNAVAILABLE,
-}
-
-/** Why the browser refused a response the server actually returned. */
-internal enum class FetchRejection {
-    NOT_HTTPS,
-    HTTP_ERROR,
-    REDIRECT_LIMIT,
-    CROSS_ORIGIN_REDIRECT,
-    OVERSIZED,
-    MALFORMED_URL,
 }
 
 /** Which of `NET-002`'s paths served this navigation. */

@@ -77,7 +77,7 @@ class ManifestDiscoveryCoordinatorTest {
         val outcomes = mutableListOf<ManifestDiscoveryOutcome>()
         val transport = CacheableManifestSource { origin, _ ->
             requested += origin
-            ManifestFetchResult.Rejected
+            ManifestFetchResult.Rejected(FetchRejection.HTTP_ERROR, 503)
         }
         val coordinator = ManifestDiscoveryCoordinator(this, transport, cache, outcomes::add)
 
@@ -99,7 +99,7 @@ class ManifestDiscoveryCoordinatorTest {
             ManifestCacheMetadata(etag = "tag", lastModified = "yesterday"),
         )
         val validators = mutableListOf<ManifestRequestValidators>()
-        var result: ManifestFetchResult = ManifestFetchResult.Rejected
+        var result: ManifestFetchResult = ManifestFetchResult.Rejected(FetchRejection.HTTP_ERROR, 503)
         val outcomes = mutableListOf<ManifestDiscoveryOutcome>()
         val source = CacheableManifestSource { _, sent -> validators += sent; result }
         val coordinator = ManifestDiscoveryCoordinator(this, source, cache, outcomes::add)
