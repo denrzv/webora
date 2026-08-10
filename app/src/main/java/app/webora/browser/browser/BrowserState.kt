@@ -93,6 +93,11 @@ internal fun BrowserState.activateSiteSkin(
     this
 }
 
+internal fun BrowserState.deactivateSiteSkin(): BrowserState = when (val current = mode) {
+    is BrowserMode.Integrated -> copy(mode = BrowserMode.Regular(current.origin))
+    else -> this
+}
+
 private fun BrowserState.observeFailure(failure: BrowserObservation.PageFailed): BrowserState {
     val retryUrl = resolveAddressInput(failure.url)?.takeIf { it == failure.url }
     val origin = retryUrl?.let(dev.siteskin.core.origin.SiteOrigin::parse)

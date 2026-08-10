@@ -79,6 +79,21 @@ class BrowserStateTest {
         assertEquals(state, result)
     }
 
+    @Test fun `global disable drops integrated chrome without losing page state`() {
+        val origin = checkNotNull(SiteOrigin.parse("https://shop.example"))
+        val integrated = BrowserState(
+            mode = BrowserMode.Regular(origin),
+            displayedUrl = "https://shop.example/catalog",
+            addressText = "https://shop.example/catalog",
+        ).activateSiteSkin(origin, configuration("https://shop.example"))
+
+        val result = integrated.deactivateSiteSkin()
+
+        assertEquals(BrowserMode.Regular(origin), result.mode)
+        assertEquals(integrated.displayedUrl, result.displayedUrl)
+        assertEquals(integrated.addressText, result.addressText)
+    }
+
     private fun configuration(origin: String) = SiteSkinValidator.validate(
         """{"schemaVersion":"1.0","site":{"id":"shop","name":"Shop"}}""".byteInputStream(),
         origin,

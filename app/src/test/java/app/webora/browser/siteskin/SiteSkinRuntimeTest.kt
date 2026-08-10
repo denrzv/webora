@@ -44,6 +44,16 @@ class SiteSkinRuntimeTest {
         assertSame(CandidateDisposition.Ignore, result)
     }
 
+    @Test fun `global disable ignores even current allowed candidate`() {
+        val outcome = available("https://shop.example", 4)
+
+        val result = candidateDisposition(
+            outcome, origin("https://shop.example"), 4, SiteConsentDecision.ALLOW, siteSkinEnabled = false,
+        )
+
+        assertSame(CandidateDisposition.Ignore, result)
+    }
+
     private fun available(value: String, generation: Long): ManifestDiscoveryOutcome.Available {
         val siteOrigin = origin(value)
         val validation = SiteSkinValidator.validate(

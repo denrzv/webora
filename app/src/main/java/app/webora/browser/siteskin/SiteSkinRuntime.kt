@@ -26,8 +26,10 @@ internal fun candidateDisposition(
     observedOrigin: SiteOrigin?,
     currentGeneration: Long,
     consent: SiteConsentDecision?,
+    siteSkinEnabled: Boolean = true,
 ): CandidateDisposition {
-    val available = outcome as? ManifestDiscoveryOutcome.Available ?: return CandidateDisposition.Ignore
+    val available = outcome as? ManifestDiscoveryOutcome.Available
+    if (!siteSkinEnabled || available == null) return CandidateDisposition.Ignore
     if (available.generation != currentGeneration || available.origin != observedOrigin) {
         return CandidateDisposition.Ignore
     }

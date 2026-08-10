@@ -55,6 +55,8 @@ internal class ManifestDiscoveryCoordinator(
         discoveryJob?.cancel()
     }
 
+    fun clearCache() = cache.clear()
+
     private suspend fun discover(
         origin: SiteOrigin,
         generation: Long,

@@ -37,4 +37,15 @@
     <string name="siteskin_allow">Allow</string>
     <string name="siteskin_not_now">Not now</string>
     <string name="siteskin_never">Never for this site</string>
+    <string name="privacy_settings_title">Privacy settings</string>
+    <string name="siteskin_global_toggle">Allow SiteSkin customisation</string>
+    <string name="site_permissions">Site permissions</string>
+    <string name="no_site_permissions">No saved SiteSkin decisions</string>
+    <string name="reset_site_permission">Reset decision</string>
+    <string name="clear_browsing_data">Clear browsing data</string>
+    <string name="clear_browsing_data_message">Clear cookies, site storage, caches, form data, history, and saved SiteSkin decisions? Webora settings stay unchanged.</string>
+    <string name="clear_data">Clear data</string>
+    <string name="close">Close</string>
+    <string name="browsing_data_cleared">Browsing data cleared</string>
+    <string name="browsing_data_clear_incomplete">Some browsing data could not be cleared</string>
 </resources>

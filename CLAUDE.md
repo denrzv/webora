@@ -506,3 +506,17 @@ the complete canonical origin (including scheme and a non-default port) so the v
 the exact `SiteOrigin` persistence key. Regular chrome remains active until Allow, Not now never
 persists, Never persists only for that origin, and every Allow action rechecks current origin and
 navigation generation before applying branding.
+
+### Privacy controls (PRIV-001)
+
+The global SiteSkin preference is browser-owned, local, defaults enabled, and is checked before
+discovery and again before candidate publication. Turning it off cancels discovery, dismisses
+pending consent, and immediately projects Integrated mode back to Regular without changing the
+committed page. Persisted Allow/Never decisions remain keyed and displayed by complete canonical
+origin and can be reset individually.
+
+Clear browsing data is an explicit confirmed operation covering WebView cookies, Web Storage,
+cache/form/history state, the in-memory manifest cache, and all per-origin SiteSkin decisions. It
+deliberately preserves onboarding completion and the global SiteSkin preference. Webora ships no
+telemetry/analytics SDK or remote preference sync; `docs/privacy/DATA_SAFETY.md` is the
+implementation-backed release mapping.
