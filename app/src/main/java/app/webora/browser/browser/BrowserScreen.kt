@@ -2,6 +2,7 @@ package app.webora.browser.browser
 
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -63,6 +64,7 @@ import app.webora.browser.siteskin.SiteSkinChromeModel
 import app.webora.browser.siteskin.SiteSkinQuickActions
 import app.webora.browser.siteskin.SiteSkinMenu
 import app.webora.browser.siteskin.SiteSkinTheme
+import app.webora.browser.siteskin.scheme
 import app.webora.browser.siteskin.SiteSkinTopBar
 import app.webora.browser.siteskin.SiteSkinTopBarModel
 import app.webora.browser.siteskin.brandMonogram
@@ -356,7 +358,7 @@ internal fun RegularBrowser(
         val integrated = state.mode as? BrowserMode.Integrated
         val security = securityPresentation(state.mode)
         if (integrated != null && security != null && brandAsset != null) {
-            val colors = SiteSkinTheme.from(integrated.configuration).light
+            val colors = SiteSkinTheme.from(integrated.configuration).scheme(isSystemInDarkTheme())
             SiteSkinTopBar(SiteSkinTopBarModel.from(integrated.configuration, brandAsset, security), colors)
         } else {
             AddressBar(

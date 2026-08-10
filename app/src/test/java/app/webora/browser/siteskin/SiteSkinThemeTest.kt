@@ -4,6 +4,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import dev.siteskin.core.SiteSkinValidationOutcome
 import dev.siteskin.core.SiteSkinValidator
+import kotlin.random.Random
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -61,6 +62,63 @@ class SiteSkinThemeTest {
         themes.flatMap { listOf(it.light, it.dark) }.forEach(::assertPairRatios)
     }
 
+    @Test fun `the system theme selects the projection and nothing else does`() {
+        val theme = SiteSkinTheme.from(configuration("#D94F8A", "#FADADD", "#FFF7FA", "#2B1B24"))
+
+        assertEquals(theme.light, theme.scheme(darkTheme = false))
+        assertEquals(theme.dark, theme.scheme(darkTheme = true))
+    }
+
+    @Test fun `adversarial colours meet contrast in both projections`() {
+        // Three handpicked themes prove the guard runs; they do not prove it holds. This corpus is
+        // the known failure modes plus a seeded sweep, and it is seeded rather than random so a
+        // failure is reproducible from the message alone instead of vanishing on the next run.
+        val failures = adversarialCases().mapNotNull { (name, theme) ->
+            val offending = listOf(theme.light to LIGHT, theme.dark to DARK).mapNotNull { (scheme, label) ->
+                scheme.shortfall()?.let { "$label $it" }
+            }
+            if (offending.isEmpty()) null else "$name -> ${offending.joinToString("; ")}"
+        }
+
+        assertTrue("contrast shortfalls:\n${failures.joinToString("\n")}", failures.isEmpty())
+    }
+
+    private fun adversarialCases(): List<Pair<String, SiteSkinTheme>> {
+        val curated = listOf(
+            // Text identical to its background, and one step away from it.
+            listOf("#000000", "#000000", "#000000", "#000000"),
+            listOf("#FFFFFF", "#FFFFFF", "#FFFFFF", "#FFFFFF"),
+            listOf("#010101", "#010101", "#000000", "#000000"),
+            // Mid grey against mid grey: the worst case for a guard that walks toward one extreme,
+            // because neither direction is obviously the right one.
+            listOf("#808080", "#808080", "#808080", "#808080"),
+            listOf("#767676", "#777777", "#787878", "#797979"),
+            // Saturated channels, where perceived luminance is dominated by one weight.
+            listOf("#00FF00", "#00FF00", "#00FF00", "#00FF00"),
+            listOf("#0000FF", "#0000FF", "#0000FF", "#0000FF"),
+            listOf("#FF0000", "#FF0000", "#FF0000", "#FF0000"),
+            // Extremes crossed over: the darkest possible text on the lightest possible surface
+            // and the reverse, which must both survive the dark derivation.
+            listOf("#FFFFFF", "#FFFFFF", "#FFFFFF", "#000000"),
+            listOf("#000000", "#000000", "#000000", "#FFFFFF"),
+        )
+        val random = Random(SWEEP_SEED)
+        val swept = List(SWEEP_CASES) { List(COLOR_FIELDS) { random.nextHex() } }
+        return (curated + swept).map { colors ->
+            colors.joinToString() to SiteSkinTheme.from(configuration(colors[0], colors[1], colors[2], colors[3]))
+        }
+    }
+
+    private fun Random.nextHex(): String = "#%06X".format(nextInt(CHANNEL_SPACE))
+
+    /** The first pair that misses its threshold, or `null` when every pair clears it. */
+    private fun SiteSkinColorScheme.shortfall(): String? = listOf(
+        Triple("primary", contrastRatio(primary, onPrimary), UI_RATIO),
+        Triple("secondary", contrastRatio(secondary, onSecondary), UI_RATIO),
+        Triple("background", contrastRatio(background, onBackground), BODY_RATIO),
+    ).firstOrNull { (_, ratio, target) -> ratio < target }
+        ?.let { (role, ratio, target) -> "$role %.2f < %.1f".format(ratio, target) }
+
     private fun assertPairRatios(scheme: SiteSkinColorScheme) {
         assertTrue(contrastRatio(scheme.primary, scheme.onPrimary) >= UI_RATIO)
         assertTrue(contrastRatio(scheme.secondary, scheme.onSecondary) >= UI_RATIO)
@@ -89,5 +147,11 @@ class SiteSkinThemeTest {
     private companion object {
         const val BODY_RATIO = 4.5
         const val UI_RATIO = 3.0
+        const val LIGHT = "light"
+        const val DARK = "dark"
+        const val SWEEP_SEED = 20260810L
+        const val SWEEP_CASES = 120
+        const val COLOR_FIELDS = 4
+        const val CHANNEL_SPACE = 0x1000000
     }
 }
