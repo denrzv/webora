@@ -476,3 +476,19 @@ security text can expand without overlap. Manifest discovery, asset decoding, an
 remain outside composition. The component is intentionally not selected from discovery results;
 `SKIN-004` owns consent, activation, and origin-change deactivation before this chrome reaches the
 runtime browser screen.
+
+### SiteSkin runtime activation (SKIN-004)
+
+Every main-frame page start deactivates an integrated skin unless the new browser-observed
+`SiteOrigin` exactly equals its active origin, then starts a new attributed discovery generation
+without delaying WebView rendering. Accepted results can activate only when both their canonical
+origin and generation still match current browser state. Coroutine cancellation limits wasted work;
+the publication-time origin/generation comparison is the security control.
+
+First-use consent is browser-owned and keyed by full canonical origin. Only Allow and Never persist;
+Not now is ephemeral, and stale dialog actions recheck origin/generation before applying. The global
+switch and decision-management UI remain for `PRIV-001`. Integrated composition consumes only the
+trusted configuration, bounded decoded-or-monogram brand asset, projected theme, and browser-derived
+domain/TLS identity. All site item selections pass through `ActionResolver` into an exhaustive
+browser dispatcher; external HTTPS and Android capabilities confirm through browser-owned UI before
+leaving the renderer.

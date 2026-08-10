@@ -26,33 +26,95 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.ImeAction
 import app.webora.browser.R
 import app.webora.browser.siteskin.ManifestDiscoveryCoordinator
+import app.webora.browser.siteskin.ManifestDiscoveryOutcome
 import app.webora.browser.siteskin.OkHttpManifestSource
+import app.webora.browser.siteskin.SiteConsentDecision
+import app.webora.browser.siteskin.SiteConsentStore
+import app.webora.browser.siteskin.SiteSkinCandidate
+import app.webora.browser.siteskin.CandidateDisposition
+import app.webora.browser.siteskin.candidateDisposition
+import app.webora.browser.siteskin.isCurrent
+import app.webora.browser.siteskin.BrandAsset
+import app.webora.browser.siteskin.BrandAssetLoader
+import app.webora.browser.siteskin.BitmapBrandAssetDecoder
+import app.webora.browser.siteskin.OkHttpBrandAssetSource
+import app.webora.browser.siteskin.SiteSkinBottomNavigation
+import app.webora.browser.siteskin.SiteSkinChromeModel
+import app.webora.browser.siteskin.SiteSkinQuickActions
+import app.webora.browser.siteskin.SiteSkinMenu
+import app.webora.browser.siteskin.SiteSkinTheme
+import app.webora.browser.siteskin.SiteSkinTopBar
+import app.webora.browser.siteskin.SiteSkinTopBarModel
+import app.webora.browser.siteskin.brandMonogram
+import app.webora.browser.siteskin.BrowserMenuCommand
 import app.webora.browser.web.BrowserWebViewController
 import app.webora.browser.web.HardenedWebView
 import app.webora.browser.web.WebViewEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import dev.siteskin.core.action.ActionResolver
+import dev.siteskin.core.action.ResolvedAction
+import dev.siteskin.core.model.NavigationItem
 
 @Composable
+@Suppress("LongMethod", "CyclomaticComplexMethod", "CognitiveComplexMethod")
 internal fun BrowserScreen(
     modifier: Modifier = Modifier,
     onLaunchExternal: (ExternalNavigation) -> Boolean = { false },
     onDownload: (String) -> Boolean = { false },
     onFileChooser: (String, (String?) -> Unit) -> Unit = { _, complete -> complete(null) },
+    onOpenExternalUrl: (String) -> Boolean = { false },
+    onShare: (String) -> Boolean = { false },
 ) {
     val controller = remember { BrowserWebViewController() }
     var state by remember { mutableStateOf(BrowserState()) }
+    var generation by remember { mutableStateOf(0L) }
+    var pendingConsent by remember { mutableStateOf<SiteSkinCandidate?>(null) }
+    var siteMenuExpanded by remember { mutableStateOf(false) }
     var pendingExternal by remember { mutableStateOf<ExternalNavigation?>(null) }
+    var pendingExternalUrl by remember { mutableStateOf<String?>(null) }
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    val manifestDiscovery = rememberManifestDiscovery(scope)
+    val context = LocalContext.current.applicationContext
+    val assetLoader = remember { BrandAssetLoader(OkHttpBrandAssetSource(), BitmapBrandAssetDecoder()) }
+    var brandAsset by remember { mutableStateOf<BrandAsset?>(null) }
+    val consentStore = remember(context) { SiteConsentStore(context) }
+    val manifestDiscovery = rememberManifestDiscovery(scope) { outcome ->
+        val origin = when (val mode = state.mode) {
+            BrowserMode.Home -> null
+            is BrowserMode.Regular -> mode.origin
+            is BrowserMode.Integrated -> mode.origin
+        }
+        val decision = outcome.origin?.let(consentStore::decision)
+        when (val disposition = candidateDisposition(outcome, origin, generation, decision)) {
+            is CandidateDisposition.Activate -> {
+                state = state.activateSiteSkin(disposition.candidate.origin, disposition.candidate.configuration)
+            }
+            is CandidateDisposition.Ask -> pendingConsent = disposition.candidate
+            CandidateDisposition.Ignore -> Unit
+        }
+    }
     val downloadMessages = stringResource(R.string.download_started) to stringResource(R.string.download_failed)
+    val integrated = state.mode as? BrowserMode.Integrated
+    LaunchedEffect(integrated?.configuration) {
+        val configuration = integrated?.configuration
+        brandAsset = configuration?.let {
+            BrandAsset.Monogram(brandMonogram(it.site.shortName, it.site.name))
+        }
+        if (configuration != null) {
+            val loaded = assetLoader.load(configuration)
+            if ((state.mode as? BrowserMode.Integrated)?.configuration === configuration) brandAsset = loaded
+        }
+    }
 
     BrowserBackHandler(enabled = state.canGoBack, controller = controller)
     if (state.mode == BrowserMode.Home) {
@@ -61,6 +123,21 @@ internal fun BrowserScreen(
             modifier = modifier,
         )
         return
+    }
+    val dispatchSiteItem: (NavigationItem) -> Unit = { item ->
+        val mode = state.mode as? BrowserMode.Integrated
+        val resolved = mode?.let { ActionResolver.resolve(item.action, it.configuration.site, state.displayedUrl) }
+        when (resolved) {
+            is ResolvedAction.NavigateInternal -> controller.navigate(resolved.url)
+            is ResolvedAction.NavigateExternal -> pendingExternalUrl = resolved.url
+            is ResolvedAction.Dial -> externalNavigation(resolved.value)?.let { pendingExternal = it }
+            is ResolvedAction.ComposeEmail -> externalNavigation(resolved.value)?.let { pendingExternal = it }
+            is ResolvedAction.OpenMap -> externalNavigation(resolved.value)?.let { pendingExternal = it }
+            is ResolvedAction.Share -> onShare(resolved.pageUrl)
+            ResolvedAction.Refresh -> controller.reload()
+            ResolvedAction.OpenMenu -> siteMenuExpanded = true
+            null -> Unit
+        }
     }
     RegularBrowser(
         state = state,
@@ -73,7 +150,13 @@ internal fun BrowserScreen(
             scope.launch { snackbar.showSnackbar(message) }
         },
         onFileChooser = onFileChooser,
-        onPageStarted = manifestDiscovery::onPageStarted,
+        brandAsset = brandAsset,
+        onSiteSelect = dispatchSiteItem,
+        onPageStarted = { url ->
+            generation += 1
+            pendingConsent = null
+            manifestDiscovery.onPageStarted(url, generation)
+        },
         modifier = modifier,
     )
     SnackbarHost(snackbar)
@@ -85,13 +168,93 @@ internal fun BrowserScreen(
         },
         onDismiss = { pendingExternal = null },
     ) }
+    pendingExternalUrl?.let { url -> ExternalUrlDialog(
+        onConfirm = {
+            onOpenExternalUrl(url)
+            pendingExternalUrl = null
+        },
+        onDismiss = { pendingExternalUrl = null },
+    ) }
+    pendingConsent?.let { candidate -> SiteSkinConsentDialog(
+        domain = candidate.origin.registrableDomain,
+        onAllow = {
+            consentStore.save(candidate.origin, SiteConsentDecision.ALLOW)
+            val currentOrigin = when (val mode = state.mode) {
+                is BrowserMode.Regular -> mode.origin
+                is BrowserMode.Integrated -> mode.origin
+                BrowserMode.Home -> null
+            }
+            if (candidate.isCurrent(currentOrigin, generation)) {
+                state = state.activateSiteSkin(candidate.origin, candidate.configuration)
+            }
+            pendingConsent = null
+        },
+        onNotNow = { pendingConsent = null },
+        onNever = {
+            consentStore.save(candidate.origin, SiteConsentDecision.NEVER)
+            pendingConsent = null
+        },
+    ) }
+    val activeMode = state.mode as? BrowserMode.Integrated
+    if (siteMenuExpanded && activeMode != null) {
+        val chrome = SiteSkinChromeModel.from(activeMode.configuration, state.displayedUrl)
+        SiteSkinMenu(
+            model = chrome,
+            onSiteSelect = { item ->
+                siteMenuExpanded = false
+                dispatchSiteItem(item)
+            },
+            onBrowserSelect = { command ->
+                siteMenuExpanded = false
+                if (command == BrowserMenuCommand.SETTINGS) Unit
+            },
+        )
+    }
 }
 
 @Composable
-private fun rememberManifestDiscovery(scope: CoroutineScope): ManifestDiscoveryCoordinator {
-    val discovery = remember(scope) { ManifestDiscoveryCoordinator(scope, OkHttpManifestSource()) {} }
+internal fun ExternalUrlDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.external_url_title)) },
+        text = { Text(stringResource(R.string.external_url_message)) },
+        confirmButton = { Button(onClick = onConfirm) { Text(stringResource(R.string.open_external)) } },
+        dismissButton = { Button(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
+    )
+}
+
+@Composable
+private fun rememberManifestDiscovery(
+    scope: CoroutineScope,
+    onOutcome: (ManifestDiscoveryOutcome) -> Unit,
+): ManifestDiscoveryCoordinator {
+    val currentOutcome = rememberUpdatedState(onOutcome)
+    val discovery = remember(scope) {
+        ManifestDiscoveryCoordinator(scope, OkHttpManifestSource()) { currentOutcome.value(it) }
+    }
     DisposableEffect(discovery) { onDispose(discovery::cancel) }
     return discovery
+}
+
+@Composable
+internal fun SiteSkinConsentDialog(
+    domain: String,
+    onAllow: () -> Unit,
+    onNotNow: () -> Unit,
+    onNever: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onNotNow,
+        title = { Text(stringResource(R.string.siteskin_consent_title, domain)) },
+        text = { Text(stringResource(R.string.siteskin_consent_message)) },
+        confirmButton = { Button(onClick = onAllow) { Text(stringResource(R.string.siteskin_allow)) } },
+        dismissButton = {
+            Row {
+                Button(onClick = onNotNow) { Text(stringResource(R.string.siteskin_not_now)) }
+                Button(onClick = onNever) { Text(stringResource(R.string.siteskin_never)) }
+            }
+        },
+    )
 }
 
 @Composable
@@ -114,6 +277,7 @@ private fun ExternalNavigationDialog(
 }
 
 @Composable
+@Suppress("LongMethod")
 private fun RegularBrowser(
     state: BrowserState,
     controller: BrowserWebViewController,
@@ -122,27 +286,36 @@ private fun RegularBrowser(
     onExternalNavigation: (ExternalNavigation) -> Unit,
     onDownload: (String) -> Unit,
     onFileChooser: (String, (String?) -> Unit) -> Unit,
+    brandAsset: BrandAsset?,
+    onSiteSelect: (NavigationItem) -> Unit,
     onPageStarted: (String) -> Unit,
     modifier: Modifier,
 ) {
     Column(modifier = modifier) {
-        AddressBar(
-            state = state,
-            onAddressChanged = { onObservation(BrowserObservation.AddressEdited(it)) },
-            onSubmit = { resolveAddressInput(state.addressText)?.let(controller::navigate) },
-            onBack = controller::goBack,
-            onForward = controller::goForward,
-            onReload = controller::reload,
-            onHome = onHome,
-        )
+        val integrated = state.mode as? BrowserMode.Integrated
+        val security = securityPresentation(state.mode)
+        if (integrated != null && security != null && brandAsset != null) {
+            val colors = SiteSkinTheme.from(integrated.configuration).light
+            SiteSkinTopBar(SiteSkinTopBarModel.from(integrated.configuration, brandAsset, security), colors)
+        } else {
+            AddressBar(
+                state = state,
+                onAddressChanged = { onObservation(BrowserObservation.AddressEdited(it)) },
+                onSubmit = { resolveAddressInput(state.addressText)?.let(controller::navigate) },
+                onBack = controller::goBack,
+                onForward = controller::goForward,
+                onReload = controller::reload,
+                onHome = onHome,
+            )
+        }
         if (state.isLoading) LinearProgressIndicator(Modifier.fillMaxWidth())
         Box(Modifier.fillMaxSize()) {
             HardenedWebView(
                 initialUrl = state.displayedUrl,
                 controller = controller,
                 onEvent = {
-                    if (it is WebViewEvent.PageStarted) onPageStarted(it.observation.url)
                     onObservation(it.toBrowserObservation())
+                    if (it is WebViewEvent.PageStarted) onPageStarted(it.observation.url)
                 },
                 onExternalNavigation = onExternalNavigation,
                 onDownload = onDownload,
@@ -157,6 +330,14 @@ private fun RegularBrowser(
                     modifier = Modifier.fillMaxSize(),
                 )
             }
+            if (integrated != null) {
+                val chrome = SiteSkinChromeModel.from(integrated.configuration, state.displayedUrl)
+                SiteSkinQuickActions(chrome.quickActions, onSiteSelect)
+            }
+        }
+        if (integrated != null) {
+            val chrome = SiteSkinChromeModel.from(integrated.configuration, state.displayedUrl)
+            SiteSkinBottomNavigation(chrome.bottomNavigation, onSiteSelect)
         }
     }
 }

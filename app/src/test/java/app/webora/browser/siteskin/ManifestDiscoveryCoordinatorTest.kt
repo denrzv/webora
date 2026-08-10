@@ -22,10 +22,12 @@ class ManifestDiscoveryCoordinatorTest {
         val outcomes = mutableListOf<ManifestDiscoveryOutcome>()
         val coordinator = ManifestDiscoveryCoordinator(this, source { VALID }, onOutcome = outcomes::add)
 
-        coordinator.onPageStarted("https://EXAMPLE.com:443/page?q=1")
+        coordinator.onPageStarted("https://EXAMPLE.com:443/page?q=1", generation = 7)
         testScheduler.advanceUntilIdle()
 
-        assertTrue(outcomes.single() is ManifestDiscoveryOutcome.Available)
+        val outcome = outcomes.single() as ManifestDiscoveryOutcome.Available
+        assertEquals("https://example.com", outcome.origin.canonical)
+        assertEquals(7, outcome.generation)
     }
 
     @Test fun `returns immediately and cancels superseded discovery`() = runTest {
@@ -65,7 +67,7 @@ class ManifestDiscoveryCoordinatorTest {
         coordinator.onPageStarted("https://example.com/next")
         testScheduler.advanceUntilIdle()
 
-        assertEquals(listOf(ManifestDiscoveryOutcome.Unavailable, ManifestDiscoveryOutcome.Unavailable), outcomes)
+        assertTrue(outcomes.all { it is ManifestDiscoveryOutcome.Unavailable })
     }
 
     @Test fun `fresh cache avoids transport and remains exact origin`() = runTest {
@@ -85,7 +87,7 @@ class ManifestDiscoveryCoordinatorTest {
         testScheduler.advanceUntilIdle()
 
         assertEquals(listOf("https://other.example"), requested)
-        assertEquals(ManifestDiscoveryOutcome.Unavailable, outcomes.first())
+        assertTrue(outcomes.first() is ManifestDiscoveryOutcome.Unavailable)
         assertTrue(outcomes.last() is ManifestDiscoveryOutcome.Available)
     }
 
@@ -109,7 +111,7 @@ class ManifestDiscoveryCoordinatorTest {
         testScheduler.advanceUntilIdle()
 
         assertEquals(ManifestRequestValidators("tag", "yesterday"), validators.first())
-        assertEquals(ManifestDiscoveryOutcome.Unavailable, outcomes.first())
+        assertTrue(outcomes.first() is ManifestDiscoveryOutcome.Unavailable)
         assertTrue(outcomes.last() is ManifestDiscoveryOutcome.Available)
     }
 
