@@ -130,6 +130,10 @@ Manifest parsing is a bounded stream operation: core consumes no more than 131,0
 malformed UTF-8 rather than accepting replacement characters, and leaves the caller-owned stream
 open. `ignoreUnknownKeys` is paired with an explicit shape walk that emits
 `SS-W-FIELD-UNKNOWN` paths; enabling it alone would silently discard protocol diagnostics.
+Before constructing a JSON tree, a non-recursive structural scan rejects object/array nesting over
+64 levels with `SS-E-PARSE`. The scan is string/escape aware; kotlinx.serialization remains
+authoritative for all other JSON grammar. This prevents a small, syntactically valid manifest from
+turning parser or unknown-field recursion into stack exhaustion.
 
 ### Action-resolution seam (CORE-005)
 

@@ -206,7 +206,7 @@ with immovable domain + TLS indicator (screens 3–5) · `SKIN-003` Bottom nav, 
 menu · `SKIN-004` Mode transitions, origin-change deactivation, redirect policy.
 
 ### M4 — Hardening, privacy, demo
-`HARDEN-001` Adversarial corpus: `javascript:`/`file:`/`content:`/`intent:`/`data:` schemes,
+`HARDEN-001` ✅ Adversarial corpus: `javascript:`/`file:`/`content:`/`intent:`/`data:` schemes,
 oversized + deeply-nested manifests, redirect loops, IDN homographs, duplicate ids, over-limit
 collections · `HARDEN-002` Brand-impersonation controls (the two decisions above) · `PRIV-001` Zero
 default telemetry, global + per-site SiteSkin toggle, clear-browsing-data, Data-safety mapping ·

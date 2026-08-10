@@ -62,7 +62,8 @@ public object ManifestParser {
         } catch (_: IOException) {
             return documentRejected(ManifestDiagnosticCode.PARSE)
         } ?: return documentRejected(ManifestDiagnosticCode.SIZE_EXCEEDED)
-        val text = decodeUtf8(bytes) ?: return documentRejected(ManifestDiagnosticCode.PARSE)
+        val text = decodeUtf8(bytes)?.takeIf(::hasBoundedStructure)
+            ?: return documentRejected(ManifestDiagnosticCode.PARSE)
         return try {
             val element = json.parseToJsonElement(text)
             ManifestDocumentResult.Parsed(element, UnknownFieldScanner.scan(element))
@@ -112,6 +113,47 @@ public object ManifestParser {
             remaining -= count
         }
         return null
+    }
+
+    private fun hasBoundedStructure(text: String): Boolean {
+        return JsonStructureScanner().accepts(text)
+    }
+
+    private class JsonStructureScanner {
+        val openings = CharArray(SiteSkinLimits.MAX_JSON_DEPTH)
+        var depth = 0
+        var inString = false
+        var escaped = false
+
+        fun accepts(text: String): Boolean = text.all(::accept) && depth == 0 && !inString
+
+        private fun accept(character: Char): Boolean =
+            if (inString) acceptStringCharacter(character) else acceptStructuralCharacter(character)
+
+        private fun acceptStringCharacter(character: Char): Boolean {
+            when {
+                escaped -> escaped = false
+                character == '\\' -> escaped = true
+                character == '"' -> inString = false
+            }
+            return true
+        }
+
+        private fun acceptStructuralCharacter(character: Char): Boolean = when (character) {
+            '"' -> true.also { inString = true }
+            '{', '[' -> push(character)
+            '}' -> pop('{')
+            ']' -> pop('[')
+            else -> true
+        }
+
+        private fun push(character: Char): Boolean {
+            if (depth == openings.size) return false
+            openings[depth++] = character
+            return true
+        }
+
+        private fun pop(expected: Char): Boolean = depth > 0 && openings[--depth] == expected
     }
 
     private fun rejected(code: ManifestDiagnosticCode): ManifestParseResult.Rejected =

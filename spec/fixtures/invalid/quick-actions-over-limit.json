@@ -1,0 +1,57 @@
+{
+  "schemaVersion": "1.0",
+  "site": {
+    "id": "bloom-flowers",
+    "name": "Bloom Flowers"
+  },
+  "quickActions": [
+    {
+      "id": "item-1",
+      "label": "Item 1",
+      "icon": "home",
+      "action": {
+        "type": "refresh"
+      }
+    },
+    {
+      "id": "item-2",
+      "label": "Item 2",
+      "icon": "home",
+      "action": {
+        "type": "refresh"
+      }
+    },
+    {
+      "id": "item-3",
+      "label": "Item 3",
+      "icon": "home",
+      "action": {
+        "type": "refresh"
+      }
+    },
+    {
+      "id": "item-4",
+      "label": "Item 4",
+      "icon": "home",
+      "action": {
+        "type": "refresh"
+      }
+    },
+    {
+      "id": "item-5",
+      "label": "Item 5",
+      "icon": "home",
+      "action": {
+        "type": "refresh"
+      }
+    },
+    {
+      "id": "item-6",
+      "label": "Item 6",
+      "icon": "home",
+      "action": {
+        "type": "refresh"
+      }
+    }
+  ]
+}

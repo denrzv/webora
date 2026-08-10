@@ -27,6 +27,37 @@ class ManifestParserTest {
     }
 
     @Test
+    fun jsonNestingIsBoundedBeforeTreeParsing() {
+        val accepted = "[".repeat(SiteSkinLimits.MAX_JSON_DEPTH - 1) + "{}" +
+            "]".repeat(SiteSkinLimits.MAX_JSON_DEPTH - 1)
+        val rejected = "[".repeat(SiteSkinLimits.MAX_JSON_DEPTH) + "{}" +
+            "]".repeat(SiteSkinLimits.MAX_JSON_DEPTH)
+
+        assertTrue(ManifestParser.parseDocument(accepted.byteInputStream()) is ManifestDocumentResult.Parsed)
+        val result = ManifestParser.parseDocument(rejected.byteInputStream())
+        assertTrue(result is ManifestDocumentResult.Rejected)
+        assertEquals(ManifestDiagnosticCode.PARSE, (result as ManifestDocumentResult.Rejected).error.code)
+    }
+
+    @Test
+    fun structuralScanIgnoresBracketsAndEscapesInsideStrings() {
+        val input = """{"value":"[{}]\\\"still text"}"""
+
+        assertTrue(ManifestParser.parse(input.byteInputStream()) is ManifestParseResult.Parsed)
+        assertRejectedWith(ManifestParser.parse("{]".byteInputStream()), ManifestDiagnosticCode.PARSE)
+    }
+
+    @Test
+    fun exactByteLimitReachesParsing() {
+        val prefix = """{"future":""""
+        val suffix = """"}"""
+        val body = prefix + "x".repeat(SiteSkinLimits.MAX_MANIFEST_BYTES - prefix.length - suffix.length) + suffix
+
+        assertEquals(SiteSkinLimits.MAX_MANIFEST_BYTES, body.encodeToByteArray().size)
+        assertTrue(ManifestParser.parse(body.byteInputStream()) is ManifestParseResult.Parsed)
+    }
+
+    @Test
     fun invalidUtf8IsRejected() {
         val result = ManifestParser.parse(ByteArrayInputStream(byteArrayOf(0xC3.toByte(), 0x28)))
 

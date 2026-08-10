@@ -1,0 +1,30 @@
+{
+  "origin": "https://bloomflowers.example",
+  "note": "The first quick action with a duplicate id survives and the later occurrence drops, proving duplicate handling is not navigation-specific.",
+  "diagnostics": [
+    {
+      "code": "SS-E-DUPLICATE-ID",
+      "disposition": "drop-item",
+      "pointer": "/quickActions/1"
+    }
+  ],
+  "result": {
+    "schemaVersion": "1.0",
+    "origin": "https://bloomflowers.example",
+    "site": {
+      "id": "bloom-flowers",
+      "name": "Bloom Flowers",
+      "homeUrl": "https://bloomflowers.example/"
+    },
+    "quickActions": [
+      {
+        "id": "duplicate",
+        "label": "First",
+        "icon": "home",
+        "action": {
+          "type": "refresh"
+        }
+      }
+    ]
+  }
+}

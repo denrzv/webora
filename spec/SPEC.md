@@ -58,6 +58,9 @@ GET {origin}/.well-known/siteskin.json
   redirect MUST abort discovery.
 - The body MUST NOT exceed **131,072 bytes (128 KB)**. The limit MUST be enforced *before* parsing,
   so an oversized payload is never fully read into memory → `SS-E-SIZE-EXCEEDED`.
+- JSON structural nesting MUST NOT exceed **64** objects/arrays. Implementations MUST enforce the
+  limit before constructing a JSON tree; deeper input is rejected with `SS-E-PARSE` even when its
+  JSON grammar is otherwise valid.
 - Discovery MUST run concurrently with page load and MUST NOT delay it. A browser MUST NOT gate
   rendering on this request.
 - A browser MUST cap cached manifest lifetime at `min(Cache-Control max-age, 24 hours)`.
@@ -468,6 +471,7 @@ catastrophic backtracking, and the mitigation for that costs more code than this
 | Limit | Value | On exceeding |
 |---|---|---|
 | Manifest size | 131,072 bytes | reject, before parse |
+| JSON structural nesting | 64 objects/arrays | reject, before tree construction |
 | Navigation items | 5 | truncate + `SS-W-LIMIT-TRUNCATED` |
 | Menu items | 20 | truncate + `SS-W-LIMIT-TRUNCATED` |
 | Quick actions | 5 | truncate + `SS-W-LIMIT-TRUNCATED` |

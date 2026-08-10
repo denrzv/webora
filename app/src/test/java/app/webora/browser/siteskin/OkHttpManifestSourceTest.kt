@@ -46,6 +46,16 @@ class OkHttpManifestSourceTest {
         assertEquals(3, overflow.requestCount)
     }
 
+    @Test fun `same origin redirect loop terminates at the browser owned hop limit`() = runTest {
+        val server = server()
+        server.enqueue(redirect(origin(server) + "/loop"))
+        server.enqueue(redirect(origin(server) + "/.well-known/siteskin.json"))
+        server.enqueue(redirect(origin(server) + "/loop"))
+
+        assertNull(source().fetch(origin(server)))
+        assertEquals(SiteSkinLimits.MAX_REDIRECTS + 1, server.requestCount)
+    }
+
     @Test fun `refuses a redirect to another origin`() = runTest {
         val target = server()
         val targetUrl = target.url("/stolen").newBuilder().scheme("https").build().toString()

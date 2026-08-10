@@ -115,9 +115,9 @@ class SpecCorpusTest {
         // security diagnostic would satisfy both malformedFixturesFailToParse and the registry
         // checks, and still be incoherent.
         //
-        // Stated in the two directions that are actually true. "Rejected before the schema implies
-        // parses=false" is NOT one of them: `oversized` is refused at the transport layer and its
-        // body is immaculate JSON, which is the whole point of that fixture.
+        // Syntactic validity is deliberately separate from parser-policy acceptance: the depth
+        // fixture is valid JSON but is rejected before tree construction. Oversized input is also
+        // valid JSON and refused even earlier at transport.
         val parseLayer = SpecCorpus.layerOrder.indexOf("parse")
         val disagreements = SpecCorpus.fixtures.mapNotNull { fixture ->
             val rejectAt = SpecCorpus.rejectingLayerIndex(fixture)
@@ -128,7 +128,7 @@ class SpecCorpusTest {
             when {
                 !fixture.bodyParses && (rejectAt == null || rejectAt > parseLayer) ->
                     "${fixture.name} declares parses=false but expects no rejection at or before 'parse'"
-                expectsParseLayerReject && fixture.bodyParses ->
+                expectsParseLayerReject && fixture.bodyParses && fixture.name != "invalid/deeply-nested" ->
                     "${fixture.name} expects a parse-layer rejection but declares parses=true"
                 else -> null
             }
