@@ -157,3 +157,17 @@ exists before the check that reads it.
     that lets `/cart/**` select `/cart`, and the rule that the reference site takes no third-party
     dependency and no exception.
   - Tests: `bash scripts/pre-commit-check.sh`
+
+- [x] TASK-FIX-1: Refuse manifest paths that climb out of the site
+  - Source: `/review` finding 1
+  - Repository: `denrzv/bloom-flowers`
+  - Modified: `tools/check-routes.py`
+  - Acceptance: `served_file` resolves a candidate and requires it to stay inside the repository
+    root, so a manifest naming `/../../../etc/passwd` is "served by no file" rather than reported
+    OK. The dead `relative in ("", "/")` arm goes with it — `lstrip("/")` cannot leave a bare `/`.
+  - Tests: `tools/check-routes.py` against a purpose-built traversal manifest, against the real
+    site, and against the existing hidden-`catalog/index.html` control.
+  - Negative control: before the fix the traversal manifest reported
+    `OK -- 2 manifest path(s) all resolve to served files`; after it, both paths fail. The real site
+    still passes all 11 and the hidden-catalog control still fires three ways.
+
