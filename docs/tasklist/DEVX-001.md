@@ -59,7 +59,7 @@ References:
     the inspector's trace file as the plan drafted it. The transport is what tells these six cases
     apart; putting the vocabulary in the observer would mean re-deriving it at the boundary.
 
-- [ ] TASK-3: Record discovery, preserve the diagnostics the pipeline drops today
+- [x] TASK-3: Record discovery, preserve the diagnostics the pipeline drops today
   - Modified: `app/src/main/java/app/webora/browser/siteskin/ManifestDiscoveryCoordinator.kt`
   - New: `app/src/test/java/app/webora/browser/inspector/ManifestDiscoveryTraceTest.kt`,
     `app/src/test/java/app/webora/browser/inspector/SiteSkinTraceNeutralityTest.kt`
@@ -73,8 +73,19 @@ References:
     `SiteSkinTraceNeutralityTest` is the ticket's central invariant: over the same matrix of inputs,
     `ManifestDiscoveryOutcome` and the resulting `CandidateDisposition` are identical with a
     recording sink installed and with `SiteSkinTraceSink.None`.
-  - Negative control: make one coordinator branch behave differently when a sink is installed; the
-    neutrality test must fail. Restore and record the result here.
+  - Negative control: added an early return to `discover` taken only when `trace !== None` and a
+    cache entry existed. `recording changes no discovery outcome and no activation disposition`
+    failed; the other two neutrality cases still passed, which is the point of having them.
+    Restored, all green.
+  - Deviation: a page that never qualified is recorded under whatever origin it *did* parse to
+    rather than skipped. "SiteSkin requires HTTPS" is an answer, and a panel that shows nothing on
+    an `http://` page reads as broken rather than as informative.
+  - Deviation: the neutrality test compares described decisions rather than the values themselves.
+    `SiteSkinConfiguration` has no `equals` by design — a trusted configuration is an identity, not
+    a value — so comparing conclusions is comparing what the browser actually concluded.
+  - Deviation: two extra neutrality cases were added because the first draft could have passed with
+    an all-`Ignore` matrix. One pins the matrix size, the other asserts it reaches activation,
+    consent and refusal. A proof of sameness over a matrix that decides nothing proves nothing.
 
 - [ ] TASK-4: Snapshot assembly — theme, chrome, consent, truncation
   - New: `app/src/main/java/app/webora/browser/inspector/InspectorSnapshot.kt`
