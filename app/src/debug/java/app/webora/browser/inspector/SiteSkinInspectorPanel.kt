@@ -116,8 +116,14 @@ private fun InspectorAppliedSection(applied: InspectorAppliedChrome) {
             stringResource(R.string.inspector_count_value, count.rendered, count.trusted),
         )
     }
+    // The label slot is browser copy. `id` is schema-constrained to [a-z0-9_-], so nothing hostile
+    // fits through it — which is exactly why it belongs in the value: the rule is enforceable only
+    // while it has no exceptions, and this is the tool that exists to make the boundary legible.
     applied.navigation.forEach { item ->
-        InspectorRow(inspectorValue(item.id), inspectorValue("${item.label} · ${item.actionType}"))
+        InspectorRow(
+            stringResource(R.string.inspector_navigation_item),
+            inspectorValue("${item.id} ${item.label} ${item.actionType}"),
+        )
     }
     InspectorRow(
         stringResource(R.string.inspector_theme_mode),

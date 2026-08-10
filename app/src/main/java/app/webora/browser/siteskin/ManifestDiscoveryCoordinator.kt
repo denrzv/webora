@@ -55,7 +55,10 @@ internal class ManifestDiscoveryCoordinator(
         val origin = parsed?.takeIf { it.scheme == HTTPS }
         discoveryJob?.cancel()
         if (origin == null) {
-            trace.record(notEligible(parsed, generation))
+            // Only when the page parsed to *some* origin. A URL that parses to none leaves the
+            // browser in Regular(null), so the panel has no key to look a record up under, and the
+            // entry would sit in the bounded store unreachable.
+            parsed?.let { trace.record(notEligible(it, generation)) }
             onOutcome(ManifestDiscoveryOutcome.Unavailable(null, generation))
             return
         }
@@ -256,12 +259,12 @@ internal class ManifestDiscoveryCoordinator(
         )
 
         /**
-         * A page that was never eligible still gets a record, keyed by whatever origin it did
-         * parse to. "SiteSkin requires HTTPS" is an answer a developer needs, and an inspector that
-         * shows nothing on an `http://` page looks broken rather than informative.
+         * A page that was never eligible still gets a record, keyed by the origin it parsed to.
+         * "SiteSkin requires HTTPS" is an answer a developer needs, and an inspector that shows
+         * nothing on an `http://` page looks broken rather than informative.
          */
-        fun notEligible(parsed: SiteOrigin?, generation: Long) = ManifestTraceRecord(
-            origin = parsed?.canonical.orEmpty(),
+        fun notEligible(parsed: SiteOrigin, generation: Long) = ManifestTraceRecord(
+            origin = parsed.canonical,
             generation = generation,
             transport = ManifestTransportTrace(
                 manifestUrl = "",

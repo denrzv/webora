@@ -82,6 +82,18 @@ class ManifestDiscoveryTraceTest {
         assertEquals(TraceValidationResult.NOT_RUN, record?.validation?.result)
     }
 
+    @Test fun `a page that parses to no origin at all is not recorded`() = runTest {
+        // The browser is left in Regular(null), so the panel has no key to look a record up under.
+        // Recording one would occupy a slot in the bounded store that nothing can ever read.
+        val recorder = SiteSkinTraceRecorder()
+        val coordinator = coordinator(this, recorder, fetched(VALID_BODY))
+
+        coordinator.onPageStarted("not a url")
+        testScheduler.advanceUntilIdle()
+
+        assertTrue(recorder.origins().isEmpty())
+    }
+
     @Test fun `each cache path names itself`() = runTest {
         assertEquals(TraceCacheState.MISS, cacheStateOf(this, cached = null, fetched(VALID_BODY)))
         assertEquals(TraceCacheState.REFETCHED, cacheStateOf(this, stale(), fetched(VALID_BODY)))

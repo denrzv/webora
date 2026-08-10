@@ -1,8 +1,11 @@
 package app.webora.browser.inspector
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -31,7 +34,13 @@ internal const val SITESKIN_INSPECTOR_AVAILABLE: Boolean = true
 internal fun SiteSkinInspectorHost(snapshot: InspectorSnapshot?) {
     if (snapshot == null) return
     var open by remember { mutableStateOf(false) }
-    Box(Modifier.fillMaxSize()) {
+    // enableEdgeToEdge() means an uninset overlay puts the affordance under the gesture bar, where
+    // it is partly untappable. Every other browser surface goes through the same safeDrawing inset.
+    Box(
+        Modifier
+            .fillMaxSize()
+            .windowInsetsPadding(WindowInsets.safeDrawing),
+    ) {
         WeboraFloatingActionButton(
             onClick = { open = true },
             modifier = Modifier

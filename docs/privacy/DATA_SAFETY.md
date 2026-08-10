@@ -27,6 +27,12 @@ does not forward browsing activity to a Webora-operated analytics service.
 | Global SiteSkin enabled switch | App preference | Separate local preferences | Settings; preserved by clear browsing data |
 | Onboarding completion | App preference | Separate local preferences | Preserved by clear browsing data |
 | Validated manifest cache | Performance | Memory only | Clear browsing data; also lost on process death |
+| SiteSkin discovery trace | Developer diagnostics | Memory only, **debug builds only** | Clear browsing data; also lost on process death |
+
+The discovery trace (`DEVX-001`) is per-origin state derived from browsing and so is listed here for
+completeness, but it is not present in any shipped artifact. Its panel compiles into the `debug`
+build type alone, and `:app:assertInspectorAbsentFromReleaseVariants` fails the build if it reaches
+the `release` or `debugRelease` variants' compiled output.
 
 The app declares network access but no location, contacts, camera, microphone, phone, advertising,
 or storage permission. Downloads use Android `DownloadManager`; uploads use the system document

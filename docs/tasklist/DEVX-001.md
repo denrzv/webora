@@ -195,3 +195,39 @@ References:
     scanned root must contribute at least one composable source. The global floor cannot notice one
     root going quiet while the others grow, which is exactly the regression the widening could
     introduce.
+
+## Post-review fixes
+
+- [x] TASK-FIX-1: Keep manifest text out of the panel's label slot
+  - Source: `/review` FINDING-1
+  - Modified: `app/src/debug/java/app/webora/browser/inspector/SiteSkinInspectorPanel.kt`,
+    `app/src/debug/res/values/strings.xml`
+  - The navigation rows put a manifest-controlled `id` where the panel's own rule says only
+    browser-authored copy goes. The schema constrains `id` to `[a-z0-9_-]`, so nothing hostile fits
+    through it — which is the reason to fix it rather than shrug: the invariant is enforceable only
+    while it has no exceptions, and the tool that exists to make the trust boundary legible is the
+    worst place for the first one.
+
+- [x] TASK-FIX-2: Inset the debug affordance out from under the gesture bar
+  - Source: `/review` FINDING-2
+  - Modified: `app/src/debug/java/app/webora/browser/inspector/SiteSkinInspectorHost.kt`
+  - `MainActivity` calls `enableEdgeToEdge()` and every other browser surface goes through
+    `browserModifier`'s `WindowInsets.safeDrawing`. The overlay did not, so the affordance sat under
+    the gesture bar — partly untappable, on a surface a developer opens deliberately.
+
+- [x] TASK-FIX-3: Record the trace in the data-safety mapping
+  - Source: `/review` FINDING-3
+  - Modified: `docs/privacy/DATA_SAFETY.md`
+  - The implemented-local-data table is what `PLAY-003` is filled in from. The trace is per-origin
+    state derived from browsing — the same shape as the row above it — and is absent because it
+    never ships. That sentence belongs in the document rather than in a reviewer's head.
+
+- [x] TASK-FIX-4: Do not record a trace nothing can retrieve
+  - Source: `/review` FINDING-4
+  - Modified: `app/src/main/java/app/webora/browser/siteskin/ManifestDiscoveryCoordinator.kt`,
+    `app/src/test/java/app/webora/browser/inspector/ManifestDiscoveryTraceTest.kt`
+  - A page URL that parses to no origin was recorded under the empty string, occupying one of the
+    eight retention slots with an entry no lookup could reach: `BrowserState.observePage` leaves the
+    browser in `Regular(null)`, so the panel has no key. The parseable non-HTTPS case still records,
+    because "SiteSkin requires HTTPS" is an answer a developer needs.
+  - Tests: `a page that parses to no origin at all is not recorded`.
