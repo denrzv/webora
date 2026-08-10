@@ -3,8 +3,9 @@ package app.webora.browser.browser
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -288,6 +289,7 @@ private fun rememberManifestDiscovery(
 }
 
 @Composable
+@OptIn(ExperimentalLayoutApi::class)
 internal fun SiteSkinConsentDialog(
     origin: String,
     onAllow: () -> Unit,
@@ -300,7 +302,10 @@ internal fun SiteSkinConsentDialog(
         text = { Text(stringResource(R.string.siteskin_consent_message)) },
         confirmButton = { WeboraButton(stringResource(R.string.siteskin_allow), onAllow) },
         dismissButton = {
-            Row {
+            // Three buttons plus a long "Never for this site" label do not fit one line at a large
+            // font scale. Wrapping keeps every consent choice reachable; shrinking them would trade
+            // the ADR-011 decision the user has to make against the target size they need to make it.
+            FlowRow {
                 WeboraButton(stringResource(R.string.siteskin_not_now), onNotNow)
                 WeboraButton(stringResource(R.string.siteskin_never), onNever)
             }
@@ -427,6 +432,7 @@ private fun BrowserBackHandler(enabled: Boolean, controller: BrowserWebViewContr
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun AddressBar(
     state: BrowserState,
@@ -458,7 +464,7 @@ private fun AddressBar(
             }
             Text(stringResource(R.string.security_identity, transport, it.registrableDomain))
         }
-        Row {
+        FlowRow {
             BrowserButton(stringResource(R.string.back), state.canGoBack, onBack)
             BrowserButton(stringResource(R.string.forward), state.canGoForward, onForward)
             BrowserButton(stringResource(R.string.reload), true, onReload)

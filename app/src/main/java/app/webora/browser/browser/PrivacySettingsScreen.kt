@@ -1,6 +1,8 @@
 package app.webora.browser.browser
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -20,7 +22,7 @@ internal fun PrivacySettingsScreen(
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier) {
+    Column(modifier.verticalScroll(rememberScrollState())) {
         Text(stringResource(R.string.privacy_settings_title))
         Text(stringResource(R.string.siteskin_global_toggle))
         Switch(checked = siteSkinEnabled, onCheckedChange = onSiteSkinEnabledChange)
