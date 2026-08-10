@@ -82,6 +82,17 @@ android {
         buildConfig = true
     }
 
+    // `initWith(release)` copies build-type configuration, not source sets, so the debugRelease
+    // variant would otherwise have no SiteSkinInspectorHost declaration at all and fail to compile.
+    // Sharing the release stub is preferable to a third copy: two stubs that can drift is exactly
+    // the failure the variant seam exists to prevent.
+    sourceSets {
+        getByName("debugRelease") {
+            java.srcDir("src/release/java")
+            kotlin.srcDir("src/release/java")
+        }
+    }
+
     testOptions {
         unitTests.isReturnDefaultValues = true
     }

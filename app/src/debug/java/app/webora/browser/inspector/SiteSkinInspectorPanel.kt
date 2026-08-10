@@ -1,0 +1,162 @@
+package app.webora.browser.inspector
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.dp
+import app.webora.browser.R
+import app.webora.browser.browser.WeboraButton
+
+/**
+ * What the browser decided about this origin, and why.
+ *
+ * Read-only by construction. There is no re-validate, no manifest override, no consent control and
+ * no retry: a developer tool that can make a rejected manifest activate is a bypass of the
+ * validator rather than a view of it, and `PRIV-001`'s settings screen stays the only place a
+ * decision changes.
+ *
+ * Every website-controlled value goes through [inspectorValue] and is rendered in its own `Text`
+ * node beside a browser-authored label from resources. Label and value are never concatenated,
+ * because a value that can contain the label's separator can imitate the label.
+ */
+@Composable
+internal fun SiteSkinInspectorPanel(snapshot: InspectorSnapshot, onClose: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onClose,
+        modifier = Modifier.testTag(INSPECTOR_PANEL_TAG),
+        title = { Text(stringResource(R.string.inspector_title)) },
+        text = { InspectorBody(snapshot) },
+        confirmButton = { WeboraButton(stringResource(R.string.inspector_close), onClose) },
+    )
+}
+
+@Composable
+private fun InspectorBody(snapshot: InspectorSnapshot) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(ROW_SPACING),
+    ) {
+        Text(stringResource(R.string.inspector_read_only))
+        InspectorOriginSection(snapshot)
+        snapshot.record?.let { record ->
+            InspectorTransportSection(record.transport)
+            InspectorValidationSection(record.validation)
+        } ?: Text(stringResource(R.string.inspector_no_record))
+        snapshot.applied?.let { InspectorAppliedSection(it) }
+    }
+}
+
+@Composable
+private fun InspectorOriginSection(snapshot: InspectorSnapshot) {
+    InspectorHeading(stringResource(R.string.inspector_section_origin))
+    InspectorRow(stringResource(R.string.inspector_origin), inspectorValue(snapshot.origin))
+    InspectorRow(stringResource(R.string.inspector_activation), snapshot.activation.name)
+    InspectorRow(stringResource(R.string.inspector_global_preference), snapshot.siteSkinEnabled.toString())
+    InspectorRow(stringResource(R.string.inspector_consent), snapshot.consent?.name.orAbsent())
+    InspectorRow(stringResource(R.string.inspector_brand_asset), snapshot.brandAsset.name)
+}
+
+@Composable
+private fun InspectorTransportSection(transport: ManifestTransportTrace) {
+    InspectorHeading(stringResource(R.string.inspector_section_transport))
+    InspectorRow(stringResource(R.string.inspector_manifest_url), inspectorValue(transport.manifestUrl))
+    InspectorRow(stringResource(R.string.inspector_transport_outcome), transport.outcome.name)
+    InspectorRow(stringResource(R.string.inspector_http_status), transport.httpStatus?.toString().orAbsent())
+    InspectorRow(stringResource(R.string.inspector_redirects), transport.redirects.toString())
+    InspectorRow(stringResource(R.string.inspector_cache_state), transport.cacheState.name)
+    InspectorRow(stringResource(R.string.inspector_rejection), transport.rejection?.name.orAbsent())
+}
+
+@Composable
+private fun InspectorValidationSection(validation: ManifestValidationTrace) {
+    InspectorHeading(stringResource(R.string.inspector_section_validation))
+    InspectorRow(stringResource(R.string.inspector_validation_result), validation.result.name)
+    InspectorRow(
+        stringResource(R.string.inspector_schema_version),
+        inspectorValue(validation.schemaVersion).ifEmpty { stringResource(R.string.inspector_absent) },
+    )
+    InspectorHeading(stringResource(R.string.inspector_diagnostics))
+    if (validation.diagnostics.isEmpty()) {
+        Text(stringResource(R.string.inspector_none))
+    } else {
+        // The code is a closed browser-owned vocabulary; the pointer is arbitrary website text,
+        // because SS-W-FIELD-UNKNOWN reports the key it did not recognise.
+        validation.diagnostics.forEach { InspectorRow(it.code, inspectorValue(it.pointer)) }
+    }
+}
+
+@Composable
+private fun InspectorAppliedSection(applied: InspectorAppliedChrome) {
+    InspectorHeading(stringResource(R.string.inspector_section_applied))
+    InspectorRow(stringResource(R.string.inspector_site_name), inspectorValue(applied.siteName))
+    InspectorRow(stringResource(R.string.inspector_site_id), inspectorValue(applied.siteId))
+    InspectorRow(stringResource(R.string.inspector_home_url), inspectorValue(applied.homeUrl))
+    InspectorRow(
+        stringResource(R.string.inspector_active_item),
+        inspectorValue(applied.activeNavigationId).ifEmpty { stringResource(R.string.inspector_no_match) },
+    )
+    applied.counts.forEach { count ->
+        InspectorRow(
+            count.collection.name,
+            stringResource(R.string.inspector_count_value, count.rendered, count.trusted),
+        )
+    }
+    applied.navigation.forEach { item ->
+        InspectorRow(inspectorValue(item.id), inspectorValue("${item.label} · ${item.actionType}"))
+    }
+    InspectorRow(
+        stringResource(R.string.inspector_theme_mode),
+        if (applied.theme.darkTheme) {
+            stringResource(R.string.inspector_theme_dark)
+        } else {
+            stringResource(R.string.inspector_theme_light)
+        },
+    )
+    applied.theme.roles.forEach { role ->
+        InspectorRow(
+            role.role.name,
+            stringResource(R.string.inspector_color_value, role.applied, role.trusted.orAbsent()),
+        )
+    }
+}
+
+@Composable
+private fun InspectorHeading(text: String) {
+    Text(text, style = MaterialTheme.typography.titleSmall, modifier = Modifier.semantics { heading() })
+}
+
+/**
+ * One browser-authored label and one value, as two nodes.
+ *
+ * `FlowRow` rather than `Row` so a long value wraps below its label at a large font scale instead of
+ * being clipped — the same reason `A11Y-001` reflowed the browser's own control rows.
+ */
+@Composable
+@OptIn(ExperimentalLayoutApi::class)
+private fun InspectorRow(label: String, value: String) {
+    FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(ROW_SPACING)) {
+        Text(label, style = MaterialTheme.typography.labelMedium)
+        Text(value, style = MaterialTheme.typography.bodySmall)
+    }
+}
+
+@Composable
+private fun String?.orAbsent(): String = this ?: stringResource(R.string.inspector_absent)
+
+internal const val INSPECTOR_PANEL_TAG = "inspector_panel"
+private val ROW_SPACING = 8.dp

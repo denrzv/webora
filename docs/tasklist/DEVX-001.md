@@ -117,7 +117,7 @@ References:
     - The pair is still meaningful in the dark projection, whose surface is derived from the
       manifest colour rather than taken from it. That case is asserted.
 
-- [ ] TASK-5: The debug-only panel and its variant seam
+- [x] TASK-5: The debug-only panel and its variant seam
   - New: `app/src/debug/java/app/webora/browser/inspector/SiteSkinInspectorHost.kt`,
     `app/src/debug/java/app/webora/browser/inspector/SiteSkinInspectorPanel.kt`,
     `app/src/debug/res/values/strings.xml`,
@@ -135,6 +135,18 @@ References:
     with the manifest cache and consent.
   - Tests: `BrowsingDataCleanerTest` gains the trace-clearing case, including the existing
     partial-failure path. `:app:assembleDebug` and `:app:assembleDebugRelease` both build.
+  - Result: the compiled output confirms the seam before any check asserts it —
+    `SiteSkinInspectorPanelKt` exists only under `built_in_kotlinc/debug`, while
+    `SiteSkinInspectorHostKt` exists in all three variants because each compiles its own
+    declaration. That is the fact TASK-6 turns into a gate.
+  - Deviation: `sourceSets["debugRelease"]` needed `kotlin.srcDir` as well as `java.srcDir`. With
+    only the `java` entry, `compileDebugReleaseKotlin` failed on an unresolved
+    `SITESKIN_INSPECTOR_AVAILABLE` — AGP 9's built-in Kotlin compilation reads the `kotlin` source
+    directory set, and the `java` one alone is not enough for a variant-specific `.kt` file.
+  - Deviation: the host takes a nullable snapshot and the caller skips assembling it when the
+    inspector is unavailable, rather than always assembling one and discarding it in the stub.
+    `SITESKIN_INSPECTOR_AVAILABLE` is a `const val`, so in the release variants the assembly folds
+    out at compile time instead of running and being thrown away.
 
 - [ ] TASK-6: Assert the absence, do not assume it
   - Modified: `app/build.gradle.kts`, `scripts/pre-commit-check.sh`

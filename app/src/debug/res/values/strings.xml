@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Inspector copy, in the debug source set only.
+
+  Kept out of src/main/res so no inspector string ships in a release artifact, and written as
+  resources rather than literals so the A11Y-001 conventions scan covers the panel like every other
+  browser-owned surface.
+-->
+<resources>
+    <string name="inspector_open">SiteSkin inspector</string>
+    <string name="inspector_title">SiteSkin inspector</string>
+    <string name="inspector_read_only">Read-only. Nothing here changes what the browser does.</string>
+    <string name="inspector_close">Close</string>
+
+    <string name="inspector_section_origin">Origin</string>
+    <string name="inspector_section_transport">Transport</string>
+    <string name="inspector_section_validation">Validation</string>
+    <string name="inspector_section_applied">Applied chrome</string>
+
+    <string name="inspector_origin">Canonical origin</string>
+    <string name="inspector_activation">Activation</string>
+    <string name="inspector_global_preference">SiteSkin preference</string>
+    <string name="inspector_consent">Stored decision</string>
+    <string name="inspector_brand_asset">Brand asset</string>
+
+    <string name="inspector_manifest_url">Manifest URL</string>
+    <string name="inspector_transport_outcome">Outcome</string>
+    <string name="inspector_http_status">HTTP status</string>
+    <string name="inspector_redirects">Redirects followed</string>
+    <string name="inspector_cache_state">Cache</string>
+    <string name="inspector_rejection">Refused because</string>
+
+    <string name="inspector_validation_result">Result</string>
+    <string name="inspector_schema_version">Schema version</string>
+    <string name="inspector_diagnostics">Diagnostics</string>
+
+    <string name="inspector_site_name">Site name</string>
+    <string name="inspector_site_id">Site id</string>
+    <string name="inspector_home_url">Home URL</string>
+    <string name="inspector_active_item">Active navigation item</string>
+    <string name="inspector_theme_mode">Theme</string>
+    <string name="inspector_theme_dark">Dark</string>
+    <string name="inspector_theme_light">Light</string>
+
+    <string name="inspector_no_record">Nothing recorded for this origin yet.</string>
+    <string name="inspector_none">None</string>
+    <string name="inspector_absent">—</string>
+    <string name="inspector_no_match">No match</string>
+    <string name="inspector_count_value">%1$d of %2$d</string>
+    <string name="inspector_color_value">%1$s applied, %2$s trusted</string>
+</resources>
