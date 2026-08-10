@@ -23,12 +23,59 @@ internal data class ManifestRequestValidators(
     val lastModified: String? = null,
 )
 
-internal sealed interface ManifestFetchResult {
-    data class Fetched(val bytes: ByteArray, val metadata: ManifestCacheMetadata) : ManifestFetchResult
-    data class NotModified(val metadata: ManifestCacheMetadata) : ManifestFetchResult
-    data object Unavailable : ManifestFetchResult
-    data object Rejected : ManifestFetchResult
+/**
+ * Why the browser refused a response the server actually returned.
+ *
+ * Owned by the transport rather than by the developer inspector that displays it: the transport is
+ * what knows these apart, and collapsing them again at the boundary would put the vocabulary in the
+ * wrong place.
+ */
+internal enum class FetchRejection {
+    NOT_HTTPS,
+    HTTP_ERROR,
+    REDIRECT_LIMIT,
+    CROSS_ORIGIN_REDIRECT,
+    OVERSIZED,
+    MALFORMED_URL,
 }
+
+/**
+ * What one manifest request produced.
+ *
+ * [Unavailable] stays a `data object` while [Rejected] carries data, and the asymmetry is the point.
+ * An `IOException`, a timeout or a cancelled call has no status to report, and "no answer" has to
+ * stay distinguishable from "the server answered and the browser refused the answer" — to a user
+ * both are regular browsing, and to a site owner behind a misconfigured CDN that difference is the
+ * whole diagnosis.
+ *
+ * The status and redirect count are observational: `DEVX-001` reports them and no browsing decision
+ * reads them.
+ */
+internal sealed interface ManifestFetchResult {
+    data class Fetched(
+        val bytes: ByteArray,
+        val metadata: ManifestCacheMetadata,
+        val httpStatus: Int = HTTP_OK,
+        val redirects: Int = 0,
+    ) : ManifestFetchResult
+
+    data class NotModified(
+        val metadata: ManifestCacheMetadata,
+        val httpStatus: Int = HTTP_NOT_MODIFIED,
+        val redirects: Int = 0,
+    ) : ManifestFetchResult
+
+    data object Unavailable : ManifestFetchResult
+
+    data class Rejected(
+        val reason: FetchRejection,
+        val httpStatus: Int? = null,
+        val redirects: Int = 0,
+    ) : ManifestFetchResult
+}
+
+internal const val HTTP_OK: Int = 200
+internal const val HTTP_NOT_MODIFIED: Int = 304
 
 internal fun interface CacheableManifestSource {
     suspend fun fetch(origin: String, validators: ManifestRequestValidators): ManifestFetchResult
@@ -48,7 +95,7 @@ internal class OkHttpManifestSource(
         validators: ManifestRequestValidators,
     ): ManifestFetchResult = withContext(Dispatchers.IO) {
         val siteOrigin = SiteOrigin.parse(origin)?.takeIf { it.scheme == HTTPS }
-            ?: return@withContext ManifestFetchResult.Rejected
+            ?: return@withContext ManifestFetchResult.Rejected(FetchRejection.NOT_HTTPS)
         val initial = siteOrigin.canonical.toHttpUrl().newBuilder()
             .encodedPath(SiteSkinSchema.WELL_KNOWN_PATH)
             .build()
@@ -57,7 +104,7 @@ internal class OkHttpManifestSource(
         } catch (_: IOException) {
             ManifestFetchResult.Unavailable
         } catch (_: IllegalArgumentException) {
-            ManifestFetchResult.Rejected
+            ManifestFetchResult.Rejected(FetchRejection.MALFORMED_URL)
         }
     }
 
@@ -70,9 +117,16 @@ internal class OkHttpManifestSource(
         var redirects = 0
         while (true) {
             client.newCall(request(url, validators)).await().use { response ->
-                if (!response.isRedirect) return readResponse(response)
-                if (redirects == SiteSkinLimits.MAX_REDIRECTS) return ManifestFetchResult.Rejected
-                url = redirectTarget(response, origin) ?: return ManifestFetchResult.Rejected
+                if (!response.isRedirect) return readResponse(response, redirects)
+                if (redirects == SiteSkinLimits.MAX_REDIRECTS) {
+                    return ManifestFetchResult.Rejected(FetchRejection.REDIRECT_LIMIT, response.code, redirects)
+                }
+                url = redirectTarget(response, origin)
+                    ?: return ManifestFetchResult.Rejected(
+                        FetchRejection.CROSS_ORIGIN_REDIRECT,
+                        response.code,
+                        redirects,
+                    )
                 redirects += 1
             }
         }
@@ -107,12 +161,17 @@ internal class OkHttpManifestSource(
         return target.takeIf { targetOrigin.scheme == HTTPS && targetOrigin == origin }
     }
 
-    private fun readResponse(response: Response): ManifestFetchResult {
+    private fun readResponse(response: Response, redirects: Int): ManifestFetchResult {
         val metadata = responseMetadata(response)
-        if (response.code == HTTP_NOT_MODIFIED) return ManifestFetchResult.NotModified(metadata)
-        if (!response.isSuccessful) return ManifestFetchResult.Rejected
+        val code = response.code
+        if (code == HTTP_NOT_MODIFIED) return ManifestFetchResult.NotModified(metadata, code, redirects)
+        if (!response.isSuccessful) {
+            return ManifestFetchResult.Rejected(FetchRejection.HTTP_ERROR, code, redirects)
+        }
         val body = response.body
-        if (body.contentLength() > SiteSkinLimits.MAX_MANIFEST_BYTES) return ManifestFetchResult.Rejected
+        if (body.contentLength() > SiteSkinLimits.MAX_MANIFEST_BYTES) {
+            return ManifestFetchResult.Rejected(FetchRejection.OVERSIZED, code, redirects)
+        }
         val limit = SiteSkinLimits.MAX_MANIFEST_BYTES.toLong() + 1
         val buffer = Buffer()
         val source = body.source()
@@ -121,9 +180,9 @@ internal class OkHttpManifestSource(
         }
         val bytes = buffer.readByteArray()
         return if (bytes.size <= SiteSkinLimits.MAX_MANIFEST_BYTES) {
-            ManifestFetchResult.Fetched(bytes, metadata)
+            ManifestFetchResult.Fetched(bytes, metadata, code, redirects)
         } else {
-            ManifestFetchResult.Rejected
+            ManifestFetchResult.Rejected(FetchRejection.OVERSIZED, code, redirects)
         }
     }
 
@@ -138,7 +197,6 @@ internal class OkHttpManifestSource(
         const val CONNECT_TIMEOUT_SECONDS = 5L
         const val IO_TIMEOUT_SECONDS = 5L
         const val CALL_TIMEOUT_SECONDS = 10L
-        const val HTTP_NOT_MODIFIED = 304
 
         fun defaultClient(): OkHttpClient = OkHttpClient.Builder()
             .followRedirects(false)

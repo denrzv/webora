@@ -121,9 +121,77 @@ class OkHttpManifestSourceTest {
     @Test fun `distinguishes HTTP rejection from transport unavailability`() = runTest {
         val server = server().apply { enqueue(MockResponse().setResponseCode(503)) }
 
-        assertSame(ManifestFetchResult.Rejected, source().fetch(origin(server), ManifestRequestValidators()))
+        val rejected = source().fetch(origin(server), ManifestRequestValidators())
         server.shutdown()
-        assertSame(ManifestFetchResult.Unavailable, source().fetch(origin(server), ManifestRequestValidators()))
+        val unavailable = source().fetch(origin(server), ManifestRequestValidators())
+
+        // "The server answered and the browser refused the answer" and "no answer arrived" are the
+        // same fallback to a user and the whole diagnosis to a site owner.
+        assertEquals(ManifestFetchResult.Rejected(FetchRejection.HTTP_ERROR, 503), rejected)
+        assertSame(ManifestFetchResult.Unavailable, unavailable)
+    }
+
+    @Test fun `reports the status of an HTTP error rather than collapsing every failure`() = runTest {
+        val notFound = server().apply { enqueue(MockResponse().setResponseCode(404)) }
+        val serverError = server().apply { enqueue(MockResponse().setResponseCode(500)) }
+
+        assertEquals(
+            ManifestFetchResult.Rejected(FetchRejection.HTTP_ERROR, 404),
+            source().fetch(origin(notFound), ManifestRequestValidators()),
+        )
+        assertEquals(
+            ManifestFetchResult.Rejected(FetchRejection.HTTP_ERROR, 500),
+            source().fetch(origin(serverError), ManifestRequestValidators()),
+        )
+    }
+
+    @Test fun `names a cross origin redirect apart from a redirect limit`() = runTest {
+        val crossOrigin = server().apply { enqueue(redirect("https://elsewhere.example/siteskin.json")) }
+        val looping = server().apply {
+            repeat(3) { enqueue(redirect(origin(this) + "/next")) }
+        }
+
+        assertEquals(
+            ManifestFetchResult.Rejected(FetchRejection.CROSS_ORIGIN_REDIRECT, 302, 0),
+            source().fetch(origin(crossOrigin), ManifestRequestValidators()),
+        )
+        assertEquals(
+            ManifestFetchResult.Rejected(FetchRejection.REDIRECT_LIMIT, 302, SiteSkinLimits.MAX_REDIRECTS),
+            source().fetch(origin(looping), ManifestRequestValidators()),
+        )
+    }
+
+    @Test fun `reports how many redirects a success took`() = runTest {
+        val server = server().apply {
+            enqueue(redirect(origin(this) + "/one"))
+            enqueue(MockResponse().setBody("manifest"))
+        }
+
+        val result = source().fetch(origin(server), ManifestRequestValidators())
+
+        assertTrue(result is ManifestFetchResult.Fetched)
+        assertEquals(200, (result as ManifestFetchResult.Fetched).httpStatus)
+        assertEquals(1, result.redirects)
+    }
+
+    @Test fun `an oversized body is refused as oversize, not as an HTTP error`() = runTest {
+        val server = server().apply {
+            enqueue(MockResponse().setBody(Buffer().write(ByteArray(SiteSkinLimits.MAX_MANIFEST_BYTES + 1))))
+        }
+
+        assertEquals(
+            ManifestFetchResult.Rejected(FetchRejection.OVERSIZED, 200),
+            source().fetch(origin(server), ManifestRequestValidators()),
+        )
+    }
+
+    @Test fun `a non https origin is refused before a request is made`() = runTest {
+        val server = server().apply { enqueue(MockResponse().setBody("manifest")) }
+
+        val result = source().fetch("http://localhost:${server.port}", ManifestRequestValidators())
+
+        assertEquals(ManifestFetchResult.Rejected(FetchRejection.NOT_HTTPS), result)
+        assertEquals(0, server.requestCount)
     }
 
     private fun source(readTimeoutMillis: Long = 5_000) = OkHttpManifestSource(

@@ -28,6 +28,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -68,6 +69,12 @@ import app.webora.browser.siteskin.SiteSkinTopBar
 import app.webora.browser.siteskin.SiteSkinTopBarModel
 import app.webora.browser.siteskin.brandMonogram
 import app.webora.browser.siteskin.BrowserMenuCommand
+import app.webora.browser.inspector.InspectorBrowserState
+import app.webora.browser.inspector.SiteSkinInspectorHost
+import app.webora.browser.inspector.SiteSkinTraceRecorder
+import app.webora.browser.inspector.SiteSkinTraceSink
+import app.webora.browser.inspector.inspectorRecorder
+import app.webora.browser.inspector.rememberInspectorSnapshot
 import app.webora.browser.privacy.PrivacySettingsStore
 import app.webora.browser.privacy.BrowsingDataCleaner
 import app.webora.browser.web.BrowserWebViewController
@@ -75,6 +82,7 @@ import app.webora.browser.web.HardenedWebView
 import app.webora.browser.web.WebViewEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import dev.siteskin.core.origin.SiteOrigin
 import dev.siteskin.core.action.ActionResolver
 import dev.siteskin.core.action.ResolvedAction
 import dev.siteskin.core.model.NavigationItem
@@ -108,7 +116,19 @@ internal fun BrowserScreen(
     val privacyStore = remember(context) { PrivacySettingsStore(context) }
     var siteSkinEnabled by remember { mutableStateOf(privacyStore.isSiteSkinEnabled()) }
     var storedDecisions by remember { mutableStateOf(consentStore.decisions()) }
-    val manifestDiscovery = rememberManifestDiscovery(scope) { outcome ->
+    val traceRecorder = remember { inspectorRecorder() }
+    // The recorder is a plain class so the JVM gate can drive it, which means Compose cannot
+    // subscribe to it. This counter is the observation channel.
+    var traceVersion by remember { mutableIntStateOf(0) }
+    val traceSink = remember(traceRecorder) {
+        traceRecorder?.let { recorder ->
+            SiteSkinTraceSink { record ->
+                recorder.record(record)
+                traceVersion += 1
+            }
+        } ?: SiteSkinTraceSink.None
+    }
+    val manifestDiscovery = rememberManifestDiscovery(scope, traceSink) { outcome ->
         val origin = when (val mode = state.mode) {
             BrowserMode.Home -> null
             is BrowserMode.Regular -> mode.origin
@@ -255,6 +275,21 @@ internal fun BrowserScreen(
             modifier = browserModifier,
         )
     }
+    SiteSkinInspectorHost(
+        rememberInspectorSnapshot(
+            recorder = traceRecorder,
+            version = traceVersion,
+            state = InspectorBrowserState(
+                origin = state.mode.observedOrigin(),
+                pageUrl = state.displayedUrl,
+                configuration = (state.mode as? BrowserMode.Integrated)?.configuration,
+                consent = state.mode.observedOrigin()?.let(consentStore::decision),
+                siteSkinEnabled = siteSkinEnabled,
+                brandAsset = brandAsset,
+                darkTheme = isSystemInDarkTheme(),
+            ),
+        ),
+    )
     if (clearConfirmation) {
         val clearedMessage = stringResource(R.string.browsing_data_cleared)
         val incompleteMessage = stringResource(R.string.browsing_data_clear_incomplete)
@@ -262,7 +297,9 @@ internal fun BrowserScreen(
             onConfirm = {
                 clearConfirmation = false
                 scope.launch {
-                    val complete = BrowsingDataCleaner.android(controller, manifestDiscovery, consentStore).clear()
+                    val cleaner = BrowsingDataCleaner
+                        .android(controller, manifestDiscovery, consentStore, traceRecorder)
+                    val complete = cleaner.clear()
                     storedDecisions = consentStore.decisions()
                     state = state.deactivateSiteSkin()
                     snackbar.showSnackbar(if (complete) clearedMessage else incompleteMessage)
@@ -271,6 +308,13 @@ internal fun BrowserScreen(
             onDismiss = { clearConfirmation = false },
         )
     }
+}
+
+/** The committed origin, whichever mode the browser is in. Home has none rather than a blank one. */
+private fun BrowserMode.observedOrigin(): SiteOrigin? = when (this) {
+    BrowserMode.Home -> null
+    is BrowserMode.Regular -> origin
+    is BrowserMode.Integrated -> origin
 }
 
 @Composable
@@ -287,11 +331,14 @@ internal fun ExternalUrlDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
 @Composable
 private fun rememberManifestDiscovery(
     scope: CoroutineScope,
+    trace: SiteSkinTraceSink,
     onOutcome: (ManifestDiscoveryOutcome) -> Unit,
 ): ManifestDiscoveryCoordinator {
     val currentOutcome = rememberUpdatedState(onOutcome)
-    val discovery = remember(scope) {
-        ManifestDiscoveryCoordinator(scope, OkHttpManifestSource()) { currentOutcome.value(it) }
+    val discovery = remember(scope, trace) {
+        ManifestDiscoveryCoordinator(scope, OkHttpManifestSource(), trace = trace) {
+            currentOutcome.value(it)
+        }
     }
     DisposableEffect(discovery) { onDispose(discovery::cancel) }
     return discovery

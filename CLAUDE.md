@@ -557,3 +557,55 @@ bound the pixels, not the string a screen reader speaks. Both bounds carry negat
 `docs/accessibility/CONFORMANCE.md` maps each guarantee to its WCAG 2.2 criterion, its code, and its
 test — and marks which are enforced by the JVM gate versus recorded as instrumented evidence. Do not
 promote an instrumented assertion to a gate claim; the gate is JVM-only.
+
+### SiteSkin Integration Inspector (DEVX-001)
+
+The browser computed everything a site owner needs and then discarded it: a rejection's diagnostics,
+the HTTP status of a refused response, which of `NET-002`'s cache paths served the navigation. A
+bounded per-origin **trace** records that as discovery happens, and a debug-only panel reads it.
+
+**The trace observes and never decides.** `ManifestDiscoveryCoordinator` takes a
+`SiteSkinTraceSink` defaulting to a discarding `None` — a sink rather than a nullable recorder,
+because a null check is a branch and a branch is somewhere the traced and untraced paths can
+diverge. `SiteSkinTraceNeutralityTest` runs the discovery matrix twice, recording and discarding,
+and asserts the same `ManifestDiscoveryOutcome` and the same `CandidateDisposition` both times. It
+carries its own guards against proving nothing: the matrix size, and that the matrix actually
+reaches activation, consent and refusal.
+
+**The trusted configuration is already normalized, so the panel cannot show "what the manifest
+asked for".** Core truncates over-limit collections and corrects failing colours during security
+validation — a six-item `bottomNavigation` arrives with five, `#FFFFFF` on `#FFFFFF` arrives as
+`#6F6F6F`. The colour field is therefore named `trusted`, not `requested`, and
+`SS-W-LIMIT-TRUNCATED` / `SS-W-CONTRAST-CORRECTED` in the record's diagnostics are the only account
+of what changed. The count and colour pairs are divergence indicators between core's normalization
+and the app's own caps, expected never to fire; a separate test proves the flag can fire so it is
+not decoration.
+
+**Availability comes from the variant source set, never `BuildConfig.DEBUG`.** AGP derives that flag
+from `isDebuggable`, and `debugRelease` sets it — gating on it would collect trace data in a variant
+compiled against the release stub with no panel to show it. `SITESKIN_INSPECTOR_AVAILABLE` is a
+`const val` declared beside the panel in each variant's own file, so the two cannot disagree, and it
+folds out the snapshot assembly at compile time in the release variants. `debugRelease` shares
+`src/release/java` through an explicit `srcDir` — `initWith(release)` copies build-type
+configuration and not sources — and it needs `kotlin.srcDir` as well as `java.srcDir`, or AGP 9's
+built-in Kotlin compilation never sees the file.
+
+**Absence is asserted against compiled output, because no test can assert it.** AGP 9.1 creates
+`testDebugUnitTest` and nothing else; enabling host tests for `release` fails inside AGP with a
+`NullPointerException`. `assertInspectorAbsentFromReleaseVariants` walks the release and
+`debugRelease` Kotlin output and fails if the panel class is there **or if the stub's class is
+not** — without the second half, renaming the panel makes the check pass while proving nothing.
+Wired into `:app:check`, `scripts/pre-commit-check.sh` and CI, which otherwise runs only `test`.
+
+**Untrusted text is bounded before it is displayed.** `SS-W-FIELD-UNKNOWN` reports the key it did
+not recognise, so a diagnostic pointer is arbitrary website text; response headers are never
+validated at all. `inspectorValue` flattens both to one line and bounds them by
+`SiteSkinLimits.MAX_SUBTITLE_LENGTH` read from core. It is a character walk rather than a regex
+because `\s` in `java.util.regex` matches neither `U+2028` nor `U+00A0`, and it strips Unicode
+format characters too, since `RIGHT-TO-LEFT OVERRIDE` reverses everything after it without
+containing a newline. Labels stay browser-authored and are rendered as separate `Text` nodes,
+never concatenated with a value.
+
+`BrowserSurfaceConventionsTest` now scans `src/main/java`, `src/debug/java` and `src/release/java`,
+and asserts every root contributes — a debug-only screen is browser-owned UI, and leaving the source
+set unscanned would make it an escape hatch from the rule the scan exists to enforce.
