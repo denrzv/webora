@@ -28,7 +28,7 @@ internal val defaultSuggestedSites = listOfNotNull(
     SuggestedSite.create(
         R.string.suggested_bloom_name,
         R.string.suggested_bloom_description,
-        "https://bloomflowers.example/",
+        "https://bloomflowers.webora.app/",
     ),
     SuggestedSite.create(
         R.string.suggested_pixelplay_name,

@@ -40,13 +40,18 @@ exists before the check that reads it.
     third independent guard the research note did not list. Recorded here rather than silently
     relied on.
 
-- [ ] TASK-2: Point the browser's suggestion catalogue at the deployment origin
+- [x] TASK-2: Point the browser's suggestion catalogue at the deployment origin
   - Modified: `app/src/main/java/app/webora/browser/browser/SuggestedSite.kt`
   - Acceptance: Bloom Flowers reads `https://bloomflowers.webora.app/`, consistent with the
     `pixelplay.` and `journal.` entries; `.example` survives only in `spec/fixtures/`, where a
     reserved documentation name is correct. No string moves into a composable — the catalogue keeps
     its resource ids.
   - Tests: `HomeModelsTest` (unchanged — it constructs its own suggestion), `:app:test`
+  - Result: one string. `bloomflowers.example` now survives only where a reserved documentation
+    name belongs — the corpus, `SPEC.md`, unit tests and a `@Preview` — and in no shipped
+    browser-owned value, verified by grep across the tracked tree. `isSafeSuggestion` accepts the
+    new URL on the same terms as the two entries beside it, so the catalogue stays HTTPS-only with
+    no user-info and no fragment.
 
 - [ ] TASK-3: The reference site — pages, stylesheet, and the logo
   - Repository: `denrzv/bloom-flowers`
