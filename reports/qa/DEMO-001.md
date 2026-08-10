@@ -79,3 +79,33 @@ remainder rather than an outstanding defect: every artifact that names the origi
 catalogue entry, `INTEGRATION.md`, the lint workflow) becomes correct the moment the DNS record
 exists, with no further change. `FINDING-1` from `/review` was fixed in `TASK-FIX-1` and re-verified
 (scenario 12).
+
+---
+
+## Validation (`/validate`)
+
+| Gate | Result |
+|---|---|
+| PRD `PRD_READY` | ✅ |
+| Research `RESEARCH_READY` | ✅ |
+| Plan `PLAN_APPROVED` | ✅ |
+| Tasklist `TASKLIST_READY` | ✅ |
+| QA `QA_PASSED` | ✅ |
+| Review `RESOLVED` | ✅ |
+| `scripts/gate-workflow.sh` | ✅ `[GATE] OK for DEMO-001` |
+| Every task ticked | ✅ 9 of 9 (TASK-1..8 plus TASK-FIX-1); none deferred |
+| `bash scripts/pre-commit-check.sh` | ✅ green — gitleaks, shellcheck, core-without-SDK, unit tests, inspector absence, detekt |
+| `CLAUDE.md` updated | ✅ "Reference integration (DEMO-001)" — the five pinned copies, recompute-never-transcribe, origin-rooted discovery, the route-layout decision and the `**`-zero-segment consequence |
+| Every commit pushed | ✅ both branches; working trees clean |
+| **CI green on the branch** | ⚠️ **Not observable.** Both repositories' workflows trigger only on `pull_request` and on pushes to `main`/`master`, so no run exists for `claude/bloom-flowers-reference-y5ybs7` in either — confirmed via the Actions API (`total_count: 0` for both). This is the repositories' configuration, not a failure: CI will run when a pull request is opened. The local gate is the equivalent evidence available now, and `manifest-guard.yml`'s two jobs were both executed by hand against this tree. |
+
+### Remaining external dependencies
+
+Neither is blocked on code, and neither requires a further change to either repository:
+
+1. **DNS for `bloomflowers.webora.app`**, plus enabling Pages with the custom domain. Unblocks QA
+   scenario 23 (`siteskin-lint` exit 0 against the live origin) and makes `CNAME`, the catalogue
+   entry and `README.md`'s live link correct.
+2. **A device or emulator.** Unblocks scenario 24 — on-device rendering of mockup screen 3, the
+   first-use consent dialog, and the tab-highlight transitions this ticket's `home`/`match` fix
+   exists to make correct.
