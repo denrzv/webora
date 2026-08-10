@@ -87,7 +87,7 @@ References:
     an all-`Ignore` matrix. One pins the matrix size, the other asserts it reaches activation,
     consent and refusal. A proof of sameness over a matrix that decides nothing proves nothing.
 
-- [ ] TASK-4: Snapshot assembly — theme, chrome, consent, truncation
+- [x] TASK-4: Snapshot assembly — theme, chrome, consent, truncation
   - New: `app/src/main/java/app/webora/browser/inspector/InspectorSnapshot.kt`
   - New: `app/src/test/java/app/webora/browser/inspector/InspectorSnapshotTest.kt`
   - Acceptance: assembly is a pure function over the record, the trusted configuration, the observed
@@ -100,6 +100,22 @@ References:
   - Tests: `InspectorSnapshotTest` — a six-item navigation shows declared 6 / rendered 5; a page
     matching no pattern yields no active id rather than the first item; a manifest colour that fails
     the guard is reported as corrected; passing `darkTheme = true` selects the dark projection.
+  - Deviation, and the reason two planned assertions were wrong: **the trusted configuration is
+    already normalized.** Both were written as "declared versus rendered" and both failed, which is
+    how the finding surfaced.
+    - A six-item `bottomNavigation` reaches the app layer with five items, because
+      `SecurityValidator` truncated it and emitted `SS-W-LIMIT-TRUNCATED`. `SiteSkinChromeModel`'s
+      5/5/20 cap is defence in depth on top of that and can only ever be a no-op for a trusted
+      configuration. The count pair is therefore a *divergence* indicator between the two layers —
+      it should never fire — and the manifest-level truncation is accounted for by the diagnostic in
+      the record. A separate case proves the flag can fire, so it is not decoration.
+    - `#FFFFFF` on `#FFFFFF` arrives as `#6F6F6F`: core corrected it during security validation, so
+      the app layer never sees what the manifest wrote. The field is named `trusted`, not
+      `requested`, and `SS-W-CONTRAST-CORRECTED` in the diagnostics is the only record that a
+      correction happened at all. Presenting the trusted value as "what you asked for" would have
+      been a false claim by the tool whose job is to answer that question.
+    - The pair is still meaningful in the dark projection, whose surface is derived from the
+      manifest colour rather than taken from it. That case is asserted.
 
 - [ ] TASK-5: The debug-only panel and its variant seam
   - New: `app/src/debug/java/app/webora/browser/inspector/SiteSkinInspectorHost.kt`,
