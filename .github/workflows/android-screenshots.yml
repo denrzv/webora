@@ -14,7 +14,7 @@ jobs:
   live-site:
     name: Bloom Flowers on Pixel 6 API 33
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
 
     steps:
       - uses: actions/checkout@v4
@@ -47,7 +47,7 @@ jobs:
           disable-animations: true
           emulator-options: >-
             -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
-            -camera-back none
+            -camera-back none -delay-adb 2000
           script: |
             set +e
             ./gradlew :app:connectedDebugAndroidTest \
