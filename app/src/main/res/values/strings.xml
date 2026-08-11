@@ -58,10 +58,6 @@
     <string name="home_open_site">Open %1$s</string>
     <string name="suggested_bloom_name">Bloom Flowers</string>
     <string name="suggested_bloom_description">Fresh flowers delivered today</string>
-    <string name="suggested_pixelplay_name">PixelPlay</string>
-    <string name="suggested_pixelplay_description">Discover independent games</string>
-    <string name="suggested_journal_name">Daily Journal</string>
-    <string name="suggested_journal_description">A focused place to write</string>
     <string name="onboarding_browsing_title">Browse the whole web</string>
     <string name="onboarding_browsing_body">Search or enter any web address. Webora is a browser first.</string>
     <string name="onboarding_adaptation_title">Sites can fit you better</string>

@@ -24,21 +24,18 @@ internal data class SuggestedSite private constructor(
     }
 }
 
+/**
+ * The reference integration, and deliberately the only entry.
+ *
+ * `SCOPE-001` narrowed the demo fleet to Bloom Flowers, so PixelPlay and Daily Journal were removed
+ * rather than left pointing at hosts that will never resolve — a suggestion the browser itself
+ * cannot reach teaches the home screen to lie.
+ */
 internal val defaultSuggestedSites = listOfNotNull(
     SuggestedSite.create(
         R.string.suggested_bloom_name,
         R.string.suggested_bloom_description,
-        "https://bloomflowers.webora.app/",
-    ),
-    SuggestedSite.create(
-        R.string.suggested_pixelplay_name,
-        R.string.suggested_pixelplay_description,
-        "https://pixelplay.webora.app/",
-    ),
-    SuggestedSite.create(
-        R.string.suggested_journal_name,
-        R.string.suggested_journal_description,
-        "https://journal.webora.app/",
+        "https://denrzv.github.io/",
     ),
 )
 

@@ -8,7 +8,7 @@ References:
 
 ## Tasks
 
-- [ ] TASK-1: Point the browser's suggestion catalogue at the live origin
+- [x] TASK-1: Point the browser's suggestion catalogue at the live origin
   - Modified: `app/src/main/java/app/webora/browser/browser/SuggestedSite.kt`,
     `app/src/main/res/values/strings.xml`
   - Acceptance: `defaultSuggestedSites` holds one entry, `https://denrzv.github.io/`; the PixelPlay
@@ -17,8 +17,11 @@ References:
   - Tests: `:app:test`, `HomeModelsTest`, `BrowserSurfaceConventionsTest`
   - Care: `BrowserSurfaceConventionsTest` contains `webora.app.src`, a Gradle property name, not the
     domain. Inspect every match; do not script the replacement.
+  - Result: one entry left, four string resources removed. Grep confirms no `*.webora.app` in any
+    app source, and `webora.app.src` survives untouched in `app/build.gradle.kts` and
+    `BrowserSurfaceConventionsTest`. Full gate green.
 
-- [ ] TASK-2: Retire the dead custom domain in the demo repository
+- [x] TASK-2: Retire the dead custom domain in the demo repository
   - Repository: `denrzv/bloom-flowers`
   - Removed: `CNAME`, `.github/workflows/pages.yml`
   - Modified: `README.md`, `.github/workflows/siteskin-lint.yml`, `INTEGRATION.md`
@@ -30,6 +33,10 @@ References:
   - Tests: `tools/check-routes.py`, `sha256sum --check`, workflow YAML parse
   - Care: `CNAME` and `pages.yml` must go in one commit; a deploy between them would publish a
     project-path copy that cannot host a SiteSkin integration.
+  - Result: both removed in one commit. No `webora.app` remains anywhere in the repository;
+    `check-routes.py` still reports 11 paths resolving, confirming the manifest never named the
+    domain; both remaining workflows parse. The lint workflow's "manual because DNS" rationale was
+    replaced with the real one — `denrzv/webora` is private, so its checkout needs a token.
 
 - [ ] TASK-3: Narrow the roadmap and backlog to one demo, and replace Play with APK distribution
   - Modified: `docs/ROADMAP.md`, `docs/BACKLOG.md`
