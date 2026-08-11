@@ -1,0 +1,1667 @@
+<title>Webora — three directions for the browser's own chrome</title>
+
+<style>
+/* ─────────────────────────────────────────────────────────────
+   PAGE TOKENS — light is the base; both dark states redefine
+   only these, so no component style lives inside a theme block.
+   ───────────────────────────────────────────────────────────── */
+:root {
+  --ground:      #F4F5F7;
+  --surface:     #FFFFFF;
+  --surface-2:   #ECEEF2;
+  --ink:         #15181F;
+  --ink-2:       #3C4453;
+  --muted:       #5B6472;
+  --rule:        #DDE0E6;
+  --rule-strong: #C3C8D1;
+  --accent:      #0F5F66;
+  --accent-soft: #DCEDEE;
+  --flag:        #B4402F;
+  --flag-soft:   #F7E6E2;
+  --shadow:      0 1px 2px rgba(20,24,32,.06), 0 12px 32px rgba(20,24,32,.08);
+  --shadow-lift: 0 2px 4px rgba(20,24,32,.08), 0 18px 44px rgba(20,24,32,.12);
+
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", "Cascadia Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace;
+  --android: Roboto, "Noto Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+
+  --step-0: 1rem;
+  --step-1: 1.1875rem;
+  --step-2: 1.5rem;
+  --step-3: 2.125rem;
+  --step-4: 3.25rem;
+  --measure: 68ch;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground:      #101216;
+    --surface:     #171A20;
+    --surface-2:   #1E222A;
+    --ink:         #E4E7EC;
+    --ink-2:       #C0C6D0;
+    --muted:       #929AA8;
+    --rule:        #282C34;
+    --rule-strong: #3A404A;
+    --accent:      #5FBFC4;
+    --accent-soft: #122C2E;
+    --flag:        #E88A76;
+    --flag-soft:   #2E1A16;
+    --shadow:      0 1px 2px rgba(0,0,0,.5), 0 12px 32px rgba(0,0,0,.45);
+    --shadow-lift: 0 2px 4px rgba(0,0,0,.55), 0 18px 44px rgba(0,0,0,.55);
+  }
+}
+
+:root[data-theme="dark"] {
+  --ground:      #101216;
+  --surface:     #171A20;
+  --surface-2:   #1E222A;
+  --ink:         #E4E7EC;
+  --ink-2:       #C0C6D0;
+  --muted:       #929AA8;
+  --rule:        #282C34;
+  --rule-strong: #3A404A;
+  --accent:      #5FBFC4;
+  --accent-soft: #122C2E;
+  --flag:        #E88A76;
+  --flag-soft:   #2E1A16;
+  --shadow:      0 1px 2px rgba(0,0,0,.5), 0 12px 32px rgba(0,0,0,.45);
+  --shadow-lift: 0 2px 4px rgba(0,0,0,.55), 0 18px 44px rgba(0,0,0,.55);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: var(--step-0);
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap { max-width: 1240px; margin: 0 auto; padding: 0 24px 96px; }
+.col  { max-width: var(--measure); }
+
+/* ── Type ─────────────────────────────────────────────────── */
+h1, h2, h3, h4 { margin: 0; text-wrap: balance; line-height: 1.12; letter-spacing: -0.022em; font-weight: 660; }
+h1 { font-size: var(--step-4); letter-spacing: -0.032em; }
+h2 { font-size: var(--step-3); }
+h3 { font-size: var(--step-2); }
+h4 { font-size: var(--step-1); letter-spacing: -0.012em; }
+p  { margin: 0; }
+a  { color: var(--accent); text-underline-offset: 3px; }
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: .75rem;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0;
+}
+.lede { font-size: var(--step-1); color: var(--ink-2); line-height: 1.55; }
+.note { font-size: .875rem; color: var(--muted); line-height: 1.6; }
+code, .m { font-family: var(--mono); font-size: .86em; }
+code {
+  background: var(--surface-2);
+  border-radius: 4px;
+  padding: .1em .35em;
+  color: var(--ink-2);
+}
+
+.stack   { display: flex; flex-direction: column; gap: 16px; }
+.stack-s { display: flex; flex-direction: column; gap: 8px; }
+.stack-l { display: flex; flex-direction: column; gap: 28px; }
+
+hr.rule { border: 0; border-top: 1px solid var(--rule); margin: 0; }
+
+/* ── Masthead ─────────────────────────────────────────────── */
+.masthead { padding: 72px 0 44px; display: flex; flex-direction: column; gap: 24px; }
+.masthead .col { display: flex; flex-direction: column; gap: 20px; }
+
+.meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  background: var(--surface);
+  overflow: hidden;
+}
+.meta-cell {
+  flex: 1 1 160px;
+  padding: 12px 16px;
+  border-right: 1px solid var(--rule);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.meta-cell:last-child { border-right: 0; }
+.meta-cell dt {
+  font-family: var(--mono);
+  font-size: .68rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.meta-cell dd { margin: 0; font-size: .9rem; font-weight: 560; font-variant-numeric: tabular-nums; }
+
+/* ── Sections ─────────────────────────────────────────────── */
+.section { padding: 52px 0 0; display: flex; flex-direction: column; gap: 24px; }
+.section-head { display: flex; flex-direction: column; gap: 12px; max-width: var(--measure); }
+
+/* ── Constraint chips ─────────────────────────────────────── */
+.chips { display: flex; flex-wrap: wrap; gap: 10px; }
+.chip {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 9px 13px;
+  font-size: .84rem;
+  color: var(--ink-2);
+}
+.chip b { font-family: var(--mono); font-size: .78rem; color: var(--flag); font-weight: 600; }
+.chip--hard { border-color: var(--flag); background: var(--flag-soft); }
+
+/* ── Direction band ───────────────────────────────────────── */
+.band { padding: 64px 0 0; display: flex; flex-direction: column; gap: 28px; }
+.band-head { display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap; }
+.band-mark {
+  font-family: var(--mono);
+  font-size: 2.4rem;
+  font-weight: 600;
+  line-height: 1;
+  width: 76px;
+  height: 76px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  color: var(--mark-ink, var(--accent));
+  background: var(--mark-bg, var(--accent-soft));
+  border: 1px solid var(--mark-line, transparent);
+}
+.band-title { display: flex; flex-direction: column; gap: 10px; max-width: 62ch; }
+.band-title h2 { font-size: var(--step-3); }
+.band-title .kicker {
+  font-family: var(--mono);
+  font-size: .72rem;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* ── Frame rail ───────────────────────────────────────────── */
+.rail {
+  display: flex;
+  gap: 28px;
+  overflow-x: auto;
+  padding: 4px 24px 20px;
+  margin: 0 -24px;
+  scroll-snap-type: x proximity;
+}
+.rail::-webkit-scrollbar { height: 10px; }
+.rail::-webkit-scrollbar-thumb { background: var(--rule-strong); border-radius: 999px; }
+.rail-item { flex: 0 0 auto; width: 360px; display: flex; flex-direction: column; gap: 10px; scroll-snap-align: start; }
+.rail-cap { display: flex; align-items: baseline; gap: 8px; }
+.rail-cap .n {
+  font-family: var(--mono);
+  font-size: .7rem;
+  color: var(--muted);
+  letter-spacing: .1em;
+}
+.rail-cap .t { font-size: .88rem; font-weight: 580; }
+
+/* ─────────────────────────────────────────────────────────────
+   PHONE FRAME — a depiction of an app, so its palette is fixed
+   by the direction it illustrates and does NOT follow the
+   viewer's theme. Every colour inside comes from an --f-* token.
+   ───────────────────────────────────────────────────────────── */
+.frame {
+  width: 360px;
+  height: 720px;
+  border-radius: 26px;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--rule-strong);
+  box-shadow: var(--shadow);
+  background: var(--f-bg);
+  color: var(--f-ink);
+  font-family: var(--android);
+  font-size: 14px;
+  line-height: 1.4;
+}
+.frame * { box-sizing: border-box; }
+
+/* System inset strips — C7: edge-to-edge is already on. */
+.sysbar {
+  height: 26px;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .01em;
+  color: var(--f-sys-ink);
+  background: var(--f-sys-bg);
+}
+.sysbar .dots { display: flex; gap: 4px; align-items: center; }
+.sysbar .dots i { width: 5px; height: 5px; border-radius: 50%; background: currentColor; opacity: .75; display: block; }
+.navinset {
+  height: 18px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  background: var(--f-nav-bg);
+}
+.navinset span { width: 100px; height: 4px; border-radius: 999px; background: var(--f-nav-ink); opacity: .55; }
+
+.screen { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.scroll { flex: 1 1 auto; min-height: 0; overflow: hidden; }
+
+.icon { width: 20px; height: 20px; display: block; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.icon--sm { width: 16px; height: 16px; }
+.icon--fill { fill: currentColor; stroke: none; }
+
+/* Fake rendered web page — the same Bloom Flowers content in every frame,
+   so the chrome is the only thing that differs between directions. */
+.web { background: #FFFFFF; color: #2A1F24; height: 100%; overflow: hidden; }
+.web-hero { background: #D94F8A; color: #FFFFFF; padding: 18px 16px; }
+.web-hero h5 { margin: 0; font-size: 17px; font-weight: 700; letter-spacing: -.01em; }
+.web-hero p { margin: 3px 0 0; font-size: 12px; opacity: .95; }
+.web-body { padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+.web-body h6 { margin: 0; font-size: 13px; font-weight: 700; color: #8E2F5C; letter-spacing: .01em; }
+.web-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.web-card { border: 1px solid #F0DCE5; border-radius: 8px; overflow: hidden; }
+.web-thumb { height: 62px; background: linear-gradient(150deg, #FBE3EE, #F3B9D3); }
+.web-card p { margin: 0; padding: 7px 8px 9px; font-size: 11px; line-height: 1.35; }
+.web-card b { display: block; font-size: 11px; }
+.web-card em { display: block; font-style: normal; color: #8E2F5C; font-weight: 700; }
+.web-line { height: 8px; border-radius: 4px; background: #F1EAED; }
+.web-line.w70 { width: 70%; }
+.web-line.w45 { width: 45%; }
+
+/* Generic mockup primitives, all direction-tokenised */
+.mk-pad { padding: var(--f-gutter); }
+.mk-title { font-size: 22px; font-weight: 700; letter-spacing: -.02em; }
+.mk-h { font-size: 13px; font-weight: 700; letter-spacing: .02em; }
+.mk-sub { font-size: 12px; color: var(--f-muted); }
+.mk-card {
+  background: var(--f-surface);
+  border-radius: var(--f-radius-card);
+  border: 1px solid var(--f-outline);
+  padding: 14px;
+}
+.mk-btn {
+  border-radius: var(--f-radius-btn);
+  background: var(--f-primary);
+  color: var(--f-on-primary);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 0 18px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.mk-btn--quiet {
+  background: transparent;
+  color: var(--f-primary);
+  border: 1px solid var(--f-outline);
+}
+.mk-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 52px;
+}
+.mk-switch { width: 44px; height: 26px; border-radius: 999px; background: var(--f-primary); position: relative; flex: 0 0 auto; }
+.mk-switch::after { content: ""; position: absolute; right: 3px; top: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--f-on-primary); }
+.mk-divider { height: 1px; background: var(--f-outline); }
+.mk-progress { height: 3px; background: var(--f-outline); position: relative; overflow: hidden; }
+.mk-progress::after { content: ""; position: absolute; inset: 0 38% 0 0; background: var(--f-primary); }
+
+/* Security identity — the one element every direction must get right (C1) */
+.sec { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; }
+.sec .dom { font-weight: 600; }
+
+/* ── Spec grid under each rail ────────────────────────────── */
+.spec {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(268px, 1fr));
+  gap: 20px;
+  align-items: start;
+}
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.panel h4 { font-size: .95rem; }
+.panel .eyebrow { font-size: .68rem; }
+
+.swatches { display: flex; flex-direction: column; gap: 6px; }
+.sw { display: flex; align-items: center; gap: 10px; font-size: .8rem; }
+.sw i { width: 26px; height: 26px; border-radius: 6px; flex: 0 0 auto; border: 1px solid rgba(128,128,128,.28); display: block; }
+.sw .nm { flex: 1 1 auto; color: var(--ink-2); }
+.sw .hx { font-family: var(--mono); font-size: .74rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: .84rem; }
+.kv dt { color: var(--muted); font-family: var(--mono); font-size: .74rem; letter-spacing: .06em; text-transform: uppercase; padding-top: 3px; }
+.kv dd { margin: 0; color: var(--ink-2); }
+
+.callout {
+  border: 1px solid var(--flag);
+  background: var(--flag-soft);
+  border-radius: 12px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.callout .eyebrow { color: var(--flag); }
+.callout p { font-size: .9rem; color: var(--ink-2); }
+.callout strong { color: var(--ink); }
+
+.verdict { display: flex; flex-direction: column; gap: 10px; }
+.verdict .line { display: flex; gap: 10px; font-size: .875rem; align-items: baseline; }
+.verdict .line span:first-child {
+  font-family: var(--mono);
+  font-size: .68rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  flex: 0 0 74px;
+  padding-top: 2px;
+}
+.verdict .line span:last-child { color: var(--ink-2); }
+
+/* ── Comparison matrix ────────────────────────────────────── */
+.table-scroll { overflow-x: auto; border: 1px solid var(--rule); border-radius: 12px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 720px; font-size: .875rem; }
+th, td { text-align: left; padding: 13px 16px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+thead th { background: var(--surface-2); font-size: .74rem; font-family: var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+tbody th { font-weight: 580; color: var(--ink); width: 190px; }
+tbody tr:last-child th, tbody tr:last-child td { border-bottom: 0; }
+td { color: var(--ink-2); }
+
+.tick { font-family: var(--mono); font-weight: 600; color: var(--accent); }
+.warnmark { font-family: var(--mono); font-weight: 600; color: var(--flag); }
+
+/* ── Closing ──────────────────────────────────────────────── */
+.next {
+  border-top: 3px solid var(--ink);
+  padding-top: 24px;
+  margin-top: 72px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.next ol { margin: 0; padding-left: 1.3em; display: flex; flex-direction: column; gap: 10px; max-width: var(--measure); }
+.next li { color: var(--ink-2); }
+.next li b { color: var(--ink); }
+
+:where(a, button):focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 3px; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+
+@media (max-width: 720px) {
+  :root { --step-4: 2.3rem; --step-3: 1.65rem; }
+  .wrap { padding: 0 16px 72px; }
+  .rail { padding: 4px 16px 20px; margin: 0 -16px; }
+  .band-mark { width: 56px; height: 56px; font-size: 1.7rem; }
+}
+
+/* ═════════════════════════════════════════════════════════════
+   DIRECTION PALETTES
+   ═════════════════════════════════════════════════════════════ */
+
+/* A — Expressive. Soft, tonal, generous. Teal seed, warm neutral. */
+.dir-a { --mark-bg: #DCEFEE; --mark-ink: #00696E; }
+.dir-a .frame {
+  --f-bg: #F7F6F3;      --f-surface: #FFFFFF;   --f-chrome: #D3EBEA;
+  --f-primary: #00696E; --f-on-primary: #FFFFFF;
+  --f-container: #B4E5E3; --f-on-container: #00201F;
+  --f-ink: #191C1C;     --f-muted: #45504F;     --f-outline: #C6D2D1;
+  --f-sys-bg: #F7F6F3;  --f-sys-ink: #191C1C;
+  --f-nav-bg: #F7F6F3;  --f-nav-ink: #191C1C;
+  --f-radius-card: 20px; --f-radius-btn: 999px; --f-gutter: 20px;
+}
+.dir-a .frame.frame--dark {
+  --f-bg: #0E1414;      --f-surface: #171F1F;   --f-chrome: #1F2C2C;
+  --f-primary: #5CDBD8; --f-on-primary: #003736;
+  --f-container: #1F2C2C; --f-on-container: #B4E5E3;
+  --f-ink: #DEE4E3;     --f-muted: #B2BEBD;     --f-outline: #2C3838;
+  --f-sys-bg: #0E1414;  --f-sys-ink: #DEE4E3;
+  --f-nav-bg: #0E1414;  --f-nav-ink: #DEE4E3;
+}
+
+/* B — Browser-native. Dense, hairline, neutral. Blue action colour. */
+.dir-b { --mark-bg: #E4ECFA; --mark-ink: #1552C4; }
+.dir-b .frame {
+  --f-bg: #FFFFFF;      --f-surface: #F1F3F5;   --f-chrome: #F1F3F5;
+  --f-primary: #1552C4; --f-on-primary: #FFFFFF;
+  --f-container: #E4ECFA; --f-on-container: #0C2E6E;
+  --f-ink: #1F2328;     --f-muted: #5B6472;     --f-outline: #D5D9DF;
+  --f-sys-bg: #F1F3F5;  --f-sys-ink: #1F2328;
+  --f-nav-bg: #F1F3F5;  --f-nav-ink: #1F2328;
+  --f-radius-card: 10px; --f-radius-btn: 8px; --f-gutter: 16px;
+}
+.dir-b .frame.frame--dark {
+  --f-bg: #17191C;      --f-surface: #212429;   --f-chrome: #212429;
+  --f-primary: #8AB4F8; --f-on-primary: #0A2547;
+  --f-container: #1D2B42; --f-on-container: #CFE0FC;
+  --f-ink: #E6E8EB;     --f-muted: #9AA3B0;     --f-outline: #33373D;
+  --f-sys-bg: #212429;  --f-sys-ink: #E6E8EB;
+  --f-nav-bg: #212429;  --f-nav-ink: #E6E8EB;
+}
+
+/* C — Instrument frame. Chrome graphite is IDENTICAL in both themes. */
+.dir-c { --mark-bg: #1C1F26; --mark-ink: #FF7A5C; }
+.dir-c .frame {
+  --f-bg: #F6F4F1;      --f-surface: #FFFFFF;   --f-chrome: #1C1F26;
+  --f-on-chrome: #EDEEF2; --f-chrome-muted: #99A0B0;
+  --f-primary: #C63F20; --f-on-primary: #FFFFFF;
+  --f-container: #FBE6DF; --f-on-container: #4A1508;
+  --f-ink: #1C1F26;     --f-muted: #5A6072;     --f-outline: #DEDAD4;
+  --f-sys-bg: #1C1F26;  --f-sys-ink: #EDEEF2;
+  --f-nav-bg: #1C1F26;  --f-nav-ink: #EDEEF2;
+  --f-radius-card: 14px; --f-radius-btn: 12px; --f-gutter: 20px;
+}
+.dir-c .frame.frame--dark {
+  --f-bg: #12141A;      --f-surface: #1A1D25;   --f-chrome: #1C1F26;
+  --f-on-chrome: #EDEEF2; --f-chrome-muted: #99A0B0;
+  --f-primary: #FF7A5C; --f-on-primary: #3A0E02;
+  --f-container: #2A1810; --f-on-container: #FFD3C6;
+  --f-ink: #E8EAF0;     --f-muted: #99A0B0;     --f-outline: #2C303B;
+  --f-sys-bg: #1C1F26;  --f-sys-ink: #EDEEF2;
+  --f-nav-bg: #1C1F26;  --f-nav-ink: #EDEEF2;
+}
+
+/* ── Per-direction chrome components ──────────────────────── */
+
+/* A: search pill + separate identity chip + floating pill action bar */
+.a-top { padding: 10px 14px 6px; display: flex; flex-direction: column; gap: 8px; background: var(--f-bg); }
+.a-pill {
+  height: 52px;
+  border-radius: 999px;
+  background: var(--f-chrome);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 8px 0 14px;
+  color: var(--f-on-container);
+}
+.a-pill .field { flex: 1 1 auto; font-size: 14px; color: var(--f-on-container); opacity: .9; }
+.a-pill .end { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; flex: 0 0 auto; }
+.a-idchip {
+  align-self: flex-start;
+  background: var(--f-container);
+  color: var(--f-on-container);
+  border-radius: 999px;
+  padding: 5px 12px 5px 9px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.a-dock { padding: 8px 14px 12px; background: var(--f-bg); }
+.a-dockbar {
+  height: 60px;
+  border-radius: 999px;
+  background: var(--f-chrome);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 8px;
+  color: var(--f-on-container);
+}
+.a-dockbar .slot { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; }
+.a-dockbar .slot.on { background: var(--f-primary); color: var(--f-on-primary); }
+.a-dockbar .slot.off { opacity: .38; }
+
+/* B: compact omnibox + hairline bottom toolbar */
+.b-top { background: var(--f-chrome); border-bottom: 1px solid var(--f-outline); }
+.b-omni { height: 48px; display: flex; align-items: center; gap: 8px; padding: 0 6px 0 12px; }
+.b-ident {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 8px;
+  background: var(--f-bg);
+  border: 1px solid var(--f-outline);
+  min-width: 0;
+}
+.b-ident .path { color: var(--f-muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.b-tap { width: 36px; height: 36px; border-radius: 8px; display: grid; place-items: center; flex: 0 0 auto; color: var(--f-ink); }
+.b-bottom {
+  height: 52px;
+  background: var(--f-chrome);
+  border-top: 1px solid var(--f-outline);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  color: var(--f-ink);
+}
+.b-bottom .slot { width: 48px; height: 48px; display: grid; place-items: center; }
+.b-bottom .slot.off { opacity: .32; }
+
+/* C: constant graphite identity bar + detached action bar */
+.c-top { background: var(--f-chrome); color: var(--f-on-chrome); padding: 8px 14px 12px; display: flex; flex-direction: column; gap: 9px; }
+.c-idrow { display: flex; align-items: center; gap: 8px; }
+.c-mark {
+  width: 22px; height: 22px; border-radius: 6px; flex: 0 0 auto;
+  background: var(--f-primary); color: var(--f-on-primary);
+  display: grid; place-items: center;
+  font-size: 12px; font-weight: 800; letter-spacing: -.03em;
+}
+.c-idrow .sec { color: var(--f-on-chrome); }
+.c-idrow .tls { color: #7EE0A6; }
+.c-field {
+  height: 40px;
+  border-radius: 12px;
+  background: rgba(255,255,255,.09);
+  border: 1px solid rgba(255,255,255,.14);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 12px;
+  color: var(--f-chrome-muted);
+  font-size: 13px;
+}
+.c-dock { padding: 10px 16px 14px; background: transparent; }
+.c-dockbar {
+  height: 56px;
+  border-radius: 16px;
+  background: var(--f-chrome);
+  color: var(--f-on-chrome);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 6px;
+  box-shadow: 0 6px 20px rgba(0,0,0,.28);
+}
+.c-dockbar .slot { width: 48px; height: 48px; border-radius: 12px; display: grid; place-items: center; }
+.c-dockbar .slot.on { background: var(--f-primary); color: var(--f-on-primary); }
+.c-dockbar .slot.off { opacity: .34; }
+</style>
+
+<svg width="0" height="0" aria-hidden="true" style="position:absolute">
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+  <symbol id="i-fwd" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></symbol>
+  <symbol id="i-reload" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.5-5.8"/><path d="M20 4v4h-4"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 11l8-6.5 8 6.5"/><path d="M6.5 9.8V19h11V9.8"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="9.5" rx="2"/><path d="M8.2 10.5V7.8a3.8 3.8 0 0 1 7.6 0v2.7"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></symbol>
+  <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 4l9 16H3z"/><path d="M12 10v4.5M12 17.4v.2"/></symbol>
+</svg>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="col">
+      <p class="eyebrow">Webora Browser · M6 · UX-001</p>
+      <h1>Three directions for the browser's own chrome</h1>
+      <p class="lede">
+        Webora gives every website that publishes a SiteSkin manifest a six-role colour system, a
+        dark projection and a WCAG contrast guard. It gives itself a bare
+        <code>MaterialTheme {}</code> and five text-labelled buttons in a wrapping row. Pick one of
+        the three directions below and that inversion gets corrected.
+      </p>
+    </div>
+
+    <dl class="meta-row">
+      <div class="meta-cell"><dt>Scale</dt><dd>1 px = 1 dp · 360 dp wide</dd></div>
+      <div class="meta-cell"><dt>Surfaces</dt><dd>Browser chrome, Home, Error, Settings</dd></div>
+      <div class="meta-cell"><dt>Out of scope</dt><dd>SiteSkin integrated chrome (UX-005)</dd></div>
+      <div class="meta-cell"><dt>Decides</dt><dd>ADR-013, then UX-002</dd></div>
+    </dl>
+  </header>
+
+  <hr class="rule">
+
+  <section class="section">
+    <div class="section-head">
+      <p class="eyebrow">What each direction is answering</p>
+      <h3>Seven constraints, and one of them decides the argument</h3>
+      <p class="note">
+        These come from the audit in <code>docs/design/AUDIT.md</code>. Six are hygiene — a direction
+        either respects them or gets amended. <b>C1 is the one that can eliminate a direction
+        outright</b>, so every direction below states its answer to C1 explicitly rather than leaving
+        it to implementation.
+      </p>
+    </div>
+    <div class="chips">
+      <div class="chip chip--hard"><b>C1</b> Domain + TLS are browser-owned and non-suppressible</div>
+      <div class="chip"><b>C2</b> Browser tokens are never manifest-influenceable</div>
+      <div class="chip"><b>C3</b> Every control routes through a <code>Webora*</code> wrapper</div>
+      <div class="chip"><b>C4</b> No string literal reaches the screen</div>
+      <div class="chip"><b>C5</b> 48 dp targets · 4.5:1 body · 3:1 UI · 200% scale</div>
+      <div class="chip"><b>C6</b> ~8 bundled vector icons, no icon library</div>
+      <div class="chip"><b>C7</b> Edge-to-edge, both system bar regions styled</div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════ DIRECTION A ══════════════════════════ -->
+  <section class="band dir-a">
+    <div class="band-head">
+      <div class="band-mark">A</div>
+      <div class="band-title">
+        <p class="kicker">Material 3 Expressive</p>
+        <h2>Soft instrument</h2>
+        <p class="lede">
+          Leans all the way into the platform's current language: a tall rounded search pill, tonal
+          containers instead of outlines, and a floating pill action bar that lifts the navigation
+          controls off the bottom edge. The identity lives in its own tonal chip below the field —
+          adjacent to the address, never inside it.
+        </p>
+      </div>
+    </div>
+
+    <div class="rail">
+      <!-- A · Browsing -->
+      <div class="rail-item">
+        <div class="rail-cap"><span class="n">01</span><span class="t">Browsing</span></div>
+        <div class="frame">
+          <div class="sysbar"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+          <div class="screen">
+            <div class="a-top">
+              <div class="a-pill">
+                <svg class="icon icon--sm"><use href="#i-search"/></svg>
+                <span class="field">denrzv.github.io/catalog</span>
+                <span class="end"><svg class="icon"><use href="#i-more"/></svg></span>
+              </div>
+              <span class="a-idchip">
+                <svg class="icon icon--sm"><use href="#i-lock"/></svg>
+                <span class="sec"><span class="dom">denrzv.github.io</span> · Secure</span>
+              </span>
+            </div>
+            <div class="mk-progress"></div>
+            <div class="scroll">
+              <div class="web">
+                <div class="web-hero"><h5>Bloom Flowers</h5><p>Fresh flowers delivered today</p></div>
+                <div class="web-body">
+                  <h6>Best sellers</h6>
+                  <div class="web-grid">
+                    <div class="web-card"><div class="web-thumb"></div><p><b>Spring Bouquet</b><em>£28</em></p></div>
+                    <div class="web-card"><div class="web-thumb"></div><p><b>Peony Bundle</b><em>£34</em></p></div>
+                  </div>
+                  <div class="web-line w70"></div>
+                  <div class="web-line w45"></div>
+                </div>
+              </div>
+            </div>
+            <div class="a-dock">
+              <div class="a-dockbar">
+                <span class="slot"><svg class="icon"><use href="#i-back"/></svg></span>
+                <span class="slot off"><svg class="icon"><use href="#i-fwd"/></svg></span>
+                <span class="slot on"><svg class="icon"><use href="#i-reload"/></svg></span>
+                <span class="slot"><svg class="icon"><use href="#i-home"/></svg></span>
+                <span class="slot"><svg class="icon"><use href="#i-menu"/></svg></span>
+              </div>
+            </div>
+          </div>
+          <div class="navinset"><span></span></div>
+        </div>
+      </div>
+
+      <!-- A · Browsing dark -->
+      <div class="rail-item">
+        <div class="rail-cap"><span class="n">02</span><span class="t">Browsing · dark</span></div>
+        <div class="frame frame--dark">
+          <div class="sysbar"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+          <div class="screen">
+            <div class="a-top">
+              <div class="a-pill">
+                <svg class="icon icon--sm"><use href="#i-search"/></svg>
+                <span class="field">denrzv.github.io/catalog</span>
+                <span class="end"><svg class="icon"><use href="#i-more"/></svg></span>
+              </div>
+              <span class="a-idchip">
+                <svg class="icon icon--sm"><use href="#i-lock"/></svg>
+                <span class="sec"><span class="dom">denrzv.github.io</span> · Secure</span>
+              </span>
+            </div>
+            <div class="mk-progress"></div>
+            <div class="scroll">
+              <div class="web">
+                <div class="web-hero"><h5>Bloom Flowers</h5><p>Fresh flowers delivered today</p></div>
+                <div class="web-body">
+                  <h6>Best sellers</h6>
+                  <div class="web-grid">
+                    <div class="web-card"><div class="web-thumb"></div><p><b>Spring Bouquet</b><em>£28</em></p></div>
+                    <div class="web-card"><div class="web-thumb"></div><p><b>Peony Bundle</b><em>£34</em></p></div>
+                  </div>
+                  <div class="web-line w70"></div>
+                </div>
+              </div>
+            </div>
+            <div class="a-dock">
+              <div class="a-dockbar">
+                <span class="slot"><svg class="icon"><use href="#i-back"/></svg></span>
+                <span class="slot off"><svg class="icon"><use href="#i-fwd"/></svg></span>
+                <span class="slot on"><svg class="icon"><use href="#i-reload"/></svg></span>
+                <span class="slot"><svg class="icon"><use href="#i-home"/></svg></span>
+                <span class="slot"><svg class="icon"><use href="#i-menu"/></svg></span>
+              </div>
+            </div>
+          </div>
+          <div class="navinset"><span></span></div>
+        </div>
+      </div>
+
+      <!-- A · Home -->
+      <div class="rail-item">
+        <div class="rail-cap"><span class="n">03</span><span class="t">Home</span></div>
+        <div class="frame">
+          <div class="sysbar"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+          <div class="screen">
+            <div class="mk-pad" style="display:flex;flex-direction:column;gap:18px;overflow:hidden">
+              <div class="mk-title" style="font-size:28px;padding-top:8px">Webora</div>
+              <div class="a-pill" style="height:56px">
+                <svg class="icon icon--sm"><use href="#i-search"/></svg>
+                <span class="field" style="opacity:.65">Search or enter address</span>
+              </div>
+              <div class="stack-s">
+                <div class="mk-h">Recent sites</div>
+                <div class="mk-sub">Sites you visit will appear here.</div>
+              </div>
+              <div class="stack-s">
+                <div class="mk-h">Favourites</div>
+                <div class="mk-sub">Your saved sites will appear here.</div>
+              </div>
+              <div class="stack-s">
+                <div class="mk-h">Suggested integrations</div>
+                <div class="mk-card" style="display:flex;flex-direction:column;gap:10px">
+                  <div style="display:flex;align-items:center;gap:10px">
+                    <span style="width:36px;height:36px;border-radius:12px;background:#D94F8A;color:#fff;display:grid;place-items:center;font-weight:700;font-size:15px">B</span>
+                    <div>
+                      <div style="font-size:15px;font-weight:650">Bloom Flowers</div>
+                      <div class="mk-sub">Fresh flowers delivered today</div>
+                    </div>
+                  </div>
+                  <span class="mk-btn" style="align-self:flex-start">Open Bloom Flowers</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="navinset"><span></span></div>
+        </div>
+      </div>
+
+      <!-- A · Error -->
+      <div class="rail-item">
+        <div class="rail-cap"><span class="n">04</span><span class="t">Load failure</span></div>
+        <div class="frame">
+          <div class="sysbar"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+          <div class="screen">
+            <div class="a-top">
+              <div class="a-pill">
+                <svg class="icon icon--sm"><use href="#i-search"/></svg>
+                <span class="field">denrzv.github.io/catalog</span>
+                <span class="end"><svg class="icon"><use href="#i-more"/></svg></span>
+              </div>
+            </div>
+            <div class="scroll" style="display:grid;place-items:center;padding:24px">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center">
+                <span style="width:72px;height:72px;border-radius:999px;background:var(--f-container);color:var(--f-on-container);display:grid;place-items:center">
+                  <svg class="icon" style="width:32px;height:32px"><use href="#i-warn"/></svg>
+                </span>
+                <div class="mk-title" style="font-size:20px">This page could not be loaded</div>
+                <div style="font-size:13px;font-weight:600">denrzv.github.io</div>
+                <div class="mk-sub" style="max-width:250px">Check your connection and try again.</div>
+                <div style="display:flex;gap:10px;padding-top:6px">
+                  <span class="mk-btn">Retry</span>
+                  <span class="mk-btn mk-btn--quiet">Home</span>
+                </div>
+              </div>
+            </div>
+            <div class="a-dock">
+              <div class="a-dockbar">
+                <span class="slot"><svg class="icon"><use href="#i-back"/></svg></span>
+                <span class="slot off"><svg class="icon"><use href="#i-fwd"/></svg></span>
+                <span class="slot on"><svg class="icon"><use href="#i-reload"/></svg></span>
+                <span class="slot"><svg class="icon"><use href="#i-home"/></svg></span>
+                <span class="slot"><svg class="icon"><use href="#i-menu"/></svg></span>
+              </div>
+            </div>
+          </div>
+          <div class="navinset"><span></span></div>
+        </div>
+      </div>
+
+      <!-- A · Settings -->
+      <div class="rail-item">
+        <div class="rail-cap"><span class="n">05</span><span class="t">Privacy settings</span></div>
+        <div class="frame">
+          <div class="sysbar"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+          <div class="screen">
+            <div class="mk-pad" style="display:flex;flex-direction:column;gap:20px;overflow:hidden">
+              <div style="display:flex;align-items:center;gap:12px;padding-top:4px">
+                <span style="width:44px;height:44px;border-radius:999px;background:var(--f-chrome);display:grid;place-items:center;color:var(--f-on-container)">
+                  <svg class="icon"><use href="#i-close"/></svg>
+                </span>
+                <div class="mk-title" style="font-size:22px">Privacy settings</div>
+              </div>
+              <div class="mk-card" style="padding:6px 16px">
+                <div class="mk-row">
+                  <div>
+                    <div style="font-size:14px;font-weight:600">Allow SiteSkin customisation</div>
+                    <div class="mk-sub">On</div>
+                  </div>
+                  <span class="mk-switch"></span>
+                </div>
+              </div>
+              <div class="stack-s">
+                <div class="mk-h">Site permissions</div>
+                <div class="mk-card" style="padding:6px 16px">
+                  <div class="mk-row">
+                    <div style="min-width:0">
+                      <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">https://denrzv.github.io</div>
+                      <div class="mk-sub">Allowed</div>
+                    </div>
+                    <span style="font-size:13px;font-weight:600;color:var(--f-primary);flex:0 0 auto">Reset</span>
+                  </div>
+                </div>
+              </div>
+              <span class="mk-btn mk-btn--quiet" style="align-self:flex-start">Clear browsing data</span>
+            </div>
+          </div>
+          <div class="navinset"><span></span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="spec">
+      <div class="panel">
+        <p class="eyebrow">Palette · light</p>
+        <div class="swatches">
+          <div class="sw"><i style="background:#00696E"></i><span class="nm">Primary</span><span class="hx">#00696E</span></div>
+          <div class="sw"><i style="background:#B4E5E3"></i><span class="nm">Primary container</span><span class="hx">#B4E5E3</span></div>
+          <div class="sw"><i style="background:#D3EBEA"></i><span class="nm">Chrome surface</span><span class="hx">#D3EBEA</span></div>
+          <div class="sw"><i style="background:#F7F6F3"></i><span class="nm">Ground</span><span class="hx">#F7F6F3</span></div>
+          <div class="sw"><i style="background:#191C1C"></i><span class="nm">Ink</span><span class="hx">#191C1C</span></div>
+          <div class="sw"><i style="background:#5CDBD8"></i><span class="nm">Primary · dark</span><span class="hx">#5CDBD8</span></div>
+        </div>
+        <p class="note">Teal seed with a warm neutral ground, chosen to sit apart from the pink, blue and orange brands most demo sites use — the browser should not look like it belongs to the page.</p>
+      </div>
+
+      <div class="panel">
+        <p class="eyebrow">Geometry &amp; type</p>
+        <dl class="kv">
+          <dt>Radius</dt><dd>999 dp pills · 20 dp cards</dd>
+          <dt>Spacing</dt><dd>4 dp base · 20 dp gutter</dd>
+          <dt>Chrome</dt><dd>52 dp pill + 60 dp floating dock</dd>
+          <dt>Type</dt><dd>28 / 22 / 15 / 13 / 12 · Roboto</dd>
+          <dt>Icons</dt><dd>8 · 20 dp stroke 1.9</dd>
+          <dt>Elevation</dt><dd>Tonal, not shadow</dd>
+        </dl>
+      </div>
+
+      <div class="callout">
+        <p class="eyebrow">C1 · Security identity</p>
+        <p>
+          <strong>Separate element, always.</strong> The identity is a tonal chip below the field,
+          fed by <code>securityPresentation(state.mode)</code>. The pill above it renders
+          <code>state.addressText</code> and is never the identity claim — the two can visibly
+          disagree, which is exactly the signal ADR-006 wants preserved.
+        </p>
+        <p class="note">Lowest C1 risk of the three. The chip costs a row of vertical space on every page.</p>
+      </div>
+
+      <div class="panel">
+        <p class="eyebrow">Verdict</p>
+        <div class="verdict">
+          <div class="line"><span>Strength</span><span>Feels current; the floating dock is thumb-reachable and reads as deliberate.</span></div>
+          <div class="line"><span>Cost</span><span>Tallest chrome of the three — pill, chip and dock eat ~140 dp of a 720 dp screen.</span></div>
+          <div class="line"><span>Effort</span><span>Medium. Tonal roles need a full container/on-container token set.</span></div>
+          <div class="line"><span>Risk</span><span>Low. Nothing here fights an existing gate.</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════ DIRECTION B ══════════════════════════ -->
+  <section class="band dir-b">
+    <div class="band-head">
+      <div class="band-mark">B</div>
+      <div class="band-title">
+        <p class="kicker">Browser-native · cites shipping precedent</p>
+        <h2>Get out of the way</h2>
+        <p class="lede">
+          The conventions people already know from Chrome, Safari and Firefox: one compact 48 dp
+          omnibox that shows the domain rather than the URL, a hairline bottom toolbar of icon-only
+          controls, and as little chrome as the job allows. Maximum room for the page, minimum
+          learning cost — and the direction that has to answer C1 most carefully.
+        </p>
+      </div>
+    </div>
+
+    <div class="rail">
+      <!-- B · Browsing -->
+      <div class="rail-item">
+        <div class="rail-cap"><span class="n">01</span><span class="t">Browsing</span></div>
+        <div class="frame">
+          <div class="sysbar"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+          <div class="screen">
+            <div class="b-top">
+              <div class="b-omni">
+                <span class="b-ident">
+                  <svg class="icon icon--sm" style="color:#146C43;flex:0 0 auto"><use href="#i-lock"/></svg>
+                  <span class="sec" style="flex:0 0 auto">denrzv.github.io</span>
+                  <span class="path">/catalog</span>
+                </span>
+                <span class="b-tap"><svg class="icon"><use href="#i-reload"/></svg></span>
+                <span class="b-tap"><svg class="icon"><use href="#i-more"/></svg></span>
+              </div>
+            </div>
+            <div class="mk-progress"></div>
+            <div class="scroll">
+              <div class="web">
+                <div class="web-hero"><h5>Bloom Flowers</h5><p>Fresh flowers delivered today</p></div>
+                <div class="web-body">
+                  <h6>Best sellers</h6>
+                  <div class="web-grid">
+                    <div class="web-card"><div class="web-thumb"></div><p><b>Spring Bouquet</b><em>£28</em></p></div>
+                    <div class="web-card"><div class="web-thumb"></div><p><b>Peony Bundle</b><em>£34</em></p></div>
+                  </div>
+                  <div class="web-line w70"></div>
+                  <div class="web-line w45"></div>
+                  <div class="web-grid">
+                    <div class="web-card"><div class="web-thumb"></div><p><b>Rose Dozen</b><em>£42</em></p></div>
+                    <div class="web-card"><div class="web-thumb"></div><p><b>Tulip Mix</b><em>£24</em></p></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="b-bottom">
+              <span class="slot"><svg class="icon"><use href="#i-back"/></svg></span>
+              <span class="slot off"><svg class="icon"><use href="#i-fwd"/></svg></span>
+              <span class="slot"><svg class="icon"><use href="#i-home"/></svg></span>
+              <span class="slot"><svg class="icon"><use href="#i-search"/></svg></span>
+              <span class="slot"><svg class="icon"><use href="#i-menu"/></svg></span>
+            </div>
+          </div>
+          <div class="navinset"><span></span></div>
+        </div>
+      </div>
+
+      <!-- B · Browsing dark -->
+      <div class="rail-item">
+        <div class="rail-cap"><span class="n">02</span><span class="t">Browsing · dark</span></div>
+        <div class="frame frame--dark">
+          <div class="sysbar"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+          <div class="screen">
+            <div class="b-top">
+              <div class="b-omni">
+                <span class="b-ident">
+                  <svg class="icon icon--sm" style="color:#6DD58C;flex:0 0 auto"><use href="#i-lock"/></svg>
+                  <span class="sec" style="flex:0 0 auto">denrzv.github.io</span>
+                  <span class="path">/catalog</span>
+                </span>
+                <span class="b-tap"><svg class="icon"><use href="#i-reload"/></svg></span>
+                <span class="b-tap"><svg class="icon"><use href="#i-more"/></svg></span>
+              </div>
+            </div>
+            <div class="mk-progress"></div>
+            <div class="scroll">
+              <div class="web">
+                <div class="web-hero"><h5>Bloom Flowers</h5><p>Fresh flowers delivered today</p></div>
+                <div class="web-body">
+                  <h6>Best sellers</h6>
+                  <div class="web-grid">
+                    <div class="web-card"><div class="web-thumb"></div><p><b>Spring Bouquet</b><em>£28</em></p></div>
+                    <div class="web-card"><div class="web-thumb"></div><p><b>Peony Bundle</b><em>£34</em></p></div>
+                  </div>
+                  <div class="web-line w70"></div>
+                  <div class="web-line w45"></div>
+                </div>
+              </div>
+            </div>
+            <div class="b-bottom">
+              <span class="slot"><svg class="icon"><use href="#i-back"/></svg></span>
+              <span class="slot off"><svg class="icon"><use href="#i-fwd"/></svg></span>
+              <span class="slot"><svg class="icon"><use href="#i-home"/></svg></span>
+              <span class="slot"><svg class="icon"><use href="#i-search"/></svg></span>
+              <span class="slot"><svg class="icon"><use href="#i-menu"/></svg></span>
+            </div>
+          </div>
+          <div class="navinset"><span></span></div>
+        </div>
+      </div>
+
+      <!-- B · Omnibox editing state -->
+      <div class="rail-item">
+        <div class="rail-cap"><span class="n">03</span><span class="t">Omnibox · editing</span></div>
+        <div class="frame">
+          <div class="sysbar"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+          <div class="screen">
+            <div class="b-top">
+              <div class="b-omni">
+                <span class="b-ident" style="border-color:var(--f-primary);border-width:2px;background:var(--f-bg)">
+                  <svg class="icon icon--sm" style="color:var(--f-muted);flex:0 0 auto"><use href="#i-search"/></svg>
+                  <span style="flex:1 1 auto;font-size:13px">denrzv.github.io/cata<span style="border-left:1.5px solid var(--f-primary);margin-left:1px"></span></span>
+                </span>
+                <span class="b-tap"><svg class="icon"><use href="#i-close"/></svg></span>
+              </div>
+              <div style="padding:0 12px 9px;display:flex;align-items:center;gap:7px;background:var(--f-chrome)">
+                <svg class="icon icon--sm" style="color:#146C43"><use href="#i-lock"/></svg>
+                <span class="sec" style="font-size:11px">Secure · denrzv.github.io</span>
+              </div>
+            </div>
+            <div class="scroll" style="background:var(--f-bg)">
+              <div style="padding:6px 0">
+                <div style="padding:11px 16px;display:flex;align-items:center;gap:11px">
+                  <svg class="icon icon--sm" style="color:var(--f-muted)"><use href="#i-search"/></svg>
+                  <span style="font-size:13px">denrzv.github.io/catalog</span>
+                </div>
+                <div style="padding:11px 16px;display:flex;align-items:center;gap:11px">
+                  <svg class="icon icon--sm" style="color:var(--f-muted)"><use href="#i-search"/></svg>
+                  <span style="font-size:13px;color:var(--f-muted)">catalogue flowers</span>
+                </div>
+              </div>
+            </div>
+            <div class="b-bottom">
+              <span class="slot"><svg class="icon"><use href="#i-back"/></svg></span>
+              <span class="slot off"><svg class="icon"><use href="#i-fwd"/></svg></span>
+              <span class="slot"><svg class="icon"><use href="#i-home"/></svg></span>
+              <span class="slot"><svg class="icon"><use href="#i-search"/></svg></span>
+              <span class="slot"><svg class="icon"><use href="#i-menu"/></svg></span>
+            </div>
+          </div>
+          <div class="navinset"><span></span></div>
+        </div>
+      </div>
+
+      <!-- B · Home -->
+      <div class="rail-item">
+        <div class="rail-cap"><span class="n">04</span><span class="t">Home</span></div>
+        <div class="frame">
+          <div class="sysbar"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+          <div class="screen">
+            <div class="mk-pad" style="display:flex;flex-direction:column;gap:16px;overflow:hidden">
+              <div class="mk-title" style="font-size:22px;padding-top:6px">Webora</div>
+              <div class="b-ident" style="height:44px;border-radius:10px">
+                <svg class="icon icon--sm" style="color:var(--f-muted)"><use href="#i-search"/></svg>
+                <span style="font-size:13px;color:var(--f-muted)">Search or enter address</span>
+              </div>
+              <div class="stack-s">
+                <div class="mk-h" style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--f-muted)">Recent sites</div>
+                <div class="mk-sub">Sites you visit will appear here.</div>
+              </div>
+              <div class="mk-divider"></div>
+              <div class="stack-s">
+                <div class="mk-h" style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--f-muted)">Favourites</div>
+                <div class="mk-sub">Your saved sites will appear here.</div>
+              </div>
+              <div class="mk-divider"></div>
+              <div class="stack-s">
+                <div class="mk-h" style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--f-muted)">Suggested integrations</div>
+                <div class="mk-row">
+                  <div style="display:flex;align-items:center;gap:11px">
+                    <span style="width:32px;height:32px;border-radius:8px;background:#D94F8A;color:#fff;display:grid;place-items:center;font-weight:700;font-size:14px">B</span>
+                    <div>
+                      <div style="font-size:14px;font-weight:600">Bloom Flowers</div>
+                      <div class="mk-sub">Fresh flowers delivered today</div>
+                    </div>
+                  </div>
+                  <svg class="icon icon--sm" style="color:var(--f-muted);flex:0 0 auto"><use href="#i-fwd"/></svg>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="b-bottom">
+            <span class="slot off"><svg class="icon"><use href="#i-back"/></svg></span>
+            <span class="slot off"><svg class="icon"><use href="#i-fwd"/></svg></span>
+            <span class="slot"><svg class="icon"><use href="#i-home"/></svg></span>
+            <span class="slot"><svg class="icon"><use href="#i-search"/></svg></span>
+            <span class="slot"><svg class="icon"><use href="#i-menu"/></svg></span>
+          </div>
+          <div class="navinset"><span></span></div>
+        </div>
+      </div>
+
+      <!-- B · Error -->
+      <div class="rail-item">
+        <div class="rail-cap"><span class="n">05</span><span class="t">Load failure</span></div>
+        <div class="frame">
+          <div class="sysbar"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+          <div class="screen">
+            <div class="b-top">
+              <div class="b-omni">
+                <span class="b-ident">
+                  <svg class="icon icon--sm" style="color:var(--f-muted);flex:0 0 auto"><use href="#i-warn"/></svg>
+                  <span class="sec" style="flex:0 0 auto">denrzv.github.io</span>
+                </span>
+                <span class="b-tap"><svg class="icon"><use href="#i-reload"/></svg></span>
+                <span class="b-tap"><svg class="icon"><use href="#i-more"/></svg></span>
+              </div>
+            </div>
+            <div class="scroll" style="padding:40px 24px">
+              <div style="display:flex;flex-direction:column;gap:12px">
+                <svg class="icon" style="width:34px;height:34px;color:var(--f-muted)"><use href="#i-warn"/></svg>
+                <div class="mk-title" style="font-size:19px">This page could not be loaded</div>
+                <div style="font-size:13px;font-weight:600">denrzv.github.io</div>
+                <div class="mk-sub">Check your connection and try again.</div>
+                <div style="display:flex;gap:10px;padding-top:8px">
+                  <span class="mk-btn">Retry</span>
+                  <span class="mk-btn mk-btn--quiet">Home</span>
+                </div>
+              </div>
+            </div>
+            <div class="b-bottom">
+              <span class="slot"><svg class="icon"><use href="#i-back"/></svg></span>
+              <span class="slot off"><svg class="icon"><use href="#i-fwd"/></svg></span>
+              <span class="slot"><svg class="icon"><use href="#i-home"/></svg></span>
+              <span class="slot"><svg class="icon"><use href="#i-search"/></svg></span>
+              <span class="slot"><svg class="icon"><use href="#i-menu"/></svg></span>
+            </div>
+          </div>
+          <div class="navinset"><span></span></div>
+        </div>
+      </div>
+
+      <!-- B · Settings -->
+      <div class="rail-item">
+        <div class="rail-cap"><span class="n">06</span><span class="t">Privacy settings</span></div>
+        <div class="frame">
+          <div class="sysbar"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+          <div class="screen">
+            <div style="height:52px;display:flex;align-items:center;gap:12px;padding:0 12px;background:var(--f-chrome);border-bottom:1px solid var(--f-outline)">
+              <span class="b-tap"><svg class="icon"><use href="#i-back"/></svg></span>
+              <span style="font-size:16px;font-weight:650">Privacy settings</span>
+            </div>
+            <div class="scroll">
+              <div class="mk-row" style="padding:10px 16px">
+                <div>
+                  <div style="font-size:14px;font-weight:600">Allow SiteSkin customisation</div>
+                  <div class="mk-sub">On</div>
+                </div>
+                <span class="mk-switch"></span>
+              </div>
+              <div class="mk-divider"></div>
+              <div style="padding:14px 16px 6px" class="mk-h">Site permissions</div>
+              <div class="mk-row" style="padding:6px 16px">
+                <div style="min-width:0">
+                  <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">https://denrzv.github.io</div>
+                  <div class="mk-sub">Allowed</div>
+                </div>
+                <span style="font-size:13px;font-weight:600;color:var(--f-primary);flex:0 0 auto">Reset</span>
+              </div>
+              <div class="mk-divider"></div>
+              <div class="mk-row" style="padding:6px 16px">
+                <div style="font-size:14px;font-weight:600">Clear browsing data</div>
+                <svg class="icon icon--sm" style="color:var(--f-muted)"><use href="#i-fwd"/></svg>
+              </div>
+            </div>
+          </div>
+          <div class="navinset"><span></span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="spec">
+      <div class="panel">
+        <p class="eyebrow">Palette · light</p>
+        <div class="swatches">
+          <div class="sw"><i style="background:#1552C4"></i><span class="nm">Action</span><span class="hx">#1552C4</span></div>
+          <div class="sw"><i style="background:#F1F3F5"></i><span class="nm">Chrome surface</span><span class="hx">#F1F3F5</span></div>
+          <div class="sw"><i style="background:#FFFFFF"></i><span class="nm">Ground</span><span class="hx">#FFFFFF</span></div>
+          <div class="sw"><i style="background:#D5D9DF"></i><span class="nm">Hairline</span><span class="hx">#D5D9DF</span></div>
+          <div class="sw"><i style="background:#146C43"></i><span class="nm">TLS secure</span><span class="hx">#146C43</span></div>
+          <div class="sw"><i style="background:#8AB4F8"></i><span class="nm">Action · dark</span><span class="hx">#8AB4F8</span></div>
+        </div>
+        <p class="note">Near-monochrome by design: colour is reserved for the one action per screen and for the TLS state, which is also carried by a lock glyph and the word “Secure” so no meaning rests on hue alone.</p>
+      </div>
+
+      <div class="panel">
+        <p class="eyebrow">Geometry &amp; type</p>
+        <dl class="kv">
+          <dt>Radius</dt><dd>8 dp controls · 10 dp cards</dd>
+          <dt>Spacing</dt><dd>4 dp base · 16 dp gutter</dd>
+          <dt>Chrome</dt><dd>48 dp omnibox + 52 dp toolbar</dd>
+          <dt>Type</dt><dd>22 / 16 / 14 / 13 / 12 · Roboto</dd>
+          <dt>Icons</dt><dd>8 · 20 dp stroke 1.9</dd>
+          <dt>Elevation</dt><dd>1 dp hairlines only</dd>
+        </dl>
+      </div>
+
+      <div class="callout">
+        <p class="eyebrow">C1 · Security identity — read this one</p>
+        <p>
+          <strong>Two states, and the second one is mandatory.</strong> In <em>display</em> state the
+          omnibox is not a text field at all: it renders <code>securityPresentation(state.mode)</code>
+          as non-editable browser-owned text, with the path in a dimmer weight. Tapping it swaps to
+          <em>edit</em> state — the real editable field — and the identity moves to a separate row
+          beneath it (frame&nbsp;03), so an editable value and an identity claim are never the same
+          pixels.
+        </p>
+        <p class="note">
+          If that second state is dropped for simplicity, this direction violates ADR-006. It is the
+          single most important thing to hold onto if B is chosen.
+        </p>
+      </div>
+
+      <div class="panel">
+        <p class="eyebrow">Verdict</p>
+        <div class="verdict">
+          <div class="line"><span>Strength</span><span>Most page area of the three; zero learning cost; densest at 200% font scale.</span></div>
+          <div class="line"><span>Cost</span><span>Webora looks like every other browser — no identity of its own.</span></div>
+          <div class="line"><span>Effort</span><span>Highest. The two-state omnibox is real interaction work plus its own tests.</span></div>
+          <div class="line"><span>Risk</span><span>Highest C1 exposure. Also the only direction whose look is hard to distinguish in a demo.</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════ DIRECTION C ══════════════════════════ -->
+  <section class="band dir-c">
+    <div class="band-head">
+      <div class="band-mark">C</div>
+      <div class="band-title">
+        <p class="kicker">Webora identity · the security argument, made visible</p>
+        <h2>The instrument frame</h2>
+        <p class="lede">
+          One idea, carried everywhere: <b>the browser's frame is always the browser's.</b> The
+          identity bar is the same graphite in light mode and in dark mode, and it never takes a
+          colour from anything — so the boundary between what Webora says and what the site says is
+          a thing you can see rather than a thing you have to read about. The product's central
+          contract, rendered as chrome.
+        </p>
+      </div>
+    </div>
+
+    <div class="rail">
+      <!-- C · Browsing -->
+      <div class="rail-item">
+        <div class="rail-cap"><span class="n">01</span><span class="t">Browsing</span></div>
+        <div class="frame">
+          <div class="sysbar"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+          <div class="screen">
+            <div class="c-top">
+              <div class="c-idrow">
+                <span class="c-mark">W</span>
+                <svg class="icon icon--sm tls" style="color:#7EE0A6;flex:0 0 auto"><use href="#i-lock"/></svg>
+                <span class="sec" style="font-size:12px">Secure · denrzv.github.io</span>
+              </div>
+              <div class="c-field">
+                <svg class="icon icon--sm"><use href="#i-search"/></svg>
+                <span style="flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">denrzv.github.io/catalog</span>
+                <svg class="icon icon--sm"><use href="#i-more"/></svg>
+              </div>
+            </div>
+            <div class="mk-progress"></div>
+            <div class="scroll">
+              <div class="web">
+                <div class="web-hero"><h5>Bloom Flowers</h5><p>Fresh flowers delivered today</p></div>
+                <div class="web-body">
+                  <h6>Best sellers</h6>
+                  <div class="web-grid">
+                    <div class="web-card"><div class="web-thumb"></div><p><b>Spring Bouquet</b><em>£28</em></p></div>
+                    <div class="web-card"><div class="web-thumb"></div><p><b>Peony Bundle</b><em>£34</em></p></div>
+                  </div>
+                  <div class="web-line w70"></div>
+                  <div class="web-line w45"></div>
+                </div>
+              </div>
+            </div>
+            <div class="c-dock">
+              <div class="c-dockbar">
+                <span class="slot"><svg class="icon"><use href="#i-back"/></svg></span>
+                <span class="slot off"><svg class="icon"><use href="#i-fwd"/></svg></span>
+                <span class="slot on"><svg class="icon"><use href="#i-reload"/></svg></span>
+                <span class="slot"><svg class="icon"><use href="#i-home"/></svg></span>
+                <span class="slot"><svg class="icon"><use href="#i-menu"/></svg></span>
+              </div>
+            </div>
+          </div>
+          <div class="navinset"><span></span></div>
+        </div>
+      </div>
+
+      <!-- C · Browsing dark -->
+      <div class="rail-item">
+        <div class="rail-cap"><span class="n">02</span><span class="t">Browsing · dark — identical chrome</span></div>
+        <div class="frame frame--dark">
+          <div class="sysbar"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+          <div class="screen">
+            <div class="c-top">
+              <div class="c-idrow">
+                <span class="c-mark">W</span>
+                <svg class="icon icon--sm" style="color:#7EE0A6;flex:0 0 auto"><use href="#i-lock"/></svg>
+                <span class="sec" style="font-size:12px">Secure · denrzv.github.io</span>
+              </div>
+              <div class="c-field">
+                <svg class="icon icon--sm"><use href="#i-search"/></svg>
+                <span style="flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">denrzv.github.io/catalog</span>
+                <svg class="icon icon--sm"><use href="#i-more"/></svg>
+              </div>
+            </div>
+            <div class="mk-progress"></div>
+            <div class="scroll">
+              <div class="web" style="background:#1A1418;color:#EDE4E8">
+                <div class="web-hero"><h5>Bloom Flowers</h5><p>Fresh flowers delivered today</p></div>
+                <div class="web-body">
+                  <h6 style="color:#F3A8C9">Best sellers</h6>
+                  <div class="web-grid">
+                    <div class="web-card" style="border-color:#3A2530"><div class="web-thumb" style="background:linear-gradient(150deg,#4A2A3A,#7A3D59)"></div><p><b>Spring Bouquet</b><em style="color:#F3A8C9">£28</em></p></div>
+                    <div class="web-card" style="border-color:#3A2530"><div class="web-thumb" style="background:linear-gradient(150deg,#4A2A3A,#7A3D59)"></div><p><b>Peony Bundle</b><em style="color:#F3A8C9">£34</em></p></div>
+                  </div>
+                  <div class="web-line w70" style="background:#2C2126"></div>
+                  <div class="web-line w45" style="background:#2C2126"></div>
+                </div>
+              </div>
+            </div>
+            <div class="c-dock">
+              <div class="c-dockbar">
+                <span class="slot"><svg class="icon"><use href="#i-back"/></svg></span>
+                <span class="slot off"><svg class="icon"><use href="#i-fwd"/></svg></span>
+                <span class="slot on"><svg class="icon"><use href="#i-reload"/></svg></span>
+                <span class="slot"><svg class="icon"><use href="#i-home"/></svg></span>
+                <span class="slot"><svg class="icon"><use href="#i-menu"/></svg></span>
+              </div>
+            </div>
+          </div>
+          <div class="navinset"><span></span></div>
+        </div>
+      </div>
+
+      <!-- C · Home -->
+      <div class="rail-item">
+        <div class="rail-cap"><span class="n">03</span><span class="t">Home</span></div>
+        <div class="frame">
+          <div class="sysbar"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+          <div class="screen">
+            <div class="c-top" style="padding-bottom:20px">
+              <div class="c-idrow" style="padding-top:6px">
+                <span class="c-mark" style="width:26px;height:26px;font-size:13px">W</span>
+                <span style="font-size:18px;font-weight:700;letter-spacing:-.02em">Webora</span>
+              </div>
+              <div class="c-field" style="height:46px">
+                <svg class="icon icon--sm"><use href="#i-search"/></svg>
+                <span style="flex:1 1 auto">Search or enter address</span>
+              </div>
+            </div>
+            <div class="scroll" style="padding:18px 20px;display:flex;flex-direction:column;gap:18px">
+              <div class="stack-s">
+                <div class="mk-h">Recent sites</div>
+                <div class="mk-sub">Sites you visit will appear here.</div>
+              </div>
+              <div class="stack-s">
+                <div class="mk-h">Favourites</div>
+                <div class="mk-sub">Your saved sites will appear here.</div>
+              </div>
+              <div class="stack-s">
+                <div class="mk-h">Suggested integrations</div>
+                <div class="mk-card" style="display:flex;align-items:center;gap:12px;padding:12px">
+                  <span style="width:40px;height:40px;border-radius:12px;background:#D94F8A;color:#fff;display:grid;place-items:center;font-weight:700;font-size:16px;flex:0 0 auto">B</span>
+                  <div style="flex:1 1 auto;min-width:0">
+                    <div style="font-size:15px;font-weight:650">Bloom Flowers</div>
+                    <div class="mk-sub">Fresh flowers delivered today</div>
+                  </div>
+                  <span class="mk-btn" style="height:36px;padding:0 14px;font-size:12px;flex:0 0 auto">Open</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="navinset"><span></span></div>
+        </div>
+      </div>
+
+      <!-- C · Error -->
+      <div class="rail-item">
+        <div class="rail-cap"><span class="n">04</span><span class="t">Load failure</span></div>
+        <div class="frame">
+          <div class="sysbar"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+          <div class="screen">
+            <div class="c-top">
+              <div class="c-idrow">
+                <span class="c-mark">W</span>
+                <svg class="icon icon--sm" style="color:#F0C36A;flex:0 0 auto"><use href="#i-warn"/></svg>
+                <span class="sec" style="font-size:12px">Not secure · denrzv.github.io</span>
+              </div>
+              <div class="c-field">
+                <svg class="icon icon--sm"><use href="#i-search"/></svg>
+                <span style="flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">denrzv.github.io/catalog</span>
+                <svg class="icon icon--sm"><use href="#i-more"/></svg>
+              </div>
+            </div>
+            <div class="scroll" style="padding:36px 24px">
+              <div style="display:flex;flex-direction:column;gap:14px">
+                <span style="width:52px;height:52px;border-radius:14px;background:var(--f-container);color:var(--f-on-container);display:grid;place-items:center">
+                  <svg class="icon" style="width:26px;height:26px"><use href="#i-warn"/></svg>
+                </span>
+                <div class="mk-title" style="font-size:21px">This page could not be loaded</div>
+                <div style="font-size:13px;font-weight:700;letter-spacing:.01em">denrzv.github.io</div>
+                <div class="mk-sub">Check your connection and try again.</div>
+                <div style="display:flex;gap:10px;padding-top:10px">
+                  <span class="mk-btn">Retry</span>
+                  <span class="mk-btn mk-btn--quiet">Home</span>
+                </div>
+              </div>
+            </div>
+            <div class="c-dock">
+              <div class="c-dockbar">
+                <span class="slot"><svg class="icon"><use href="#i-back"/></svg></span>
+                <span class="slot off"><svg class="icon"><use href="#i-fwd"/></svg></span>
+                <span class="slot on"><svg class="icon"><use href="#i-reload"/></svg></span>
+                <span class="slot"><svg class="icon"><use href="#i-home"/></svg></span>
+                <span class="slot"><svg class="icon"><use href="#i-menu"/></svg></span>
+              </div>
+            </div>
+          </div>
+          <div class="navinset"><span></span></div>
+        </div>
+      </div>
+
+      <!-- C · Settings -->
+      <div class="rail-item">
+        <div class="rail-cap"><span class="n">05</span><span class="t">Privacy settings</span></div>
+        <div class="frame">
+          <div class="sysbar"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+          <div class="screen">
+            <div class="c-top" style="padding-bottom:18px">
+              <div class="c-idrow">
+                <svg class="icon" style="flex:0 0 auto"><use href="#i-close"/></svg>
+                <span style="font-size:17px;font-weight:700;letter-spacing:-.02em">Privacy settings</span>
+              </div>
+            </div>
+            <div class="scroll" style="padding:18px 20px;display:flex;flex-direction:column;gap:16px">
+              <div class="mk-card">
+                <div class="mk-row" style="min-height:auto">
+                  <div>
+                    <div style="font-size:14px;font-weight:650">Allow SiteSkin customisation</div>
+                    <div class="mk-sub">On</div>
+                  </div>
+                  <span class="mk-switch"></span>
+                </div>
+              </div>
+              <div class="stack-s">
+                <div class="mk-h">Site permissions</div>
+                <div class="mk-card" style="padding:12px 14px">
+                  <div class="mk-row" style="min-height:auto">
+                    <div style="min-width:0">
+                      <div style="font-size:13px;font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">https://denrzv.github.io</div>
+                      <div class="mk-sub">Allowed</div>
+                    </div>
+                    <span style="font-size:13px;font-weight:700;color:var(--f-primary);flex:0 0 auto">Reset</span>
+                  </div>
+                </div>
+              </div>
+              <span class="mk-btn mk-btn--quiet" style="align-self:flex-start">Clear browsing data</span>
+            </div>
+          </div>
+          <div class="navinset"><span></span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="spec">
+      <div class="panel">
+        <p class="eyebrow">Palette · light &amp; dark</p>
+        <div class="swatches">
+          <div class="sw"><i style="background:#1C1F26"></i><span class="nm">Frame — both themes</span><span class="hx">#1C1F26</span></div>
+          <div class="sw"><i style="background:#C63F20"></i><span class="nm">Action</span><span class="hx">#C63F20</span></div>
+          <div class="sw"><i style="background:#F6F4F1"></i><span class="nm">Ground · light</span><span class="hx">#F6F4F1</span></div>
+          <div class="sw"><i style="background:#12141A"></i><span class="nm">Ground · dark</span><span class="hx">#12141A</span></div>
+          <div class="sw"><i style="background:#7EE0A6"></i><span class="nm">TLS secure</span><span class="hx">#7EE0A6</span></div>
+          <div class="sw"><i style="background:#FF7A5C"></i><span class="nm">Action · dark</span><span class="hx">#FF7A5C</span></div>
+        </div>
+        <p class="note">The frame colour appears once and never changes. That is the direction — a token that is deliberately not part of the light/dark pair, because the thing it identifies does not change either.</p>
+      </div>
+
+      <div class="panel">
+        <p class="eyebrow">Geometry &amp; type</p>
+        <dl class="kv">
+          <dt>Radius</dt><dd>12 dp controls · 14 dp cards · 16 dp dock</dd>
+          <dt>Spacing</dt><dd>4 dp base · 20 dp gutter</dd>
+          <dt>Chrome</dt><dd>72 dp identity block + 56 dp detached dock</dd>
+          <dt>Type</dt><dd>21 / 17 / 15 / 13 / 12 · Roboto, tight display tracking</dd>
+          <dt>Icons</dt><dd>8 · 20 dp stroke 1.9</dd>
+          <dt>Elevation</dt><dd>One shadow, on the dock only</dd>
+        </dl>
+      </div>
+
+      <div class="callout">
+        <p class="eyebrow">C1 · Security identity</p>
+        <p>
+          <strong>The identity is the frame.</strong> Domain and TLS sit on graphite that no page,
+          manifest or theme setting can tint, above a visually subordinate address field. Compare
+          frames 01 and 02: the page inverts, the frame does not. That makes an impersonating
+          manifest structurally unable to produce a screen where its own colours surround the
+          identity claim.
+        </p>
+        <p class="note">Also the direction that reads best in the SiteSkin demo, since the branded site and the unbranded frame stay visibly separate.</p>
+      </div>
+
+      <div class="panel">
+        <p class="eyebrow">Verdict</p>
+        <div class="verdict">
+          <div class="line"><span>Strength</span><span>Webora gets an identity, and it is the same argument as the product's security thesis.</span></div>
+          <div class="line"><span>Cost</span><span>An always-dark bar is a strong opinion; some users will read it as heavy in light mode.</span></div>
+          <div class="line"><span>Effort</span><span>Medium. One extra token concept — a colour outside the light/dark pair.</span></div>
+          <div class="line"><span>Risk</span><span>Contrast must be checked once against the fixed frame rather than per theme, which is simpler, not harder.</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════ COMPARISON ══════════════════════════ -->
+  <section class="section" style="padding-top:72px">
+    <div class="section-head">
+      <p class="eyebrow">Side by side</p>
+      <h3>What you are actually trading</h3>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Criterion</th>
+            <th scope="col">A · Soft instrument</th>
+            <th scope="col">B · Get out of the way</th>
+            <th scope="col">C · Instrument frame</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">C1 mechanism</th>
+            <td>Identity chip, separate element</td>
+            <td>Two-state omnibox — display vs edit</td>
+            <td>Identity lives on an untintable frame</td>
+          </tr>
+          <tr>
+            <th scope="row">C1 risk if rushed</th>
+            <td><span class="tick">low</span></td>
+            <td><span class="warnmark">high</span> — dropping the edit state breaks ADR-006</td>
+            <td><span class="tick">low</span></td>
+          </tr>
+          <tr>
+            <th scope="row">Chrome height</th>
+            <td>~140 dp</td>
+            <td>~100 dp</td>
+            <td>~128 dp</td>
+          </tr>
+          <tr>
+            <th scope="row">Dark theme</th>
+            <td>Full tonal re-derivation</td>
+            <td>Full re-derivation</td>
+            <td>Ground only — frame is fixed</td>
+          </tr>
+          <tr>
+            <th scope="row">Distinct in a demo</th>
+            <td>Somewhat — reads as a modern Android app</td>
+            <td><span class="warnmark">no</span> — reads as Chrome</td>
+            <td><span class="tick">yes</span></td>
+          </tr>
+          <tr>
+            <th scope="row">Supports the SiteSkin pitch</th>
+            <td>Neutral</td>
+            <td>Neutral</td>
+            <td><span class="tick">directly</span> — the frame is the argument</td>
+          </tr>
+          <tr>
+            <th scope="row">New icons needed</th>
+            <td>8</td>
+            <td>8</td>
+            <td>8</td>
+          </tr>
+          <tr>
+            <th scope="row">Implementation effort</th>
+            <td>Medium</td>
+            <td>High — interaction states and their tests</td>
+            <td>Medium</td>
+          </tr>
+          <tr>
+            <th scope="row">Familiarity to users</th>
+            <td>High</td>
+            <td><span class="tick">highest</span></td>
+            <td>Medium — new, but conventional controls</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="next">
+    <div class="col stack">
+      <p class="eyebrow">What happens after you pick</p>
+      <h3>Choosing is <code>UX-001</code>'s only deliverable</h3>
+      <ol>
+        <li><b>Name a direction</b>, and any amendments to it — “C, but the frame lightens on Home” is a valid answer and belongs in the record.</li>
+        <li><b><code>ADR-013</code> is written</b> from that choice: the browser-owned token layer, and why the browser's palette is compiled rather than derived from anything remote.</li>
+        <li><b><code>UX-002</code> builds <code>WeboraTheme</code></b> — colour, type, shape, spacing, plus the eight vector drawables and the <code>WeboraIconButton</code> wrapper that <code>C3</code> requires.</li>
+        <li><b><code>UX-003</code> and <code>UX-004</code></b> rebuild the chrome, then Home, onboarding and settings against those tokens.</li>
+      </ol>
+      <p class="note">
+        SiteSkin's integrated chrome is untouched by all of this and keeps its placeholder glyphs —
+        parked as <code>UX-005</code>. Worth knowing before a demo: the Bloom Flowers screen is the
+        one screen M6 does not improve.
+      </p>
+    </div>
+  </section>
+
+</div>

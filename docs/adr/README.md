@@ -22,6 +22,7 @@ re-arguing.
 | 010 | Invalid integration always falls back to regular mode | ACCEPTED |
 | [011](ADR-011-first-use-consent.md) | **First-use consent before activation** | ACCEPTED |
 | 012 | Signed manifests deferred past MVP | ACCEPTED |
+| 013 | Browser-owned design tokens, compiled and never derived | PROPOSED — `UX-001` |
 
 ---
 
@@ -96,6 +97,17 @@ Every failure path — malformed JSON, unsupported version, invalid colours, uns
 timeout, offline — ends in regular browser mode with the page still rendering. SiteSkin is an
 enhancement layer; its failure is never the user's problem. Diagnostics go to the developer
 inspector (`DEVX-001`), not to a user-facing error.
+
+## ADR-013 — Browser-owned design tokens *(proposed, `UX-001`)*
+
+Reserved, not yet decided. `M6` gives the browser the token layer it never had, and this ADR records
+the choice of direction plus the rule that survives whichever direction wins: Webora's palette,
+typography and shape scale are **compiled into the app**, with no path from a manifest value into
+them. `SiteSkinColorScheme` remains the entire website-influenceable colour surface.
+
+Written under `UX-001` from the directions in `docs/design/directions/`. Promote to its own file if
+the reasoning needs re-arguing — the security half of it (a direction can fail `ADR-006` by placing
+the domain inside the editable address field) probably will.
 
 ## ADR-012 — Signed manifests deferred
 
