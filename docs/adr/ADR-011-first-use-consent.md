@@ -52,3 +52,22 @@ restyled chrome and has no reason to connect it to the site.
 **Ask once globally rather than per site.** A single "allow site customisation" grant is not
 meaningfully informed consent, and it discards the per-origin boundary the rest of the design is
 built on.
+
+## Amendment — attributed manifest preview
+
+The consent sheet now shows an explicitly attributed preview of the validated manifest: its bounded
+title and optional subtitle, an optional contrast-guarded brand-colour swatch, and bounded counts of
+navigation tabs, quick actions and menu items. Browser-authored explanation and site-authored text
+remain separate nodes. The canonical origin remains in the browser-authored heading, so a manifest
+cannot blend its brand claim into Webora's identity statement.
+
+The preview is produced only by `SiteSkinConsentModel.from`, with every remote string and collection
+bounded by `SiteSkinLimits`. It excludes the logo because previewing it would make refusal cost the
+user another request to the site; it excludes the home URL and action payloads because the sheet
+describes rather than navigates; and it excludes item labels because a stack of attacker-chosen
+labels above Allow would become a site-authored message rather than a neutral capability summary.
+
+It is a violation of this decision to concatenate manifest text into browser copy, replace the
+canonical origin with a manifest claim, expose unbounded remote content, fetch a preview-only asset,
+or let the preview invoke any site action. The earlier consequence allowing "optionally, the site
+name" is therefore closed: only the attributed projection above may cross into the sheet.

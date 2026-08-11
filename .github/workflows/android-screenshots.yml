@@ -1,0 +1,99 @@
+name: Android screenshots
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-screenshots
+  cancel-in-progress: true
+
+jobs:
+  live-site:
+    name: Bloom Flowers on Pixel 6 API 33
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      - name: Initialize diagnostic artifact
+        run: |
+          mkdir -p artifacts/screenshots
+          printf 'commit=%s\nrun_id=%s\n' "$GITHUB_SHA" "$GITHUB_RUN_ID" \
+            > artifacts/run.txt
+
+      - name: Enable KVM access
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run live SiteSkin screenshot journey
+        uses: ReactiveCircus/android-emulator-runner@1dcd0090116d15e7c562f8db72807de5e036a4ed # v2.34.0
+        with:
+          api-level: 33
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-options: >-
+            -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+            -camera-back none
+          script: |
+            set +e
+            ./gradlew :app:connectedDebugAndroidTest \
+              -Pandroid.testInstrumentationRunnerArguments.class=app.webora.browser.visual.LiveSiteScreenshotTest \
+              2>&1 | tee artifacts/instrumentation.txt
+            test_status=${PIPESTATUS[0]}
+            adb logcat -d > artifacts/logcat.txt
+            adb pull \
+              /sdcard/Android/data/app.webora.browser.debug/files/screenshots/. \
+              artifacts/screenshots/ || true
+            png_count=$(find artifacts/screenshots -maxdepth 1 -type f -name '*.png' | wc -l)
+            printf 'test_status=%s\npng_count=%s\n' "$test_status" "$png_count" \
+              | tee artifacts/result.txt
+            if [[ "$png_count" -eq 0 ]]; then
+              echo "No screenshots were produced" >&2
+              exit 1
+            fi
+            exit "$test_status"
+
+      - name: Upload screenshots and diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: webora-screenshots-api33-${{ github.sha }}
+          path: |
+            artifacts/
+            app/build/outputs/androidTest-results/
+            app/build/reports/androidTests/
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Summarize the evidence
+        if: always()
+        run: |
+          {
+            echo '## Webora live-site screenshots'
+            echo
+            echo "Origin: \`https://denrzv.github.io\`"
+            echo 'Device: Pixel 6 profile, Android API 33'
+            echo "Download the \`webora-screenshots-api33-*\` artifact from this run."
+            echo
+            if [[ -f artifacts/result.txt ]]; then
+              echo '```text'
+              cat artifacts/result.txt
+              echo '```'
+            else
+              echo 'The emulator step ended before it could write a result summary.'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

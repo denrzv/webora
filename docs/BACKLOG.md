@@ -224,6 +224,11 @@ palette is compiled rather than derived from anything remote. Acceptance: every 
 `C1` mechanism concrete enough to implement; the selection and its amendments are recorded in
 `docs/adr/ADR-013-browser-owned-design-tokens.md`; `bash scripts/pre-commit-check.sh` passes.
 
+**`UX-006` Attributed SiteSkin preview in first-use consent.** Project the trusted configuration
+through one bounded app-layer model, then show its title, optional subtitle and guarded brand colour
+plus bounded surface counts without moving the canonical origin out of browser-authored copy. This
+is consent-boundary work, distinct from deferred `UX-005`'s integrated chrome and icon-set redesign.
+
 > The candidate set already exists at `docs/design/directions/index.html`, written ahead of the
 > ticket because it lives under `docs/` and is therefore outside the workflow gate — and because a
 > milestone about the product's appearance should not be scoped in prose. It is `UX-001`'s input,
