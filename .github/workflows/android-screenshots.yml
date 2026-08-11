@@ -38,8 +38,10 @@ jobs:
           sudo udevadm trigger --name-match=kvm
 
       # ubuntu-latest currently ships several Android system images plus NDK/CMake.
-      # This job is JVM-only and android-emulator-runner installs the exact API 33
-      # image it needs, so remove the unused preinstalled payload before provisioning.
+      # The failed run had only 5.6 GiB free while Emulator 37.1.11 required 7.2+ GiB
+      # to create Pixel 6 userdata. This project has no native build, and the runner
+      # installs the exact API 33 system image below, so these preinstalled SDK payloads
+      # are disposable in this isolated screenshot job.
       - name: Free disk space for Android emulator
         run: |
           echo "=== Disk before Android SDK cleanup ==="
