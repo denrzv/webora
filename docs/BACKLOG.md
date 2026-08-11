@@ -197,10 +197,92 @@ absent from the release variants by construction.
 
 ---
 
+## M6 — Design refresh
+
+Opened after the `DIST-001` debug APK was run on an emulator. The finding that justifies a milestone
+rather than a cleanup ticket is in [`design/AUDIT.md`](design/AUDIT.md) §1.6: **a site that publishes
+a manifest gets a better-specified visual system than the browser rendering it.** `SiteSkinTheme`
+gives websites six colour roles, a dark projection and a WCAG guard; `MainActivity.kt:38` gives
+Webora a bare `MaterialTheme {}` and the default baseline purple.
+
+Scope is **browser-owned surfaces only** — chrome, Home, onboarding, errors, settings. SiteSkin
+integrated chrome is `UX-005`, descoped below.
+
+The audit's §3 lists seven constraints every ticket here inherits. Two are worth repeating because
+they are build-breaking rather than advisory: `BrowserSurfaceConventionsTest`'s `RAW_BUTTON_IMPORT`
+bans **any** `androidx.compose.material3.\w*Button` import outside the file declaring
+`fun WeboraButton(`, so a `WeboraIconButton` must land in `BrowserAccessibility.kt` and nowhere
+else; and `NAMED_LITERAL` bans a hard-coded `contentDescription`, so every icon-only control needs
+its `strings.xml` entry in the same commit that introduces it.
+
+**`UX-001` Design direction sketches and selection.** Three distinct directions rendered as 360 dp
+mockups of the four surfaces, light and dark, each annotated with its palette, geometry, icon budget
+and — the part that can eliminate a direction — its mechanism for keeping the registrable domain and
+TLS state browser-owned under `ADR-006`. Deliverable is a **decision**, not code: a named direction
+with its amendments, and `ADR-013` recording the browser-owned token layer and why the browser's
+palette is compiled rather than derived from anything remote. Acceptance: every direction states a
+`C1` mechanism concrete enough to implement; the selection and its amendments are recorded in
+`docs/adr/ADR-013-browser-owned-design-tokens.md`; `bash scripts/pre-commit-check.sh` passes.
+
+> The candidate set already exists at `docs/design/directions/index.html`, written ahead of the
+> ticket because it lives under `docs/` and is therefore outside the workflow gate — and because a
+> milestone about the product's appearance should not be scoped in prose. It is `UX-001`'s input,
+> not its conclusion.
+
+**`UX-002` Design system foundations.** `WeboraTheme` — a browser-owned token layer for colour
+(light and dark), typography, shape, spacing and elevation — replacing the bare `MaterialTheme {}`
+at `MainActivity.kt:38`. Roughly eight Material Symbols bundled as **vector drawables in
+`res/drawable`** rather than adding `material-icons-extended`, which is large and deprecated
+upstream; `res/` currently contains no `drawable/` directory at all. `WeboraIconButton` added
+beside the existing wrappers. `themes.xml` gains a `values-night` counterpart so the system bars
+follow the same setting the Compose palette does. Acceptance: no browser surface reads a Material
+default; `contrastRatio()` — lifted out of `SiteSkinTheme.kt:89` to somewhere both palettes reach —
+asserts every browser colour pair at 4.5:1 body and 3:1 non-text **in a JVM test**; a test proves no
+manifest value can reach a browser token, with a negative control; `bash scripts/pre-commit-check.sh`
+passes.
+
+> The `C2` invariant — browser tokens are not manifest-influenceable — is currently maintained only
+> by there being no browser palette at all. Creating one is exactly when it stops being free, which
+> is why the test lands in the same ticket as the palette rather than after it.
+
+**`UX-003` Browser-owned chrome rebuild.** The address bar, navigation controls, overflow menu,
+progress and status region, and the error page — `BrowserScreen.kt:493-534` and `:537`. The five
+filled text-labelled buttons in a `FlowRow` become the selected direction's control set.
+Acceptance: `BrowserSecurityIdentity` still derives from the committed `SiteOrigin` and still
+publishes `BROWSER_SECURITY_TAG`, with a negative control proving the test detects its removal; the
+persistent live region survives, still assertive on failure and polite on progress; every control
+is ≥ 48 dp at 200% font scale without truncating a load-bearing string;
+`bash scripts/pre-commit-check.sh` passes.
+
+**`UX-004` Home, onboarding and settings.** `HomeScreen`, `OnboardingScreen` and
+`PrivacySettingsScreen` against the `UX-002` tokens. The settings screen's bare
+`Text` + `Switch` pair (`PrivacySettingsScreen.kt:35-43`) becomes a list row, and the per-origin
+resets stop being full-width filled buttons whose label is an entire canonical origin — while
+keeping the origin *in* the accessible name, which is why it was put there. Acceptance: the
+`stateDescription` on the global toggle survives the restyle; the complete canonical origin remains
+readable per `HARDEN-002`; `docs/accessibility/CONFORMANCE.md` is updated for every surface that
+changed; `bash scripts/pre-commit-check.sh` passes.
+
+---
+
 ## Descoped
 
 Parked with their reasoning, not deleted — `SCOPE-001` records the decisions. Each entry keeps its
 original definition so reviving it does not start from nothing.
+
+**`UX-005` SiteSkin integrated chrome and icon set.** The top bar, bottom navigation, quick-action
+FAB and side menu, and replacing `SiteSkinChrome.kt:135`'s Unicode placeholder glyphs
+(`⌂ ▦ ▣ ● ☎`) with the real icon set `UX-002` introduces.
+- *Why not now:* the browser's own surfaces have no design system at all, while the integrated
+  chrome already has a real `NavigationBar`, a six-role theme projection and a contrast guard. The
+  surface with nothing goes first.
+- *What lapses:* the Bloom Flowers screen — **the headline screen of any demo** — keeps its
+  placeholder glyphs through M6. Worth stating plainly rather than discovering during a demo: the
+  surface being fixed first is not the surface most on show.
+- *What would revive it:* `UX-002` landing the vector-drawable icon set, which is the actual
+  dependency. Once eight real icons exist in `res/drawable`, `SiteSkinIcon`'s closed decorative
+  mapping is a small change — and it must stay closed, since the icon name is a manifest-supplied
+  value and an open mapping would hand a website an arbitrary glyph slot.
 
 **`DEMO-002` PixelPlay, Daily Journal, Example News.** Three more origins, the last deliberately
 without a manifest as the negative control. Acceptance was: all four served over HTTPS on **distinct

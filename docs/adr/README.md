@@ -22,6 +22,7 @@ re-arguing.
 | 010 | Invalid integration always falls back to regular mode | ACCEPTED |
 | [011](ADR-011-first-use-consent.md) | **First-use consent before activation** | ACCEPTED |
 | 012 | Signed manifests deferred past MVP | ACCEPTED |
+| 013 | [Browser-owned design tokens, compiled and never derived](ADR-013-browser-owned-design-tokens.md) | ACCEPTED — `UX-001` |
 
 ---
 
@@ -96,6 +97,26 @@ Every failure path — malformed JSON, unsupported version, invalid colours, uns
 timeout, offline — ends in regular browser mode with the page still rendering. SiteSkin is an
 enhancement layer; its failure is never the user's problem. Diagnostics go to the developer
 inspector (`DEVX-001`), not to a user-facing error.
+
+## ADR-013 — Browser-owned design tokens
+
+**Decided under `UX-001`, and promoted to its own file:
+[`ADR-013-browser-owned-design-tokens.md`](ADR-013-browser-owned-design-tokens.md).** The stub
+anticipated that the security half would need re-arguing, and it does — so it lives where it can be
+cited rather than summarised.
+
+The selection is **direction A, "Soft instrument"**, unamended: a tonal search pill, a floating dock,
+and the security identity in **its own tonal chip below the field**. B was selected first and
+reversed once both directions were rendered at 360 dp — the renders are kept beside the sketches as
+the evidence.
+
+The rule the stub reserved this ADR for survives unchanged: Webora's palette, typography and shape
+scale are **compiled into the app**, with no path from a manifest value into them, and
+`SiteSkinColorScheme` remains the entire website-influenceable colour surface.
+
+The condition of the selection, in one line: the identity chip is a **separate element from the
+address field**, and moving the domain into the field — or dropping the chip on focus — violates
+`ADR-006` however it looks.
 
 ## ADR-012 — Signed manifests deferred
 

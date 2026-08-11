@@ -55,6 +55,18 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 
 - [x] `DIST-001` Debug APK on a GitHub Release, with install instructions
 
+## M6 — Design refresh
+
+Browser-owned surfaces only. Opened after the `DIST-001` APK was run on an emulator: the browser
+gives *websites* a six-role colour system with a contrast guard and gives itself a bare
+`MaterialTheme {}`. Evidence in [`design/AUDIT.md`](design/AUDIT.md); the candidate directions are
+in [`design/directions/`](design/directions/index.html).
+
+- [x] `UX-001` Design direction sketches and selection — deliverable is a decision, plus `ADR-013`
+- [ ] `UX-002` Design system foundations — `WeboraTheme` tokens, icon set, dark theme
+- [ ] `UX-003` Browser-owned chrome rebuild — address bar, navigation controls, menu, error page
+- [ ] `UX-004` Home, onboarding and settings surfaces
+
 ## Descoped
 
 Not abandoned — parked, with the reasoning kept in [`BACKLOG.md`](BACKLOG.md) so reviving any of
@@ -63,6 +75,10 @@ them does not start from nothing. `SCOPE-001` records the decisions.
 - `DEMO-002` PixelPlay, Daily Journal, Example News — one demo is enough for now. The browser
   behaviour they would have demonstrated live (skin swap, skin drop on origin change) is implemented
   and unit-tested under `SKIN-004`; what lapses is the demonstration, not the capability.
+- `UX-005` SiteSkin integrated chrome and a real icon set — M6 fixes the browser's own surfaces
+  first, because those are the ones with no design system at all. The integrated chrome already has
+  a real `NavigationBar`, a theme projection and a contrast guard; what it lacks is the icon set,
+  and its Unicode placeholders (`⌂ ▦ ▣ ● ☎`) survive M6.
 - `PLAY-001` Compliance sweep · `PLAY-002` Release signing, R8 keeps, versioning ·
   `PLAY-003` Store listing, Data safety, internal testing track — distribution is an APK handed to
   friends, not a store listing. **`targetSdk 36` is not descoped**: it shipped in `FOUND-002` and is

@@ -225,6 +225,50 @@ the cross-origin skin-swap and skin-drop cases. The behaviour is implemented and
 + versioning · `PLAY-003` Store listing, Data safety form, internal testing track. Reasoning kept
 below and in `BACKLOG.md`.
 
+### M6 — Design refresh *(post-MVP; opened from emulator evidence)*
+`UX-001` Design direction sketches and selection, and `ADR-013` · `UX-002` `WeboraTheme` token
+layer, bundled vector icon set, dark theme · `UX-003` Browser-owned chrome rebuild — address bar,
+navigation controls, menu, error page · `UX-004` Home, onboarding and settings.
+
+*Deferred:* `UX-005` SiteSkin integrated chrome and its icon set. Scope, acceptance criteria and the
+deferral reasoning are in `BACKLOG.md`; the evidence is in `docs/design/AUDIT.md` and the candidate
+directions in `docs/design/directions/`.
+
+---
+
+## The design inversion — why M6 exists
+
+M6 was not in this plan and is not a cleanup ticket. It opened when the `DIST-001` debug APK was run
+on an emulator and the browser chrome was found to look unfinished next to the SiteSkin chrome it
+wraps. The reason is structural, and it is worth recording because it inverts the trust story this
+document spends most of its length arguing:
+
+> **`SKIN-001` gave every website a six-role colour system with a dark projection and a WCAG
+> contrast guard applied before first paint. Nothing ever gave Webora one.** `MainActivity` composes
+> a bare `MaterialTheme {}`, so every browser-owned screen renders in Material 3's default baseline
+> palette. A site that publishes a manifest is better specified than the browser rendering it.
+
+That inversion is easy to reach honestly. Every milestone from M1 to M4 was about bounding what a
+*website* may do to the browser's appearance, and each one ended by writing down a rule the site
+must satisfy. None of them ever had cause to ask what the browser's own appearance should be — a
+question with no security content, and therefore no ticket.
+
+Two rules fall out of correcting it, and they belong here rather than in a ticket:
+
+- **The browser's palette is compiled, never derived.** `SiteSkinColorScheme` is the *entire*
+  website-influenceable colour surface and stays that way. `WeboraTheme` is a separate token set
+  with no path from a manifest value into it. The invariant is free today only because there is no
+  browser palette to violate it; creating one is when it needs a test.
+- **A design direction can be rejected on `ADR-006`, not only on taste.** Any chrome that puts the
+  registrable domain inside the editable address field collapses a browser-owned identity claim into
+  a field whose value is page-derived and user-editable. That is a design constraint with a
+  security cause, which is why `UX-001`'s deliverable is a direction *plus its mechanism* for
+  keeping the two apart — see the three mechanisms compared in `docs/design/directions/`.
+
+The ordering — browser surfaces before SiteSkin surfaces — is deliberate and has a cost worth naming
+in advance: the Bloom Flowers integrated screen is the one most likely to be demonstrated, and it is
+the one M6 does not touch.
+
 ---
 
 ## `denrzv/bloom-flowers` — the reference integration
