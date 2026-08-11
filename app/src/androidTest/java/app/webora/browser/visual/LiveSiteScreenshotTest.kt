@@ -55,6 +55,9 @@ class LiveSiteScreenshotTest {
 
     private fun captureDeviceScreenshot(name: String) {
         composeRule.waitForIdle()
+        // Compose idleness is not evidence that Webora is what a person would see: the first green
+        // run returned three frames under a `System UI isn't responding` dialog.
+        guard.requireAppOwnsScreen(name.removeSuffix(".png"))
         val bitmap = requireNotNull(instrumentation.uiAutomation.takeScreenshot()) {
             "UiAutomation returned no screenshot for $name"
         }
@@ -72,6 +75,10 @@ class LiveSiteScreenshotTest {
 
     private fun string(id: Int, vararg arguments: Any): String =
         targetContext.getString(id, *arguments)
+
+    private val guard by lazy {
+        ScreenEvidenceGuard(instrumentation.uiAutomation, targetContext.packageName, testStorage)
+    }
 
     private val instrumentation
         get() = InstrumentationRegistry.getInstrumentation()
