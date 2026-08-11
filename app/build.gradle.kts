@@ -14,7 +14,7 @@ android {
         applicationId = "app.webora.browser"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
+        versionCode = resolveVersionCode()
         versionName = "0.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -191,6 +191,41 @@ tasks.withType<Test>().configureEach {
         "webora.app.src",
         composeSourceRoots.joinToString(File.pathSeparator) { it.asFile.absolutePath },
     )
+}
+
+/**
+ * `versionCode` is the number of commits reachable from `HEAD`.
+ *
+ * Android refuses to install an APK whose `versionCode` is not greater than the installed one, so a
+ * constant `1` meant every demo build after the first had to be uninstalled before it could be
+ * tried. Commit count fixes that and keeps two properties worth having:
+ *
+ * - **Monotonic** along a branch — every commit that lands raises it.
+ * - **Reproducible** — the same commit yields the same number on any machine, so a local build and
+ *   a CI build of one commit are the same artifact. Re-running a build on an unchanged commit
+ *   therefore does *not* bump; use `-PweboraVersionCode=` to force one.
+ *
+ * `providers.exec` rather than a bare `exec {}` because this repository builds with the
+ * configuration cache: a provider is recorded as an input, while running a process directly at
+ * configuration time is not cacheable.
+ *
+ * **A shallow clone counts 1 commit.** `actions/checkout` defaults to `fetch-depth: 1`, so any
+ * workflow that publishes an APK must set `fetch-depth: 0` or every release ships `versionCode` 1
+ * and the upgrade path silently breaks again.
+ */
+fun resolveVersionCode(): Int {
+    providers.gradleProperty("weboraVersionCode").orNull?.toIntOrNull()?.let { return it }
+
+    val counted = runCatching {
+        providers.exec {
+            commandLine("git", "rev-list", "--count", "HEAD")
+        }.standardOutput.asText.get().trim().toIntOrNull()
+    }.getOrNull()
+
+    // No git, no history, or a source archive: fall back rather than fail the build. A local build
+    // outside a checkout is not worth breaking over, and the release workflow is where the number
+    // has to be right.
+    return counted?.takeIf { it > 0 } ?: 1
 }
 
 fun resolveSigning(key: String): String? =
