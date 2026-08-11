@@ -17,9 +17,9 @@ jobs:
     timeout-minutes: 40
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "25"
@@ -37,44 +37,54 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
+      # ubuntu-latest currently ships several Android system images plus NDK/CMake.
+      # The failed run had only 5.6 GiB free while Emulator 37.1.11 required 7.2+ GiB
+      # to create Pixel 6 userdata. This project has no native build, and the runner
+      # installs the exact API 33 system image below, so these preinstalled SDK payloads
+      # are disposable in this isolated screenshot job.
+      - name: Free disk space for Android emulator
+        run: |
+          echo "=== Disk before Android SDK cleanup ==="
+          df -h /
+          du -sh "$ANDROID_HOME/system-images" "$ANDROID_HOME/ndk" "$ANDROID_HOME/cmake" \
+            2>/dev/null || true
+
+          sudo rm -rf "$ANDROID_HOME/system-images"
+          sudo rm -rf "$ANDROID_HOME/ndk"
+          sudo rm -rf "$ANDROID_HOME/cmake"
+
+          echo "=== Disk after Android SDK cleanup ==="
+          df -h /
+
       - name: Run live SiteSkin screenshot journey
-        uses: ReactiveCircus/android-emulator-runner@1dcd0090116d15e7c562f8db72807de5e036a4ed # v2.34.0
+        uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
-          api-level: 33
+          api-level: 36
+          system-image-api-level: 33
           target: google_apis
           arch: x86_64
           profile: pixel_6
+          emulator-boot-timeout: 300
           disable-animations: true
           emulator-options: >-
             -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
-            -camera-back none -delay-adb 2000
-          script: |
-            set +e
-            ./gradlew :app:connectedDebugAndroidTest \
-              -Pandroid.testInstrumentationRunnerArguments.class=app.webora.browser.visual.LiveSiteScreenshotTest \
-              2>&1 | tee artifacts/instrumentation.txt
-            test_status=${PIPESTATUS[0]}
-            adb logcat -d > artifacts/logcat.txt
-            adb pull \
-              /sdcard/Android/data/app.webora.browser.debug/files/screenshots/. \
-              artifacts/screenshots/ || true
-            png_count=$(find artifacts/screenshots -maxdepth 1 -type f -name '*.png' | wc -l)
-            printf 'test_status=%s\npng_count=%s\n' "$test_status" "$png_count" \
-              | tee artifacts/result.txt
-            if [[ "$png_count" -eq 0 ]]; then
-              echo "No screenshots were produced" >&2
-              exit 1
-            fi
-            exit "$test_status"
+            -camera-back none -no-metrics
+          pre-emulator-launch-script: |
+            echo "=== Disk before emulator launch ==="
+            df -h /
+            du -sh "$ANDROID_AVD_HOME" 2>/dev/null || true
+            du -sh "$ANDROID_HOME/system-images" 2>/dev/null || true
+          script: bash scripts/android-screenshot-ci.sh
 
       - name: Upload screenshots and diagnostics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: webora-screenshots-api33-${{ github.sha }}
           path: |
             artifacts/
             app/build/outputs/androidTest-results/
+            app/build/outputs/connected_android_test_additional_output/
             app/build/reports/androidTests/
           if-no-files-found: error
           retention-days: 7
