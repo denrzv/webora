@@ -17,9 +17,9 @@ jobs:
     timeout-minutes: 40
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "25"
@@ -37,15 +37,31 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
+      # ubuntu-latest currently ships several Android system images plus NDK/CMake.
+      # This job is JVM-only and android-emulator-runner installs the exact API 33
+      # image it needs, so remove the unused preinstalled payload before provisioning.
+      - name: Free disk space for Android emulator
+        run: |
+          echo "=== Disk before Android SDK cleanup ==="
+          df -h /
+          du -sh "$ANDROID_HOME/system-images" "$ANDROID_HOME/ndk" "$ANDROID_HOME/cmake" \
+            2>/dev/null || true
+
+          sudo rm -rf "$ANDROID_HOME/system-images"
+          sudo rm -rf "$ANDROID_HOME/ndk"
+          sudo rm -rf "$ANDROID_HOME/cmake"
+
+          echo "=== Disk after Android SDK cleanup ==="
+          df -h /
+
       - name: Run live SiteSkin screenshot journey
-        uses: ReactiveCircus/android-emulator-runner@1dcd0090116d15e7c562f8db72807de5e036a4ed # v2.34.0
+        uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
           api-level: 36
           system-image-api-level: 33
           target: google_apis
           arch: x86_64
           profile: pixel_6
-          disk-size: 2048M
           emulator-boot-timeout: 300
           disable-animations: true
           emulator-options: >-
@@ -77,7 +93,7 @@ jobs:
 
       - name: Upload screenshots and diagnostics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: webora-screenshots-api33-${{ github.sha }}
           path: |
