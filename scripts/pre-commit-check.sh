@@ -43,6 +43,11 @@ else
   echo "[warn] shellcheck not found (CI runs it)."
 fi
 
+# The emulator readiness gate decides when a screenshot run may start, and it runs
+# where no emulator exists to test it against. Its verdict function is pure for that
+# reason, and this is the check that keeps it honest.
+run "emulator readiness self-test" bash "${ROOT}/scripts/android-emulator-ready-selftest.sh"
+
 if [[ ! -x "${ROOT}/gradlew" ]]; then
   echo "[FAIL] gradlew not found or not executable at ${ROOT}/gradlew" >&2
   exit 1

@@ -44,6 +44,14 @@ main() {
   fi
   cat artifacts/prebuilt-apks.txt
 
+  # The emulator action returns once `sys.boot_completed=1`. That is where the screenshots
+  # used to start going wrong, so the run does not proceed on it alone.
+  if ! bash scripts/android-emulator-ready.sh; then
+    adb logcat -d > artifacts/logcat.txt || true
+    echo "The emulator never settled; see artifacts/readiness.txt for every sample taken." >&2
+    exit 1
+  fi
+
   set +e
   ./gradlew :app:connectedDebugAndroidTest \
     "-Pandroid.testInstrumentationRunnerArguments.class=${SCREENSHOT_TEST_CLASS}" 2>&1 \
