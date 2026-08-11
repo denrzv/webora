@@ -1,7 +1,8 @@
 # Roadmap
 
 Milestone tracker. The reasoning behind it is in [`DEVELOPMENT_PLAN.md`](DEVELOPMENT_PLAN.md);
-this file records what is done.
+the recommended implementation order is in [`DEVELOPER_PLAN.md`](DEVELOPER_PLAN.md). This file
+records what is done.
 
 Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 
@@ -65,21 +66,48 @@ in [`design/directions/`](design/directions/index.html).
 
 - [x] `UX-001` Design direction sketches and selection — deliverable is a decision, plus `ADR-013`
 - [x] `UX-006` Attributed, bounded SiteSkin preview in first-use consent
-- [ ] `UX-002` Design system foundations — `WeboraTheme` tokens, icon set, dark theme
+- [ ] `UX-002` Design system foundations — `WeboraTheme` tokens, browser-owned vector icon set, dark theme
 - [ ] `UX-003` Browser-owned chrome rebuild — address bar, navigation controls, menu, error page
 - [ ] `UX-004` Home, onboarding and settings surfaces
 
-## M6 — Design refresh
+## M7 — Visual quality, evidence & integration polish
 
-Browser-owned surfaces only. Opened after the `DIST-001` APK was run on an emulator: the browser
-gives *websites* a six-role colour system with a contrast guard and gives itself a bare
-`MaterialTheme {}`. Evidence in [`design/AUDIT.md`](design/AUDIT.md); the candidate directions are
-in [`design/directions/`](design/directions/index.html).
+Opened from the first successful live Pixel 6 / API 33 screenshot journey. The workflow proved the
+integration end to end, but the evidence also made several quality defects impossible to ignore:
+System UI ANR overlays contaminated otherwise-passing captures, screenshots were cumbersome to
+review, the debug inspector dominated the demo frame, SiteSkin navigation still used placeholder
+Unicode glyphs, and the consent actions were visually weak on a phone-sized viewport.
 
-- [x] `UX-001` Design direction sketches and selection — deliverable is a decision, plus `ADR-013`
-- [ ] `UX-002` Design system foundations — `WeboraTheme` tokens, icon set, dark theme
-- [ ] `UX-003` Browser-owned chrome rebuild — address bar, navigation controls, menu, error page
-- [ ] `UX-004` Home, onboarding and settings surfaces
+Evidence/DX track — can proceed without waiting for all M6 surfaces:
+
+- [ ] `CI-002` Deterministic clean Android screenshot capture — eliminate known System UI
+  contamination without hiding Webora failures
+- [ ] `DEVX-002` Screenshot review experience — separate human/diagnostic artifacts and add one
+  labelled contact-sheet preview
+- [ ] `DEVX-003` Inspector isolation and canonical evidence mode — keep debug diagnostics available
+  without a persistent overlay in product evidence
+
+Product-polish track:
+
+- [ ] `UX-005` SiteSkin integrated chrome & semantic icon set — **revived** after live evidence;
+  replace placeholder glyphs with browser-owned vector icons and meaningful quick actions
+- [ ] `UX-007` Adaptive SiteSkin consent action hierarchy — clear primary/secondary/persistent-deny
+  actions across narrow widths and large font scales
+- [ ] `DEMO-003` Bloom Flowers visual fidelity & protocol showcase — exercise the polished icon and
+  action vocabulary in the live reference integration
+
+`UX-005` depends on `UX-002`; `UX-007` builds on the already-complete `UX-006`; `DEMO-003` is the
+final product-facing evidence after `UX-005`, `UX-007`, and `DEVX-003`. The detailed parallel order
+and gates are in [`DEVELOPER_PLAN.md`](DEVELOPER_PLAN.md).
+
+### Why `UX-005` is no longer descoped
+
+`UX-005` was parked while the browser itself had no design system. That sequencing was correct, but
+its original risk is now visible in real evidence: the Bloom Flowers demo — the product's headline
+integrated surface — shows `⌂ ▦ ▣ ● ☎` placeholders and an undifferentiated quick-action affordance.
+The SiteSkin manifest already supplies semantic icon names; trusted chrome must continue mapping
+those names to **browser-owned** assets rather than accepting arbitrary site-provided icons. M7
+revives the ticket once `UX-002` supplies that asset foundation.
 
 ## Descoped
 
@@ -89,10 +117,6 @@ them does not start from nothing. `SCOPE-001` records the decisions.
 - `DEMO-002` PixelPlay, Daily Journal, Example News — one demo is enough for now. The browser
   behaviour they would have demonstrated live (skin swap, skin drop on origin change) is implemented
   and unit-tested under `SKIN-004`; what lapses is the demonstration, not the capability.
-- `UX-005` SiteSkin integrated chrome and a real icon set — M6 fixes the browser's own surfaces
-  first, because those are the ones with no design system at all. The integrated chrome already has
-  a real `NavigationBar`, a theme projection and a contrast guard; what it lacks is the icon set,
-  and its Unicode placeholders (`⌂ ▦ ▣ ● ☎`) survive M6.
 - `PLAY-001` Compliance sweep · `PLAY-002` Release signing, R8 keeps, versioning ·
   `PLAY-003` Store listing, Data safety, internal testing track — distribution is an APK handed to
   friends, not a store listing. **`targetSdk 36` is not descoped**: it shipped in `FOUND-002` and is
@@ -114,3 +138,6 @@ From concept §62. All must hold:
   demo origin, which is descoped with `DEMO-002`
 - **no manifest can hide the domain or the TLS indicator** (`ADR-006`)
 - core validation and navigation logic is covered by automated tests
+
+M7 adds a visual-quality bar on top of that functional prototype: canonical evidence must be clean,
+cheap to review, free of debug/OS contamination, and representative of the intended SiteSkin UX.
