@@ -74,31 +74,7 @@ jobs:
             df -h /
             du -sh "$ANDROID_AVD_HOME" 2>/dev/null || true
             du -sh "$ANDROID_HOME/system-images" 2>/dev/null || true
-
-            free_kb=$(df --output=avail -k / | tail -1 | tr -d ' ')
-            min_free_kb=$((9 * 1024 * 1024))
-            if (( free_kb < min_free_kb )); then
-              echo "Insufficient disk headroom for Pixel 6 emulator: ${free_kb} KiB free; require at least ${min_free_kb} KiB." >&2
-              exit 1
-            fi
-          script: |
-            set +e
-            ./gradlew :app:connectedDebugAndroidTest \
-              -Pandroid.testInstrumentationRunnerArguments.class=app.webora.browser.visual.LiveSiteScreenshotTest \
-              2>&1 | tee artifacts/instrumentation.txt
-            test_status=${PIPESTATUS[0]}
-            adb logcat -d > artifacts/logcat.txt
-            adb pull \
-              /sdcard/Android/data/app.webora.browser.debug/files/screenshots/. \
-              artifacts/screenshots/ || true
-            png_count=$(find artifacts/screenshots -maxdepth 1 -type f -name '*.png' | wc -l)
-            printf 'test_status=%s\npng_count=%s\n' "$test_status" "$png_count" \
-              | tee artifacts/result.txt
-            if [[ "$png_count" -eq 0 ]]; then
-              echo "No screenshots were produced" >&2
-              exit 1
-            fi
-            exit "$test_status"
+          script: bash scripts/android-screenshot-ci.sh
 
       - name: Upload screenshots and diagnostics
         if: always()
