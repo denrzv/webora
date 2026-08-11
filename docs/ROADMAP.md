@@ -62,7 +62,7 @@ gives *websites* a six-role colour system with a contrast guard and gives itself
 `MaterialTheme {}`. Evidence in [`design/AUDIT.md`](design/AUDIT.md); the candidate directions are
 in [`design/directions/`](design/directions/index.html).
 
-- [ ] `UX-001` Design direction sketches and selection — deliverable is a decision, plus `ADR-013`
+- [x] `UX-001` Design direction sketches and selection — deliverable is a decision, plus `ADR-013`
 - [ ] `UX-002` Design system foundations — `WeboraTheme` tokens, icon set, dark theme
 - [ ] `UX-003` Browser-owned chrome rebuild — address bar, navigation controls, menu, error page
 - [ ] `UX-004` Home, onboarding and settings surfaces

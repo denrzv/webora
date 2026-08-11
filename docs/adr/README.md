@@ -22,7 +22,7 @@ re-arguing.
 | 010 | Invalid integration always falls back to regular mode | ACCEPTED |
 | [011](ADR-011-first-use-consent.md) | **First-use consent before activation** | ACCEPTED |
 | 012 | Signed manifests deferred past MVP | ACCEPTED |
-| 013 | Browser-owned design tokens, compiled and never derived | PROPOSED — `UX-001` |
+| 013 | [Browser-owned design tokens, compiled and never derived](ADR-013-browser-owned-design-tokens.md) | ACCEPTED — `UX-001` |
 
 ---
 
@@ -98,16 +98,22 @@ timeout, offline — ends in regular browser mode with the page still rendering.
 enhancement layer; its failure is never the user's problem. Diagnostics go to the developer
 inspector (`DEVX-001`), not to a user-facing error.
 
-## ADR-013 — Browser-owned design tokens *(proposed, `UX-001`)*
+## ADR-013 — Browser-owned design tokens
 
-Reserved, not yet decided. `M6` gives the browser the token layer it never had, and this ADR records
-the choice of direction plus the rule that survives whichever direction wins: Webora's palette,
-typography and shape scale are **compiled into the app**, with no path from a manifest value into
-them. `SiteSkinColorScheme` remains the entire website-influenceable colour surface.
+**Decided under `UX-001`, and promoted to its own file:
+[`ADR-013-browser-owned-design-tokens.md`](ADR-013-browser-owned-design-tokens.md).** The stub
+anticipated that the security half would need re-arguing, and it does — so it lives where it can be
+cited rather than summarised.
 
-Written under `UX-001` from the directions in `docs/design/directions/`. Promote to its own file if
-the reasoning needs re-arguing — the security half of it (a direction can fail `ADR-006` by placing
-the domain inside the editable address field) probably will.
+The selection is **direction B, "Get out of the way"**, amended with the fixed identity frame from
+direction C: the identity surface never takes a colour from anything, in either theme.
+
+The rule the stub reserved this ADR for survives unchanged: Webora's palette, typography and shape
+scale are **compiled into the app**, with no path from a manifest value into them, and
+`SiteSkinColorScheme` remains the entire website-influenceable colour surface.
+
+The condition of the selection, in one line: B's address bar is **two states**, and dropping the
+second — leaving the domain inside the editable field — violates `ADR-006` however it looks.
 
 ## ADR-012 — Signed manifests deferred
 
