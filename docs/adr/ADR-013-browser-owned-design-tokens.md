@@ -49,9 +49,25 @@ Direction C exists to solve exactly that, and its central idea is taken:
 > and in dark mode, sourced from a token outside the light/dark pair.
 
 This was chosen over A's tonal identity chip because it answers B's cost **without adding chrome
-height**, which is the single thing B is optimising for. It costs one extra token concept. Per C's
-own annotation, it makes contrast checking *simpler* rather than harder: the frame is verified once
-against a fixed colour instead of once per theme.
+height**, which is the single thing B is optimising for. Per C's own annotation, it makes contrast
+checking *simpler* rather than harder: the frame is verified once against a fixed colour instead of
+once per theme.
+
+**Cost, corrected.** This section first said "one extra token concept". Rendering the amendment in
+[`../design/directions/selected-b.html`](../design/directions/selected-b.html) showed that is
+optimistic: a strip that never follows the theme cannot reuse the theme's foreground colours, so it
+needs its own set. Measured against the fixed graphite `#1C1F26`:
+
+| On the fixed strip | Light theme's value | Needed instead |
+|---|---|---|
+| TLS indicator | `#146C43` — **2.56:1**, fails | `#5BC98A` — 7.98:1 |
+| Action / focus | `#1552C4` — **2.38:1**, fails | `#8AB4F8` — 7.83:1 |
+| Body text | — | `#EDEEF2` — 14.22:1 |
+| Secondary text | — | `#99A0B0` — 6.29:1 |
+
+So the amendment is **four tokens** — a theme-independent on-strip foreground set — not one. Still
+cheaper than A's identity chip, which costs chrome height on every screen, and still checked once
+rather than per theme.
 
 It also does security work rather than decoration. An identity surface that can never take a site's
 colour is harder to confuse with site chrome while SiteSkin is active — the boundary between what
@@ -112,8 +128,8 @@ than re-argued from taste.
 
 ## Consequences
 
-- **`UX-002`** builds `WeboraTheme` to the palette, geometry and type scale above, plus one identity
-  token outside the light/dark pair. It carries the `C2` test.
+- **`UX-002`** builds `WeboraTheme` to the palette, geometry and type scale above, plus the
+  four-token on-strip set from the corrected cost table. It carries the `C2` test.
 - **`UX-003`** implements the two-state address bar. It is the largest piece of `M6` and the one with
   a security acceptance criterion rather than a visual one.
 - **`UX-004`** applies the same tokens to home, onboarding and settings.

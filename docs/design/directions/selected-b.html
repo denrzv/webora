@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Direction B, amended — the two scenes that decide it</title>
+<style>
+/* ─────────────────────────────────────────────────────────────
+   Page tokens. The frames below do NOT follow the viewer's
+   theme — every colour inside a frame comes from an --f-* token
+   fixed by the direction, exactly as in index.html.
+   ───────────────────────────────────────────────────────────── */
+:root{
+  --ground:#F4F5F7; --surface:#FFFFFF; --ink:#15181F; --ink-2:#3C4453;
+  --muted:#5B6472; --rule:#DDE0E6; --rule-strong:#C3C8D1;
+  --accent:#0F5F66; --accent-soft:#DCEDEE; --flag:#B4402F; --flag-soft:#F7E6E2;
+  --ok:#1B5E3F; --ok-soft:#DDF0E5;
+  --shadow:0 1px 2px rgba(20,24,32,.06),0 12px 32px rgba(20,24,32,.08);
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"DejaVu Sans Mono",monospace;
+  --android:Roboto,"Noto Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --ground:#101216; --surface:#171A20; --ink:#E4E7EC; --ink-2:#C0C6D0;
+  --muted:#929AA8; --rule:#282C34; --rule-strong:#3A404A;
+  --accent:#5FBFC4; --accent-soft:#122C2E; --flag:#E88A76; --flag-soft:#2E1A16;
+  --ok:#7FD3A6; --ok-soft:#12281D;
+  --shadow:0 1px 2px rgba(0,0,0,.5),0 12px 32px rgba(0,0,0,.45);
+}}
+:root[data-theme="dark"]{
+  --ground:#101216; --surface:#171A20; --ink:#E4E7EC; --ink-2:#C0C6D0;
+  --muted:#929AA8; --rule:#282C34; --rule-strong:#3A404A;
+  --accent:#5FBFC4; --accent-soft:#122C2E; --flag:#E88A76; --flag-soft:#2E1A16;
+  --ok:#7FD3A6; --ok-soft:#12281D;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);line-height:1.55}
+.wrap{max-width:80rem;margin:0 auto;padding:2.5rem 1.5rem 4rem}
+h1{font-size:2rem;line-height:1.15;margin:0 0 .5rem;letter-spacing:-.01em}
+.lede{color:var(--ink-2);max-width:60ch;margin:0 0 .4rem;font-size:1.05rem}
+.sub{color:var(--muted);max-width:66ch;margin:0 0 2rem;font-size:.95rem}
+h2{font-size:1.15rem;margin:2.6rem 0 .35rem;letter-spacing:-.005em}
+h2 .num{color:var(--muted);font-family:var(--mono);font-size:.85rem;margin-right:.5rem}
+.note{color:var(--ink-2);max-width:64ch;margin:0 0 1.1rem;font-size:.93rem}
+code{font-family:var(--mono);font-size:.88em;background:var(--surface);border:1px solid var(--rule);
+     border-radius:5px;padding:.06em .34em}
+.rail{display:flex;gap:1.6rem;flex-wrap:wrap;align-items:flex-start;margin-bottom:.5rem}
+.cap{font-size:.8rem;color:var(--muted);margin:0 0 .5rem;font-weight:600;letter-spacing:.02em}
+.legend{display:flex;gap:1.25rem;flex-wrap:wrap;margin:.8rem 0 0;font-size:.85rem;color:var(--ink-2)}
+.legend span{display:flex;align-items:center;gap:.4rem}
+.sw{width:13px;height:13px;border-radius:4px;border:1px solid var(--rule-strong);flex:0 0 auto}
+.callout{background:var(--surface);border:1px solid var(--rule);border-left:3px solid var(--accent);
+         border-radius:0 10px 10px 0;padding:1rem 1.15rem;margin:1.4rem 0;max-width:64ch}
+.callout.warn{border-left-color:var(--flag)}
+.callout h3{margin:0 0 .4rem;font-size:.98rem}
+.callout p{margin:.4rem 0 0;font-size:.92rem;color:var(--ink-2)}
+table{border-collapse:collapse;font-size:.9rem;margin:.6rem 0 0}
+th,td{text-align:left;padding:.45rem .8rem .45rem 0;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font-weight:600}
+.pass{color:var(--ok);font-weight:600}
+.fail{color:var(--flag);font-weight:600}
+
+/* ── frame shell ─────────────────────────────────────────── */
+.frame{width:360px;height:720px;border-radius:26px;overflow:hidden;position:relative;
+  display:flex;flex-direction:column;border:1px solid var(--rule-strong);box-shadow:var(--shadow);
+  background:var(--f-bg);color:var(--f-ink);font-family:var(--android);font-size:14px;line-height:1.4}
+.frame *{box-sizing:border-box}
+.sysbar{height:26px;flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;
+  padding:0 14px;font-size:11px;font-weight:600;color:var(--f-sys-ink);background:var(--f-sys-bg)}
+.sysbar .dots{display:flex;gap:4px;align-items:center}
+.sysbar .dots i{width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.75;display:block}
+.navinset{height:18px;flex:0 0 auto;display:grid;place-items:center;background:var(--f-nav-bg)}
+.navinset span{width:100px;height:4px;border-radius:999px;background:var(--f-nav-ink);opacity:.55}
+.screen{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.scroll{flex:1 1 auto;min-height:0;overflow:hidden}
+.icon{width:20px;height:20px;display:block;fill:none;stroke:currentColor;stroke-width:1.9;
+  stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
+.icon--sm{width:16px;height:16px}
+
+/* Direction B tokens, verbatim from index.html */
+.dir-b .frame{
+  --f-bg:#FFFFFF; --f-surface:#F1F3F5; --f-chrome:#F1F3F5;
+  --f-primary:#1552C4; --f-on-primary:#FFFFFF;
+  --f-ink:#1F2328; --f-muted:#5B6472; --f-outline:#D5D9DF;
+  --f-nav-bg:#F1F3F5; --f-nav-ink:#1F2328;
+  /* AMENDMENT — the identity strip is fixed in both themes and never
+     sourced from the page. These four are the amendment's real cost. */
+  --f-idbar:#1C1F26; --f-on-idbar:#EDEEF2; --f-idbar-muted:#99A0B0;
+  --f-idbar-tls:#5BC98A;
+  --f-sys-bg:#1C1F26; --f-sys-ink:#EDEEF2;
+}
+.dir-b .frame.frame--dark{
+  --f-bg:#17191C; --f-surface:#212429; --f-chrome:#212429;
+  --f-primary:#8AB4F8; --f-on-primary:#0A2547;
+  --f-ink:#E6E8EB; --f-muted:#9AA3B0; --f-outline:#33373D;
+  --f-nav-bg:#212429; --f-nav-ink:#E6E8EB;
+  /* identical to light — that is the whole point of the amendment */
+  --f-idbar:#1C1F26; --f-on-idbar:#EDEEF2; --f-idbar-muted:#99A0B0;
+  --f-idbar-tls:#5BC98A;
+  --f-sys-bg:#1C1F26; --f-sys-ink:#EDEEF2;
+}
+
+/* ── B chrome ────────────────────────────────────────────── */
+.b-top{background:var(--f-idbar);padding:7px 10px;flex:0 0 auto}
+.b-omni{display:flex;align-items:center;gap:6px;height:48px}
+.b-ident{flex:1 1 auto;display:flex;align-items:center;gap:7px;height:34px;padding:0 10px;
+  border-radius:8px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);
+  min-width:0;color:var(--f-on-idbar)}
+.b-ident .sec{font-size:13.5px;font-weight:600;white-space:nowrap;flex:0 0 auto}
+.b-ident .path{font-size:13.5px;color:var(--f-idbar-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.b-tap{width:34px;height:34px;display:grid;place-items:center;border-radius:8px;color:var(--f-on-idbar);flex:0 0 auto}
+.b-bottom{height:52px;flex:0 0 auto;display:flex;align-items:center;justify-content:space-around;
+  background:var(--f-chrome);border-top:1px solid var(--f-outline)}
+.b-bottom .slot{width:44px;height:44px;display:grid;place-items:center;color:var(--f-ink)}
+.b-bottom .slot.off{opacity:.34}
+.mk-progress{height:2px;background:var(--f-primary);width:38%;flex:0 0 auto}
+
+/* edit state (the C1 second state) */
+.b-edit{background:var(--f-idbar);padding:7px 10px 9px;flex:0 0 auto}
+.b-field{display:flex;align-items:center;gap:8px;height:44px;padding:0 12px;border-radius:8px;
+  background:var(--f-bg);border:2px solid var(--f-primary);color:var(--f-ink)}
+.b-field .txt{font-size:15px;flex:1 1 auto}
+.b-field .caret{width:1.5px;height:19px;background:var(--f-primary);display:inline-block;margin-left:-4px}
+.b-idrow{display:flex;align-items:center;gap:7px;margin-top:8px;padding:0 3px;color:var(--f-on-idbar)}
+.b-idrow .sec{font-size:12.5px;font-weight:600}
+.b-idrow .sep{color:var(--f-idbar-muted);font-size:12.5px}
+.b-sugg{padding:6px 0;background:var(--f-bg);flex:0 0 auto}
+.b-sugg .row{display:flex;align-items:center;gap:11px;padding:10px 16px;color:var(--f-ink)}
+.b-sugg .row .t{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.b-sugg .row .t em{color:var(--f-muted);font-style:normal}
+
+/* ── page content ────────────────────────────────────────── */
+.web{padding:0 0 14px}
+.web-hero{padding:18px 16px 14px}
+.web-hero h5{margin:0 0 3px;font-size:19px;color:var(--f-ink)}
+.web-hero p{margin:0;font-size:13px;color:var(--f-muted)}
+.web-body{padding:0 16px}
+.web-body h6{margin:12px 0 9px;font-size:14px;color:var(--f-ink)}
+.web-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:11px}
+.web-card{border:1px solid var(--f-outline);border-radius:10px;overflow:hidden;background:var(--f-bg)}
+.web-thumb{height:62px;background:var(--f-surface)}
+.web-card.bloom .web-thumb{background:linear-gradient(135deg,#FADADD,#F7C3D2)}
+.web-card p{margin:0;padding:7px 9px;font-size:12px;display:flex;justify-content:space-between;gap:6px;color:var(--f-ink)}
+.web-card p em{font-style:normal;color:var(--f-muted)}
+.web-line{height:9px;border-radius:5px;background:var(--f-surface);margin-bottom:8px}
+.w70{width:70%}.w45{width:45%}.w88{width:88%}
+.art h5{margin:0 0 6px;font-size:20px;line-height:1.25;color:var(--f-ink)}
+.art .by{font-size:12px;color:var(--f-muted);margin:0 0 12px}
+
+/* ── SiteSkin integrated chrome (existing, not redesigned) ─ */
+.ss-top{flex:0 0 auto;background:var(--ss-primary);color:#FFFFFF;padding:11px 14px;
+  display:flex;align-items:center;gap:11px;min-height:64px}
+.ss-logo{width:40px;height:40px;border-radius:9px;background:#FFF7FA;display:grid;place-items:center;
+  font-size:21px;flex:0 0 auto;overflow:hidden}
+.ss-txt{min-width:0;flex:1 1 auto;display:flex;flex-direction:column;gap:1px}
+.ss-txt .t{display:block;font-size:16px;font-weight:600;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ss-txt .s{display:block;font-size:12.5px;line-height:1.25;opacity:.95;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ss-menu{width:38px;height:38px;display:grid;place-items:center;border-radius:9px;
+  background:rgba(255,255,255,.16);color:#FFF;flex:0 0 auto}
+.ss-nav{flex:0 0 auto;display:flex;background:var(--ss-navbg);border-top:1px solid var(--ss-navrule);
+  padding:5px 2px 6px}
+.ss-nav .tab{flex:1 1 0;display:flex;flex-direction:column;align-items:center;gap:3px;
+  padding:3px 0;color:var(--ss-navink);font-size:11px}
+.ss-nav .tab.on{color:var(--ss-primary);font-weight:600}
+.ss-nav .tab.on .pill{background:var(--ss-pill)}
+.ss-nav .tab .pill{padding:2px 15px;border-radius:999px;display:grid;place-items:center}
+.ss-fab{position:absolute;right:14px;bottom:96px;height:46px;padding:0 17px;border-radius:999px;
+  background:var(--ss-primary);color:#FFF;display:flex;align-items:center;gap:8px;
+  font-size:14px;font-weight:600;box-shadow:0 4px 14px rgba(0,0,0,.28)}
+.frame.integrated{--ss-primary:#B83A6E;--ss-navbg:#FFF7FA;--ss-navink:#5C4450;--ss-navrule:#F2D8E1;--ss-pill:#FADADD}
+.frame.integrated.frame--dark{--ss-primary:#F49CC4;--ss-navbg:#241A1F;--ss-navink:#C9B6BE;--ss-navrule:#3A2A31;--ss-pill:#432A35}
+.frame.integrated.frame--dark .ss-top{color:#2B1B24}
+.frame.integrated.frame--dark .ss-fab{color:#2B1B24}
+.frame.integrated.frame--dark .ss-menu{background:rgba(0,0,0,.16);color:#2B1B24}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+<symbol id="i-reload" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v5h-5"/></symbol>
+<symbol id="i-more" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="12" cy="19" r="1.4"/></symbol>
+<symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+<symbol id="i-fwd" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></symbol>
+<symbol id="i-home" viewBox="0 0 24 24"><path d="M4 11l8-6 8 6"/><path d="M6 10v9h12v-9"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M15.5 15.5L20 20"/></symbol>
+<symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+<symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+<symbol id="i-grid" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></symbol>
+<symbol id="i-cart" viewBox="0 0 24 24"><path d="M4 5h2l2 10h9l2-7H7"/><circle cx="10" cy="19" r="1.3"/><circle cx="17" cy="19" r="1.3"/></symbol>
+<symbol id="i-person" viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.5"/><path d="M5.5 19.5a6.5 6.5 0 0 1 13 0"/></symbol>
+<symbol id="i-call" viewBox="0 0 24 24"><path d="M6 4h3l1.6 4-2 1.4a11 11 0 0 0 5 5L15 12.4 19 14v3a2 2 0 0 1-2.2 2A15 15 0 0 1 4 6.2 2 2 0 0 1 6 4z"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 7.5V12l3 2"/></symbol>
+</defs></svg>
+
+<div class="wrap dir-b">
+
+  <h1>Direction B, amended — the two scenes that decide it</h1>
+  <p class="lede">“Get out of the way”, with the fixed identity frame borrowed from “The instrument
+  frame”. The same browser, shown on a site that publishes no manifest and on one that does.</p>
+  <p class="sub">Frames are fixed to the direction and ignore your theme, as in
+  <code>index.html</code>. Rendered to answer one question before the decision is final: is the
+  two-state address bar worth its cost?</p>
+
+  <h2><span class="num">01–02</span>A regular site — no manifest, nothing to activate</h2>
+  <p class="note">This is what the browser looks like almost all of the time. The dark strip is the
+  browser; everything below it is the page. Note there is no accent colour anywhere except the
+  loading bar — B reserves colour for the one action per screen and for TLS state.</p>
+
+  <div class="rail">
+    <div>
+      <p class="cap">01 · Regular site · light</p>
+      <div class="frame">
+        <div class="sysbar"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+        <div class="screen">
+          <div class="b-top"><div class="b-omni">
+            <span class="b-ident">
+              <svg class="icon icon--sm" style="color:var(--f-idbar-tls)"><use href="#i-lock"/></svg>
+              <span class="sec">example-news.com</span>
+              <span class="path">/world/harbour-review</span>
+            </span>
+            <span class="b-tap"><svg class="icon"><use href="#i-reload"/></svg></span>
+            <span class="b-tap"><svg class="icon"><use href="#i-more"/></svg></span>
+          </div></div>
+          <div class="scroll"><div class="web"><div class="web-body art" style="padding-top:16px">
+            <h5>Harbour review clears final hurdle</h5>
+            <p class="by">City desk · 6 min read</p>
+            <div class="web-thumb" style="height:104px;border-radius:10px;margin-bottom:12px"></div>
+            <div class="web-line w88"></div><div class="web-line w70"></div>
+            <div class="web-line w88"></div><div class="web-line w45"></div>
+            <div class="web-line w88"></div><div class="web-line w70"></div>
+            <div class="web-line w45"></div>
+          </div></div></div>
+          <div class="b-bottom">
+            <span class="slot"><svg class="icon"><use href="#i-back"/></svg></span>
+            <span class="slot off"><svg class="icon"><use href="#i-fwd"/></svg></span>
+            <span class="slot"><svg class="icon"><use href="#i-home"/></svg></span>
+            <span class="slot"><svg class="icon"><use href="#i-search"/></svg></span>
+            <span class="slot"><svg class="icon"><use href="#i-menu"/></svg></span>
+          </div>
+        </div>
+        <div class="navinset"><span></span></div>
+      </div>
+    </div>
+
+    <div>
+      <p class="cap">02 · Regular site · dark</p>
+      <div class="frame frame--dark">
+        <div class="sysbar"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+        <div class="screen">
+          <div class="b-top"><div class="b-omni">
+            <span class="b-ident">
+              <svg class="icon icon--sm" style="color:var(--f-idbar-tls)"><use href="#i-lock"/></svg>
+              <span class="sec">example-news.com</span>
+              <span class="path">/world/harbour-review</span>
+            </span>
+            <span class="b-tap"><svg class="icon"><use href="#i-reload"/></svg></span>
+            <span class="b-tap"><svg class="icon"><use href="#i-more"/></svg></span>
+          </div></div>
+          <div class="scroll"><div class="web"><div class="web-body art" style="padding-top:16px">
+            <h5>Harbour review clears final hurdle</h5>
+            <p class="by">City desk · 6 min read</p>
+            <div class="web-thumb" style="height:104px;border-radius:10px;margin-bottom:12px"></div>
+            <div class="web-line w88"></div><div class="web-line w70"></div>
+            <div class="web-line w88"></div><div class="web-line w45"></div>
+            <div class="web-line w88"></div><div class="web-line w70"></div>
+            <div class="web-line w45"></div>
+          </div></div></div>
+          <div class="b-bottom">
+            <span class="slot"><svg class="icon"><use href="#i-back"/></svg></span>
+            <span class="slot off"><svg class="icon"><use href="#i-fwd"/></svg></span>
+            <span class="slot"><svg class="icon"><use href="#i-home"/></svg></span>
+            <span class="slot"><svg class="icon"><use href="#i-search"/></svg></span>
+            <span class="slot"><svg class="icon"><use href="#i-menu"/></svg></span>
+          </div>
+        </div>
+        <div class="navinset"><span></span></div>
+      </div>
+    </div>
+
+    <div>
+      <p class="cap">03 · Address bar · edit state — the expensive part</p>
+      <div class="frame">
+        <div class="sysbar"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+        <div class="screen">
+          <div class="b-edit">
+            <div class="b-field">
+              <svg class="icon icon--sm" style="color:var(--f-muted)"><use href="#i-search"/></svg>
+              <span class="txt">example-news.com/wor</span><span class="caret"></span>
+              <svg class="icon icon--sm" style="color:var(--f-muted)"><use href="#i-x"/></svg>
+            </div>
+            <div class="b-idrow">
+              <svg class="icon icon--sm" style="color:var(--f-idbar-tls)"><use href="#i-lock"/></svg>
+              <span class="sec">example-news.com</span>
+              <span class="sep">· Secure · browser-verified</span>
+            </div>
+          </div>
+          <div class="b-sugg">
+            <div class="row"><svg class="icon icon--sm" style="color:var(--f-muted)"><use href="#i-clock"/></svg><span class="t">example-news.com/world/harbour-review</span></div>
+            <div class="row"><svg class="icon icon--sm" style="color:var(--f-muted)"><use href="#i-search"/></svg><span class="t">world news <em>— search</em></span></div>
+            <div class="row"><svg class="icon icon--sm" style="color:var(--f-muted)"><use href="#i-search"/></svg><span class="t">world cup <em>— search</em></span></div>
+          </div>
+          <div class="scroll" style="background:var(--f-bg)"></div>
+        </div>
+        <div class="navinset"><span></span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout warn">
+    <h3>Frame 03 is the whole cost of direction B</h3>
+    <p>In frames 01–02 the address bar is <strong>not a text field</strong>. It renders
+    <code>securityPresentation(state.mode)</code> as non-editable browser-owned text, derived from
+    the committed <code>SiteOrigin</code>. Tapping it produces frame 03: the real editable field,
+    with the identity moved to <em>its own row underneath</em>.</p>
+    <p>Two components where every other browser ships one, and a state transition between them.
+    That is the extra effort — not the styling. Collapsing them into a single editable field that
+    displays the domain is the thing <code>ADR-006</code> forbids.</p>
+  </div>
+
+  <h2><span class="num">04–05</span>Bloom Flowers — manifest accepted, branding applied</h2>
+  <p class="note">The site now supplies colour, a logo, a title, a bottom navigation and a Call
+  quick action. The dark strip at the top does not change, in either theme. That is the amendment
+  doing its job: the boundary between what Webora says and what the site says is a thing you can
+  see, not a thing you have to read about.</p>
+
+  <div class="rail">
+    <div>
+      <p class="cap">04 · SiteSkin active · light</p>
+      <div class="frame integrated">
+        <div class="sysbar"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+        <div class="screen">
+          <div class="b-top"><div class="b-omni">
+            <span class="b-ident">
+              <svg class="icon icon--sm" style="color:var(--f-idbar-tls)"><use href="#i-lock"/></svg>
+              <span class="sec">denrzv.github.io</span>
+              <span class="path">/catalog</span>
+            </span>
+            <span class="b-tap"><svg class="icon"><use href="#i-reload"/></svg></span>
+            <span class="b-tap"><svg class="icon"><use href="#i-more"/></svg></span>
+          </div></div>
+          <div class="ss-top">
+            <span class="ss-logo">🌸</span>
+            <span class="ss-txt"><span class="t">Bloom Flowers</span><span class="s">Fresh flowers delivered today</span></span>
+            <span class="ss-menu"><svg class="icon"><use href="#i-menu"/></svg></span>
+          </div>
+          <div class="scroll"><div class="web">
+            <div class="web-body" style="padding-top:14px">
+              <h6>Best sellers</h6>
+              <div class="web-grid">
+                <div class="web-card bloom"><div class="web-thumb"></div><p><b>Spring Bouquet</b><em>£28</em></p></div>
+                <div class="web-card bloom"><div class="web-thumb"></div><p><b>Peony Bundle</b><em>£34</em></p></div>
+              </div>
+              <div class="web-grid">
+                <div class="web-card bloom"><div class="web-thumb"></div><p><b>Rose Dozen</b><em>£42</em></p></div>
+                <div class="web-card bloom"><div class="web-thumb"></div><p><b>Tulip Mix</b><em>£24</em></p></div>
+              </div>
+              <div class="web-line w70"></div><div class="web-line w45"></div>
+            </div>
+          </div></div>
+          <div class="ss-fab"><svg class="icon"><use href="#i-call"/></svg>Call</div>
+          <div class="ss-nav">
+            <span class="tab"><span class="pill"><svg class="icon"><use href="#i-home"/></svg></span>Home</span>
+            <span class="tab on"><span class="pill"><svg class="icon"><use href="#i-grid"/></svg></span>Catalog</span>
+            <span class="tab"><span class="pill"><svg class="icon"><use href="#i-cart"/></svg></span>Cart</span>
+            <span class="tab"><span class="pill"><svg class="icon"><use href="#i-person"/></svg></span>Profile</span>
+          </div>
+        </div>
+        <div class="navinset"><span></span></div>
+      </div>
+    </div>
+
+    <div>
+      <p class="cap">05 · SiteSkin active · dark</p>
+      <div class="frame integrated frame--dark">
+        <div class="sysbar"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+        <div class="screen">
+          <div class="b-top"><div class="b-omni">
+            <span class="b-ident">
+              <svg class="icon icon--sm" style="color:var(--f-idbar-tls)"><use href="#i-lock"/></svg>
+              <span class="sec">denrzv.github.io</span>
+              <span class="path">/catalog</span>
+            </span>
+            <span class="b-tap"><svg class="icon"><use href="#i-reload"/></svg></span>
+            <span class="b-tap"><svg class="icon"><use href="#i-more"/></svg></span>
+          </div></div>
+          <div class="ss-top">
+            <span class="ss-logo">🌸</span>
+            <span class="ss-txt"><span class="t">Bloom Flowers</span><span class="s">Fresh flowers delivered today</span></span>
+            <span class="ss-menu"><svg class="icon"><use href="#i-menu"/></svg></span>
+          </div>
+          <div class="scroll"><div class="web">
+            <div class="web-body" style="padding-top:14px">
+              <h6>Best sellers</h6>
+              <div class="web-grid">
+                <div class="web-card"><div class="web-thumb"></div><p><b>Spring Bouquet</b><em>£28</em></p></div>
+                <div class="web-card"><div class="web-thumb"></div><p><b>Peony Bundle</b><em>£34</em></p></div>
+              </div>
+              <div class="web-grid">
+                <div class="web-card"><div class="web-thumb"></div><p><b>Rose Dozen</b><em>£42</em></p></div>
+                <div class="web-card"><div class="web-thumb"></div><p><b>Tulip Mix</b><em>£24</em></p></div>
+              </div>
+              <div class="web-line w70"></div><div class="web-line w45"></div>
+            </div>
+          </div></div>
+          <div class="ss-fab"><svg class="icon"><use href="#i-call"/></svg>Call</div>
+          <div class="ss-nav">
+            <span class="tab"><span class="pill"><svg class="icon"><use href="#i-home"/></svg></span>Home</span>
+            <span class="tab on"><span class="pill"><svg class="icon"><use href="#i-grid"/></svg></span>Catalog</span>
+            <span class="tab"><span class="pill"><svg class="icon"><use href="#i-cart"/></svg></span>Cart</span>
+            <span class="tab"><span class="pill"><svg class="icon"><use href="#i-person"/></svg></span>Profile</span>
+          </div>
+        </div>
+        <div class="navinset"><span></span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span><i class="sw" style="background:#1C1F26"></i> Browser-owned, fixed in both themes</span>
+    <span><i class="sw" style="background:#B83A6E"></i> Site-supplied, contrast-corrected</span>
+    <span><i class="sw" style="background:#5BC98A"></i> TLS state</span>
+  </div>
+
+  <div class="callout">
+    <h3>What frames 04–05 are and are not proposing</h3>
+    <p>The pink bar and the bottom navigation are the <em>existing</em> integrated chrome from
+    <code>SKIN-002</code>/<code>SKIN-003</code>, not a redesign — <code>UX-005</code> is descoped.
+    What is new in these frames is only the strip above them.</p>
+    <p>The site asked for <code>#D94F8A</code>. White body text on it is 3.86:1, which fails AA, so
+    the contrast guard darkened it to <code>#B83A6E</code> — 5.43:1. The browser already does this;
+    it is drawn here because a sketch that showed the raw manifest colour would be showing something
+    the browser never renders.</p>
+  </div>
+
+  <h2><span class="num">·</span>What the amendment actually costs</h2>
+  <p class="note">The ADR said “one extra token concept”. Rendering it showed that is optimistic:
+  a fixed dark strip cannot reuse the light theme’s foreground colours, so it needs its own set.</p>
+
+  <table>
+    <tr><th>On the fixed strip</th><th>Light theme’s value</th><th>Needed instead</th></tr>
+    <tr><td>TLS indicator</td><td><code>#146C43</code> — <span class="fail">2.56:1</span></td><td><code>#5BC98A</code> — <span class="pass">7.98:1</span></td></tr>
+    <tr><td>Action / focus</td><td><code>#1552C4</code> — <span class="fail">2.38:1</span></td><td><code>#8AB4F8</code> — <span class="pass">7.83:1</span></td></tr>
+    <tr><td>Body text</td><td>—</td><td><code>#EDEEF2</code> — <span class="pass">14.22:1</span></td></tr>
+    <tr><td>Secondary text</td><td>—</td><td><code>#99A0B0</code> — <span class="pass">6.29:1</span></td></tr>
+  </table>
+
+  <p class="note" style="margin-top:1rem">So the amendment is <strong>four tokens, not one</strong>
+  — an on-strip foreground set that is theme-independent. That is still cheaper than A’s identity
+  chip, which costs chrome height on every screen, and it is checked once rather than per theme.
+  But it should be recorded accurately before <code>UX-002</code> builds from it.</p>
+
+</div>
+</body>
+</html>
