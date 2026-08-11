@@ -53,7 +53,7 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 
 ## M5 — Distribution
 
-- [ ] `DIST-001` Debug APK on a GitHub Release, with install instructions
+- [x] `DIST-001` Debug APK on a GitHub Release, with install instructions
 
 ## Descoped
 

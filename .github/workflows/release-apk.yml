@@ -1,0 +1,98 @@
+name: Release debug APK
+
+# Turns a commit into a downloadable APK.
+#
+# The build is a DEBUG build by decision (SCOPE-001): distribution is an APK handed to named people,
+# not a Play listing, so signing configuration, R8 keep verification and store assets are all
+# descoped. A debug build also carries DEVX-001's SiteSkin Inspector, which is useful when
+# demonstrating what the browser decided about a manifest.
+#
+# Manual on purpose. A demo build is cut deliberately; a Release on every push is noise.
+#
+# NOTE ON SHARING: while denrzv/webora is private, GitHub serves release assets only to
+# authenticated users with access to the repository — a friend clicking the link gets a 404, not a
+# download. See docs/INSTALL.md for the options. This workflow is still worth having: it makes the
+# artifact reproducible and removes "which machine built this" from the question.
+
+on:
+  workflow_dispatch:
+    inputs:
+      notes:
+        description: Extra release notes (optional)
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-apk
+  cancel-in-progress: false
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Deliberately identical to the `android` job in ci.yml, so the build that ships is the build
+      # CI proved. If that job's toolchain changes, this one has to change with it.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+      - run: chmod +x ./gradlew
+
+      - name: Build the debug APK
+        run: ./gradlew :app:assembleDebug
+
+      # versionName and versionCode are constant across builds, so the file name is the only thing
+      # that can tell two APKs apart. The short SHA goes in it for that reason.
+      - name: Name the artifact after its version and commit
+        id: artifact
+        run: |
+          set -euo pipefail
+          version="$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts | head -1)"
+          short="$(git rev-parse --short HEAD)"
+          src="app/build/outputs/apk/debug/app-debug.apk"
+
+          # A Release with no asset is worse than no Release: the link exists and gives nothing.
+          if [[ ! -f "${src}" ]]; then
+            echo "::error::no APK at ${src}"
+            exit 1
+          fi
+
+          name="webora-${version}-${short}-debug.apk"
+          mv "${src}" "${name}"
+          echo "name=${name}" >> "${GITHUB_OUTPUT}"
+          echo "tag=v${version}-${short}" >> "${GITHUB_OUTPUT}"
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+          ls -lh "${name}"
+
+      - name: Publish the Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.artifact.outputs.tag }}
+          name: Webora ${{ steps.artifact.outputs.version }} (debug, ${{ github.sha }})
+          files: ${{ steps.artifact.outputs.name }}
+          fail_on_unmatched_files: true
+          body: |
+            Debug build of Webora for demonstration.
+
+            **This is a debug build.** It is debuggable, signed with Android's default debug key, and
+            includes the SiteSkin Integration Inspector. That is appropriate for a build handed to
+            people you know and not for general distribution.
+
+            - Application id `app.webora.browser.debug` — it will not collide with any future release
+              build on the same device.
+            - Android 8.0 (API 26) or newer.
+            - `INTERNET` is the only permission requested.
+
+            Install instructions: [`docs/INSTALL.md`](../blob/main/docs/INSTALL.md).
+
+            To see SiteSkin working, open the suggestion on the home screen — <https://denrzv.github.io>
+            — and allow the branding when asked.
+
+            ${{ inputs.notes }}
