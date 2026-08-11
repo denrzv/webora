@@ -84,6 +84,7 @@ jobs:
           path: |
             artifacts/
             app/build/outputs/androidTest-results/
+            app/build/outputs/connected_android_test_additional_output/
             app/build/reports/androidTests/
           if-no-files-found: error
           retention-days: 7
