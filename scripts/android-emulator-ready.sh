@@ -24,14 +24,18 @@ READINESS_LOG="${READINESS_LOG:-artifacts/readiness.txt}"
 # which is what lets scripts/android-emulator-ready-selftest.sh exercise every branch
 # on a machine with no /dev/kvm.
 readiness_verdict() {
-  local boot_completed="$1" bootanim_exit="$2" pm_path="$3" focus_line="$4"
+  local boot_completed="$1" bootanim_state="$2" pm_path="$3" focus_line="$4"
 
   if [[ "${boot_completed}" != "1" ]]; then
     printf 'boot-incomplete:%s\n' "${boot_completed:-<empty>}"
     return 1
   fi
-  if [[ "${bootanim_exit}" != "1" ]]; then
-    printf 'bootanim-running:%s\n' "${bootanim_exit:-<empty>}"
+  # The condition is "the boot animation does not own the display", which is false only while the
+  # service is actually running. It is NOT `service.bootanim.exit == 1`: this workflow launches the
+  # emulator with `-no-boot-anim`, so bootanim never runs and never sets that property, and run
+  # 31512048008 spent 49 samples and its whole deadline waiting for a `1` that could not arrive.
+  if [[ "${bootanim_state}" == "running" ]]; then
+    printf 'bootanim-running:%s\n' "${bootanim_state}"
     return 1
   fi
   if [[ "${pm_path}" != package:* ]]; then
@@ -80,7 +84,7 @@ main() {
     sample=$(( sample + 1 ))
     verdict="$(readiness_verdict \
       "$(device_getprop sys.boot_completed)" \
-      "$(device_getprop service.bootanim.exit)" \
+      "$(device_getprop init.svc.bootanim)" \
       "$(device_package_manager)" \
       "$(device_current_focus)")"
 

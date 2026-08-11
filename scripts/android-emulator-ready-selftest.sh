@@ -39,7 +39,16 @@ expect "the boot broadcast has not fired" \
   "boot-incomplete:<empty>" "" "1" "package:/system/framework/framework-res.apk" "${APP_FOCUS}"
 
 expect "the boot animation is still running" \
-  "bootanim-running:0" "1" "0" "package:/system/framework/framework-res.apk" "${APP_FOCUS}"
+  "bootanim-running:running" "1" "running" "package:/system/framework/framework-res.apk" "${APP_FOCUS}"
+
+# The regression from run 31512048008. `-no-boot-anim` means bootanim never runs, so its property is
+# never set — and a gate that waits for a value the device will never produce fails every run,
+# patiently, for its entire deadline. The condition is "not running", not "has finished".
+expect "an emulator launched with -no-boot-anim never sets the property" \
+  "ready" "1" "" "package:/system/framework/framework-res.apk" "${APP_FOCUS}"
+
+expect "a stopped boot animation is ready" \
+  "ready" "1" "stopped" "package:/system/framework/framework-res.apk" "${APP_FOCUS}"
 
 expect "PackageManager is not answering yet" \
   "package-manager-silent:<empty>" "1" "1" "" "${APP_FOCUS}"
@@ -60,9 +69,9 @@ expect "no mCurrentFocus line at all" \
 # must fail the run is ScreenEvidencePolicy's decision, and duplicating it here would
 # create a second copy free to disagree with the first.
 expect "readiness does not classify the focused window" \
-  "ready" "1" "1" "package:/system/framework/framework-res.apk" "${SYSTEM_UI_ANR_FOCUS}"
+  "ready" "1" "stopped" "package:/system/framework/framework-res.apk" "${SYSTEM_UI_ANR_FOCUS}"
 
-if (( checks < 8 )); then
+if (( checks < 10 )); then
   printf 'FAIL only %s checks ran; the self-test lost coverage\n' "${checks}" >&2
   exit 1
 fi

@@ -668,3 +668,55 @@ analytics, cookie, form or storage — it is the artifact most likely to be copi
 anything it does becomes a pattern. It also derives its own darker brand shades for body text rather
 than shipping white-on-`#D94F8A` at 3.86:1, mirroring the contrast guard `SKIN-001` runs over
 manifest colours so the page and the native chrome agree.
+
+### Screenshot evidence integrity (CI-002)
+
+`CI-001` made the hosted screenshot journey possible and immediately produced the failure mode a
+semantic assertion cannot catch: **three frames that passed every Compose assertion while covered by
+`System UI isn't responding`.** A green job and worthless evidence. The rules that keep that from
+recurring are as much a trust boundary as anything in the manifest pipeline, just one layer up — the
+question is not what a website may influence, but what the harness may hide from the person looking
+at the picture.
+
+**The cause was contention, and the fix is ordering.** The emulator step used to boot a device and
+then run a full Gradle build — 72 tasks, 8m39s in run `31491580516` — on the same 4-vCPU runner.
+Android's ANR timers are wall-clock and do not care that the delay came from the host. Both APKs are
+now assembled *before* the emulator launches, and `scripts/android-screenshot-ci.sh` refuses to run
+when either is missing. That precondition is the load-bearing half: without it a regressed pre-build
+step is invisible, because `connectedDebugAndroidTest` would simply rebuild inside the emulator step
+and still go green.
+
+**`sys.boot_completed=1` is not a screenshot-ready signal.** It means the boot broadcast fired.
+`scripts/android-emulator-ready.sh` requires four observable conditions on three consecutive samples
+under a deadline, and writes every sample it took to the artifact. `readiness_verdict` is a pure
+shell function of four strings precisely so a checkout with no `/dev/kvm` can still test the gate
+that decides when an emulator may be photographed.
+
+**The harness may clear exactly one obstruction, and it is an allow-list of one process.**
+`ScreenEvidencePolicy.focusVerdict` classifies `dumpsys window`'s focused window into `OwnedByApp`,
+`DismissableSystemAnr` or `Blocked`. Only `Application Not Responding: com.android.systemui` is
+dismissable, and only by pressing `Wait`. A System UI *crash*, an ANR in any other process, an
+unrecognised window, a null focus, an unparseable dump and two disagreeing focus lines are all
+`Blocked`. There is deliberately no `else` branch that dismisses. The obvious "close whatever dialog
+is in the way" would also clear a Webora crash dialog and photograph the screen behind it — silently,
+with the job still green.
+
+The decision reads only what the OS supplies. AOSP builds those titles from a **process name**
+(`"Application Not Responding: " + processName`), so no translated string, page content, dialog text
+or manifest field reaches the classification. Do not re-key it on anything a website can influence.
+
+**Ownership is a whole-token package match, not a `package/activity` prefix.** A dialog or popup
+window is not guaranteed to be titled that way, and the consent frame is captured with a dialog
+focused — the strict shape would fail the journey the guard protects. A bare `contains` was rejected
+too: it accepts `com.evil.app.webora.browser.debug`. Both halves have a test.
+
+**`src/screenshotPolicy/java` is shared into `test` and `androidTest` and into no variant.** In
+`androidTest` alone the decision would live where `./gradlew test` cannot reach it, and managed
+checkouts have no emulator — the test would exist and never have run. In `main` it would ship harness
+policy inside the browser. As with `debugRelease`'s `src/release/java`, AGP 9 needs both
+`java.srcDir` and `kotlin.srcDir`.
+
+**Readiness records the focused window and never classifies it.** That knowledge has one owner, and
+the shell self-test asserts the non-duplication directly: a System UI ANR dialog in `mCurrentFocus`
+is a *ready* device. Adding classification to the shell would create a second copy free to disagree
+with the first, and nothing would notice until they did.

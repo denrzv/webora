@@ -22,10 +22,44 @@ The ZIP contains:
 | `instrumentation.txt` | Focused connected-test output. |
 | `logcat.txt` | Emulator logcat for diagnosing WebView, network, crash or ANR failures. |
 | `result.txt` | Instrumentation exit status and number of PNGs collected. |
+| `prebuilt-apks.txt` | The two APKs the emulator step found already built, with their sizes. |
+| `readiness.txt` | Every readiness sample taken after boot, with its verdict and when it settled. |
+| `…/diagnostics/focus-01-home.txt` etc. | The `mCurrentFocus` lines behind each successful capture. |
+| `…/diagnostics/interference-*.txt` | Present only if a System UI dialog was cleared: what it was, and what was pressed. |
+| `…/diagnostics/window-*.txt` | Present only on a refused capture: the whole `dumpsys window` output at that moment. |
+
+The `diagnostics/` files are written through Android test storage, so they arrive under
+`connected_android_test_additional_output/` rather than beside `screenshots/`.
 
 The workflow runs only when manually requested. It does not consume private-repository Actions
 minutes on every push, does not publish screenshots as a Release, and retains its artifact for seven
 days.
+
+## What the pipeline may clear off the screen, and what it never touches
+
+A screenshot is supposed to show what a person would see. The first green run showed something
+else: three frames covered by Android's `System UI isn't responding` dialog, with every semantic
+assertion passing underneath. `CI-002` fixed the cause and then made the contaminated frame
+impossible to publish.
+
+- **The cause.** Both APKs are now built in an ordinary workflow step *before* the emulator starts.
+  Previously the emulator booted and then sat through an 8½-minute Gradle build on the same 4-vCPU
+  runner; ANR timers are wall-clock, so System UI was starved into one. `android-screenshot-ci.sh`
+  refuses to run if either APK is missing, so that build cannot quietly move back inside.
+- **Readiness.** `sys.boot_completed=1` means the boot broadcast fired, not that the device is worth
+  photographing. `scripts/android-emulator-ready.sh` polls four conditions — boot broadcast, boot
+  animation exit, PackageManager answering, something owning the display — and requires them on
+  three consecutive samples under a deadline. Every sample lands in `readiness.txt`.
+- **The one dismissal.** Before each capture the test reads the focused window and refuses to
+  photograph anything Webora does not own. Exactly one obstruction may be cleared:
+  `Application Not Responding: com.android.systemui`, by pressing `Wait`, at most twice, and it is
+  recorded in `diagnostics/interference-*.txt` when it happens.
+- **What is never dismissed.** A Webora crash dialog, a Webora ANR, a System UI *crash*, an ANR in
+  any other process, a permission prompt, or any window nobody could identify. Each of those fails
+  the run with the observed window. The allow-list is one process name in
+  `ScreenEvidencePolicy.DISMISSABLE_ANR_PROCESS`, and `ScreenEvidencePolicyTest` turns red if it is
+  widened — a generic "close whatever is on top" loop would clear a Webora failure and photograph
+  the screen behind it, which is precisely the outcome these screenshots exist to detect.
 
 ## What a failure means
 
@@ -34,6 +68,14 @@ ordinary HTTPS manifest discovery; it does not substitute fixture JSON. A failur
 the selected app commit regressed, the GitHub-hosted emulator failed, or `https://denrzv.github.io`
 or its `/.well-known/siteskin.json` was temporarily unavailable. Check `instrumentation.txt` first,
 then `logcat.txt`, and retry once if the evidence is clearly a transient network/emulator failure.
+
+Since `CI-002` there are three more shapes of red, and each names itself:
+
+| Failure | Where to look | What it means |
+|---|---|---|
+| `MISSING prebuilt APK` | `prebuilt-apks.txt` | The pre-build step regressed. Do not "fix" it by building inside the emulator step; that is the contention this ticket removed. |
+| `The emulator never settled` | `readiness.txt` | Every sample and its verdict is there. A run of `package-manager-silent` is a slow runner; `no-focused-window` throughout is a device that never presented anything. |
+| `Refusing to capture <frame>` | `diagnostics/window-<frame>.txt` | Something Webora does not own was on screen. The message names it. If it is a Webora crash or ANR, that is the product failing and the screenshot job is doing its job. |
 
 Screenshots are written through AndroidX `PlatformTestStorage`, so the Android Gradle Plugin copies
 them from the device into its connected-test additional-output directory before test teardown removes
