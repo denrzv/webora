@@ -3,7 +3,10 @@ package app.webora.browser.browser
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -13,7 +16,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
@@ -38,6 +43,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
@@ -63,6 +70,7 @@ import app.webora.browser.siteskin.SiteSkinBottomNavigation
 import app.webora.browser.siteskin.SiteSkinChromeModel
 import app.webora.browser.siteskin.SiteSkinQuickActions
 import app.webora.browser.siteskin.SiteSkinMenu
+import app.webora.browser.siteskin.SiteSkinConsentModel
 import app.webora.browser.siteskin.SiteSkinTheme
 import app.webora.browser.siteskin.scheme
 import app.webora.browser.siteskin.SiteSkinTopBar
@@ -218,6 +226,7 @@ internal fun BrowserScreen(
     ) }
     pendingConsent?.let { candidate -> SiteSkinConsentDialog(
         origin = candidate.origin.canonical,
+        model = SiteSkinConsentModel.from(candidate.configuration, isSystemInDarkTheme()),
         onAllow = {
             consentStore.save(candidate.origin, SiteConsentDecision.ALLOW)
             storedDecisions = consentStore.decisions()
@@ -348,6 +357,7 @@ private fun rememberManifestDiscovery(
 @OptIn(ExperimentalLayoutApi::class)
 internal fun SiteSkinConsentDialog(
     origin: String,
+    model: SiteSkinConsentModel,
     onAllow: () -> Unit,
     onNotNow: () -> Unit,
     onNever: () -> Unit,
@@ -355,7 +365,7 @@ internal fun SiteSkinConsentDialog(
     AlertDialog(
         onDismissRequest = onNotNow,
         title = { Text(stringResource(R.string.siteskin_consent_title, origin)) },
-        text = { Text(stringResource(R.string.siteskin_consent_message)) },
+        text = { SiteSkinConsentDetails(model) },
         confirmButton = { WeboraButton(stringResource(R.string.siteskin_allow), onAllow) },
         dismissButton = {
             // Three buttons plus a long "Never for this site" label do not fit one line at a large
@@ -368,6 +378,43 @@ internal fun SiteSkinConsentDialog(
         },
     )
 }
+
+@Composable
+private fun SiteSkinConsentDetails(model: SiteSkinConsentModel) {
+    Column(
+        modifier = Modifier.verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(stringResource(R.string.siteskin_consent_message))
+        Text(
+            stringResource(R.string.siteskin_consent_site_heading),
+            modifier = Modifier.semantics { heading() },
+        )
+        Text(model.title)
+        model.subtitle?.let { Text(it) }
+        model.brandColor?.let { color ->
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Box(
+                    Modifier
+                        .size(CONSENT_SWATCH_SIZE)
+                        .background(color)
+                        .clearAndSetSemantics { },
+                )
+                Text(stringResource(R.string.siteskin_consent_brand_color))
+            }
+        }
+        ConsentCount(R.plurals.siteskin_consent_navigation_count, model.navigationCount)
+        ConsentCount(R.plurals.siteskin_consent_quick_action_count, model.quickActionCount)
+        ConsentCount(R.plurals.siteskin_consent_menu_count, model.menuCount)
+    }
+}
+
+@Composable
+private fun ConsentCount(resource: Int, count: Int) {
+    Text(pluralStringResource(resource, count, count))
+}
+
+private val CONSENT_SWATCH_SIZE = 24.dp
 
 @Composable
 private fun ExternalNavigationDialog(
