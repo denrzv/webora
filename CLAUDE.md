@@ -226,6 +226,12 @@ The first time an origin's manifest validates, the user is asked before the chro
 Not now / Never for this site. This is the enforcement point for the per-site opt-out, and it is
 what makes the trust boundary legible rather than implicit.
 
+The sheet's site-authored half crosses the boundary only through `SiteSkinConsentModel.from`. That
+projection bounds remote strings and collection counts with `SiteSkinLimits`, uses the guarded theme
+colour, and excludes logos, URLs, action payloads and item labels. It stays attributed and separate
+from the browser-authored canonical-origin heading; manifest text is never concatenated into Webora's
+identity statement.
+
 ### Allow-lists, never deny-lists
 
 Schemes (`https`, `mailto`, `tel`, `geo`), action types, icon names, asset MIME types. An unknown
