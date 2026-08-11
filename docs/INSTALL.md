@@ -7,7 +7,7 @@ This page is for installing a demo build on a phone.
 
 **This is a debug build.** It is:
 
-- **debuggable**, and signed with Android's default debug key — not a release key;
+- **debuggable**, and signed with a shared debug key — not a release key;
 - larger and slower than a release build would be (~14 MB, unminified);
 - carrying the **SiteSkin Integration Inspector**, a developer panel that shows what the browser
   decided about a site's manifest.
@@ -54,6 +54,18 @@ knowing:
   the build with `-PweboraVersionCode=<n>`.
 - Installing an **older** build over a newer one is still refused by Android. Uninstall first if you
   need to go backwards.
+
+### One-time uninstall for early builds
+
+Upgrading in place also requires both APKs to be signed with the same key, and demo builds are
+signed with a **shared debug key committed to the repository** (`app/debug.keystore`) so that a
+build from CI and a build from a developer's machine match.
+
+Builds cut before that was pinned were signed with a per-machine key that GitHub Actions generated
+fresh on every run. If you installed one of those — anything from release `v0.1.0-7e6b620` or
+earlier — Android will refuse the next build with *"App not installed"* or
+`INSTALL_FAILED_UPDATE_INCOMPATIBLE`. **Uninstall Webora once**, then install the new build; every
+build after that upgrades in place.
 
 ## Seeing SiteSkin work
 
