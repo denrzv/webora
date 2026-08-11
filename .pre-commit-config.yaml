@@ -15,7 +15,11 @@ repos:
     rev: v4.6.0
     hooks:
       - id: end-of-file-fixer
+      # Two trailing spaces are a Markdown hard line break, and BACKLOG.md uses them
+      # deliberately in its ticket headers. Without this the hook rewrites the file and
+      # fails CI on prose that is correct; a single stray trailing space is still removed.
       - id: trailing-whitespace
+        args: ["--markdown-linebreak-ext=md"]
       - id: check-yaml
       - id: check-json
         exclude: ^(?:docs/claude-settings\.example\.json|spec/fixtures/invalid/malformed-json\.json)$
