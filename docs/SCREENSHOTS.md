@@ -9,7 +9,7 @@ return full-device screenshots without a local Android phone.
 2. Select **Actions** → **Android screenshots**.
 3. Select **Run workflow**, choose the branch containing the commit to inspect, and confirm.
 4. Open the resulting **Bloom Flowers on Pixel 6 API 33** job. A cold emulator normally takes
-   several minutes; the job has a 30-minute timeout.
+   several minutes; the job has a 40-minute timeout.
 5. Under **Artifacts**, download `webora-screenshots-api33-<commit-sha>`.
 
 The ZIP contains:
@@ -21,7 +21,7 @@ The ZIP contains:
 | `screenshots/03-siteskin-integrated.png` | Live page inside native SiteSkin chrome, with browser-owned security identity and navigation. |
 | `instrumentation.txt` | Focused connected-test output. |
 | `logcat.txt` | Emulator logcat for diagnosing WebView, network, crash or ANR failures. |
-| `result.txt` | Instrumentation exit status and number of PNGs pulled. |
+| `result.txt` | Instrumentation exit status and number of PNGs collected. |
 
 The workflow runs only when manually requested. It does not consume private-repository Actions
 minutes on every push, does not publish screenshots as a Release, and retains its artifact for seven
@@ -35,7 +35,11 @@ the selected app commit regressed, the GitHub-hosted emulator failed, or `https:
 or its `/.well-known/siteskin.json` was temporarily unavailable. Check `instrumentation.txt` first,
 then `logcat.txt`, and retry once if the evidence is clearly a transient network/emulator failure.
 
-The job fails if no PNG can be pulled, even when Gradle happened to return success. It uploads
+Screenshots are written through AndroidX `PlatformTestStorage`, so the Android Gradle Plugin copies
+them from the device into its connected-test additional-output directory before test teardown removes
+app-specific storage. The CI helper then copies the three PNGs into `artifacts/screenshots/`.
+
+The job fails if no PNG is collected, even when Gradle happened to return success. It uploads
 whatever diagnostics exist with `if: always()`, so a red job should still have an artifact unless
 the runner failed before artifact upload itself.
 
