@@ -40,14 +40,22 @@ jobs:
       - name: Run live SiteSkin screenshot journey
         uses: ReactiveCircus/android-emulator-runner@1dcd0090116d15e7c562f8db72807de5e036a4ed # v2.34.0
         with:
-          api-level: 33
+          api-level: 36
+          system-image-api-level: 33
           target: google_apis
           arch: x86_64
           profile: pixel_6
+          disk-size: 2048M
+          emulator-boot-timeout: 300
           disable-animations: true
           emulator-options: >-
             -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
-            -camera-back none -delay-adb 2000
+            -camera-back none -no-metrics
+          pre-emulator-launch-script: |
+            echo "=== Disk before emulator launch ==="
+            df -h /
+            du -sh "$ANDROID_AVD_HOME" 2>/dev/null || true
+            du -sh "$ANDROID_HOME/system-images" 2>/dev/null || true
           script: |
             set +e
             ./gradlew :app:connectedDebugAndroidTest \
