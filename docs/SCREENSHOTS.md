@@ -48,8 +48,11 @@ impossible to publish.
   refuses to run if either APK is missing, so that build cannot quietly move back inside.
 - **Readiness.** `sys.boot_completed=1` means the boot broadcast fired, not that the device is worth
   photographing. `scripts/android-emulator-ready.sh` polls four conditions — boot broadcast, boot
-  animation exit, PackageManager answering, something owning the display — and requires them on
-  three consecutive samples under a deadline. Every sample lands in `readiness.txt`.
+  animation not running, PackageManager answering, something owning the display — and requires them
+  on three consecutive samples under a deadline. Every sample lands in `readiness.txt`. This is not
+  belt-and-braces: in run `31513527146` the first sample was ready, the next three read
+  `mCurrentFocus=null`, and the device only settled 33 seconds in. One sample, or a short fixed
+  `sleep`, would have started the journey while nothing owned the display.
 - **The one dismissal.** Before each capture the test reads the focused window and refuses to
   photograph anything Webora does not own. Exactly one obstruction may be cleared:
   `Application Not Responding: com.android.systemui`, by pressing `Wait`, at most twice, and it is
