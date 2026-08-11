@@ -219,14 +219,16 @@ the cross-origin skin-swap and skin-drop cases. The behaviour is implemented and
 `SKIN-004`; only the live demonstration lapses, and it cannot be revived on a single Pages origin.
 
 ### M5 — Distribution
-`DIST-001` Debug APK on a GitHub Release, with install instructions.
+`DIST-001` Debug APK on a GitHub Release, with install instructions · `CI-001` manual GitHub-hosted
+Android screenshots against the live integration.
 
 *Descoped by `SCOPE-001`:* `PLAY-001` Compliance sweep · `PLAY-002` Real release signing + R8 keeps
 + versioning · `PLAY-003` Store listing, Data safety form, internal testing track. Reasoning kept
 below and in `BACKLOG.md`.
 
 ### M6 — Design refresh *(post-MVP; opened from emulator evidence)*
-`UX-001` Design direction sketches and selection, and `ADR-013` · `UX-002` `WeboraTheme` token
+`UX-001` Design direction sketches and selection, and `ADR-013` · `UX-006` attributed, bounded
+SiteSkin preview in first-use consent · `UX-002` `WeboraTheme` token
 layer, bundled vector icon set, dark theme · `UX-003` Browser-owned chrome rebuild — address bar,
 navigation controls, menu, error page · `UX-004` Home, onboarding and settings.
 

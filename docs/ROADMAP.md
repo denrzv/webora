@@ -54,6 +54,20 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 ## M5 — Distribution
 
 - [x] `DIST-001` Debug APK on a GitHub Release, with install instructions
+- [x] `CI-001` Manual GitHub-hosted Android screenshots against the live integration
+
+## M6 — Design refresh
+
+Browser-owned surfaces only. Opened after the `DIST-001` APK was run on an emulator: the browser
+gives *websites* a six-role colour system with a contrast guard and gives itself a bare
+`MaterialTheme {}`. Evidence in [`design/AUDIT.md`](design/AUDIT.md); the candidate directions are
+in [`design/directions/`](design/directions/index.html).
+
+- [x] `UX-001` Design direction sketches and selection — deliverable is a decision, plus `ADR-013`
+- [x] `UX-006` Attributed, bounded SiteSkin preview in first-use consent
+- [ ] `UX-002` Design system foundations — `WeboraTheme` tokens, icon set, dark theme
+- [ ] `UX-003` Browser-owned chrome rebuild — address bar, navigation controls, menu, error page
+- [ ] `UX-004` Home, onboarding and settings surfaces
 
 ## M6 — Design refresh
 
