@@ -33,3 +33,25 @@ References:
     rather than picking one. The choice is repository visibility, which is the owner's and outside
     a distribution ticket — but a link that 404s is the most likely way this ticket fails in
     practice, so it is stated where it will be read before a link is sent.
+
+- [x] TASK-FIX-1: Bump `versionCode` on every commit so a demo build installs over the last one
+  - Source: field observation — `versionCode` was constant at `1`, so Android refused to install
+    one demo build over another and every update needed an uninstall first.
+  - Modified: `app/build.gradle.kts`, `.github/workflows/release-apk.yml`, `docs/INSTALL.md`
+  - Acceptance: `versionCode` is the commit count reachable from `HEAD`, overridable with
+    `-PweboraVersionCode=`; derived through `providers.exec` so the configuration cache still
+    records it as an input; the release workflow checks out with `fetch-depth: 0` and fails
+    explicitly if the resolved count is ≤ 1. `versionName` is untouched, so the workflow's version
+    parse still works.
+  - Tests: built and read back with `aapt2 dump badging` — `versionCode='135'` matching
+    `git rev-list --count HEAD`, and `versionCode='999'` with `-PweboraVersionCode=999`.
+  - Negative control: a `--depth 1` clone of this repository reports a commit count of **1** against
+    **135** for a full clone. That is the exact failure `fetch-depth: 0` prevents, and the reason the
+    workflow now refuses to publish when the count is ≤ 1 — without the guard, a future checkout
+    change would silently reinstate a constant `versionCode` and break the upgrade path again.
+  - Deviation: `versionName` was left at `0.1.0` rather than given the commit SHA. The release name,
+    tag and asset name already carry it, and embedding it would break the workflow's
+    `grep versionName` parse for no gain.
+  - Note: the sharing question is settled — the repository stays private, and the APK is passed on
+    as a file or by granting repository access. `INSTALL.md` records that instead of the previous
+    three-option table.

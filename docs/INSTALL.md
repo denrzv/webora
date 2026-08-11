@@ -41,8 +41,19 @@ You can turn "Allow from this source" back off afterwards; the installed app is 
 ### Checking you got the right file
 
 The asset name carries the version and the commit it was built from — for example
-`webora-0.1.0-a1b2c3d-debug.apk`. `versionName` and `versionCode` do not change between demo builds,
-so **the commit in the file name is the only thing that distinguishes two APKs.**
+`webora-0.1.0-a1b2c3d-debug.apk`. `versionName` stays `0.1.0` across demo builds, so **the commit in
+the file name is what distinguishes two APKs on disk.**
+
+`versionCode` *does* change: it is the number of commits behind the build. That matters because
+Android refuses to install an APK whose `versionCode` is not higher than the installed one — so a
+newer demo build installs straight over an older one, with no uninstall step. Two consequences worth
+knowing:
+
+- Re-running the release workflow on an **unchanged commit** produces the same `versionCode`, by
+  design: the same source should give the same artifact. To force a bump without a new commit, run
+  the build with `-PweboraVersionCode=<n>`.
+- Installing an **older** build over a newer one is still refused by Android. Uninstall first if you
+  need to go backwards.
 
 ## Seeing SiteSkin work
 
@@ -71,15 +82,13 @@ switch off returns to regular browser chrome immediately, without reloading the 
 
 ## A note on the download link
 
-While `denrzv/webora` is a **private** repository, GitHub serves release assets only to signed-in
-users with access to it. A friend opening the Release link will get a 404 rather than a download.
+`denrzv/webora` is a **private** repository, and GitHub serves release assets only to signed-in
+users with access to it. A friend opening the Release link gets a 404 rather than a download.
 
-Three ways round it, none of which the release workflow can decide:
+**This is settled and the repository stays private.** Distribution is therefore one of:
 
-| Option | Trade-off |
-|---|---|
-| Make the repository public | The link works for anyone. The whole source becomes public. |
-| Send the APK file directly | Works today with no repository change; loses the reproducible link, and you are re-sending a 14 MB file each time. |
-| Publish the Release from a public repository instead | Puts an app binary in a repository that exists for something else. |
+- download the APK from the Release and send the file on, or
+- grant the person access to the repository, after which the Release link works for them.
 
-Until one is chosen, download the APK yourself from the Release and pass the file on.
+Keeping it private is why the release workflow does not advertise a public link, and why the
+instructions above start from "the Release link you were sent" rather than a URL anyone can open.

@@ -33,7 +33,14 @@ jobs:
   apk:
     runs-on: ubuntu-latest
     steps:
+      # fetch-depth: 0 is load-bearing, not tidiness. versionCode is the commit count, and
+      # actions/checkout defaults to a depth-1 clone where `git rev-list --count HEAD` returns 1 —
+      # so with the default every release would ship versionCode 1 and Android would refuse to
+      # install one demo build over another. Verified: a shallow clone of this repository counts 1
+      # against 135 for a full one.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       # Deliberately identical to the `android` job in ci.yml, so the build that ships is the build
       # CI proved. If that job's toolchain changes, this one has to change with it.
@@ -48,15 +55,24 @@ jobs:
       - name: Build the debug APK
         run: ./gradlew :app:assembleDebug
 
-      # versionName and versionCode are constant across builds, so the file name is the only thing
-      # that can tell two APKs apart. The short SHA goes in it for that reason.
+      # versionName is constant across demo builds, so the short SHA goes in the file name to tell
+      # two APKs apart on disk. versionCode does move — it is the commit count — but it is only
+      # visible once installed, which is no help when picking a file to send someone.
       - name: Name the artifact after its version and commit
         id: artifact
         run: |
           set -euo pipefail
           version="$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts | head -1)"
           short="$(git rev-parse --short HEAD)"
+          code="$(git rev-list --count HEAD)"
           src="app/build/outputs/apk/debug/app-debug.apk"
+
+          # Guards the fetch-depth above. If this ever reads 1 on a repository with real history,
+          # the checkout was shallow and every install-over-previous would be refused by Android.
+          if [[ "${code}" -le 1 ]]; then
+            echo "::error::versionCode resolved to ${code} — the checkout is shallow, see fetch-depth"
+            exit 1
+          fi
 
           # A Release with no asset is worse than no Release: the link exists and gives nothing.
           if [[ ! -f "${src}" ]]; then
@@ -67,6 +83,7 @@ jobs:
           name="webora-${version}-${short}-debug.apk"
           mv "${src}" "${name}"
           echo "name=${name}" >> "${GITHUB_OUTPUT}"
+          echo "code=${code}" >> "${GITHUB_OUTPUT}"
           echo "tag=v${version}-${short}" >> "${GITHUB_OUTPUT}"
           echo "version=${version}" >> "${GITHUB_OUTPUT}"
           ls -lh "${name}"
@@ -87,6 +104,8 @@ jobs:
 
             - Application id `app.webora.browser.debug` — it will not collide with any future release
               build on the same device.
+            - `versionCode` ${{ steps.artifact.outputs.code }}, derived from the commit count, so
+              this installs over an earlier demo build instead of being refused.
             - Android 8.0 (API 26) or newer.
             - `INTERNET` is the only permission requested.
 
