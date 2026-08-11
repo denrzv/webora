@@ -2,6 +2,7 @@
 
 Status: APPROVED
 Date: 2026-08-07
+Last amended: 2026-08-11 — added M7 visual quality, evidence, and integration polish after live Pixel 6 evidence.
 
 > **Repository note — resolved.** This plan was approved naming `denrzv/webora` as the app repo.
 > Attaching that repo was blocked when the plan was written, so the bootstrap was drafted against
@@ -228,13 +229,24 @@ below and in `BACKLOG.md`.
 
 ### M6 — Design refresh *(post-MVP; opened from emulator evidence)*
 `UX-001` Design direction sketches and selection, and `ADR-013` · `UX-006` attributed, bounded
-SiteSkin preview in first-use consent · `UX-002` `WeboraTheme` token
-layer, bundled vector icon set, dark theme · `UX-003` Browser-owned chrome rebuild — address bar,
-navigation controls, menu, error page · `UX-004` Home, onboarding and settings.
+SiteSkin preview in first-use consent · `UX-002` `WeboraTheme` token layer, bundled vector icon set,
+dark theme · `UX-003` Browser-owned chrome rebuild — address bar, navigation controls, menu, error
+page · `UX-004` Home, onboarding and settings.
 
-*Deferred:* `UX-005` SiteSkin integrated chrome and its icon set. Scope, acceptance criteria and the
-deferral reasoning are in `BACKLOG.md`; the evidence is in `docs/design/AUDIT.md` and the candidate
-directions in `docs/design/directions/`.
+M6 intentionally fixes browser-owned surfaces first. `UX-005` is no longer abandoned: it moves into
+M7 and begins after `UX-002` supplies the shared browser-owned vector/icon foundation.
+
+### M7 — Visual quality, evidence & integration polish *(opened from live Pixel 6 evidence)*
+`CI-002` deterministic clean Android screenshot capture · `DEVX-002` screenshot review experience ·
+`DEVX-003` inspector isolation and canonical evidence mode · `UX-005` SiteSkin integrated chrome &
+semantic icon set *(revived)* · `UX-007` adaptive SiteSkin consent action hierarchy · `DEMO-003`
+Bloom Flowers visual fidelity & protocol showcase.
+
+M7 has two parallel tracks. Evidence/DX work can proceed as soon as `CI-001` is on `main`; product
+polish keeps its real dependencies: `UX-005` waits for `UX-002`, `UX-007` builds on completed
+`UX-006`, and `DEMO-003` is the final demonstration after icon, consent, and inspector polish. The
+execution order and quality gates are maintained in [`DEVELOPER_PLAN.md`](DEVELOPER_PLAN.md); the
+per-ticket scope and acceptance criteria live in [`BACKLOG.md`](BACKLOG.md).
 
 ---
 
@@ -267,9 +279,48 @@ Two rules fall out of correcting it, and they belong here rather than in a ticke
   security cause, which is why `UX-001`'s deliverable is a direction *plus its mechanism* for
   keeping the two apart — see the three mechanisms compared in `docs/design/directions/`.
 
-The ordering — browser surfaces before SiteSkin surfaces — is deliberate and has a cost worth naming
-in advance: the Bloom Flowers integrated screen is the one most likely to be demonstrated, and it is
-the one M6 does not touch.
+The ordering — browser surfaces before SiteSkin surfaces — was deliberate and its cost is now
+measured rather than hypothetical: the Bloom Flowers integrated screen is the one most likely to be
+demonstrated, and it is where the placeholder icon system is most visible. M7 corrects that after
+`UX-002` establishes the shared browser-owned foundation rather than introducing a second ad-hoc
+visual system.
+
+---
+
+## Visual evidence inversion — why M7 exists
+
+The first successful GitHub-hosted Pixel 6 / API 33 journey established another distinction that is
+now part of the development model:
+
+> **A green instrumentation test proves behaviour, not presentation.**
+
+The live test could navigate Home → first-use consent → integrated Bloom Flowers and finish with zero
+test failures while every resulting screenshot was covered by `System UI isn't responding`. The
+same evidence showed a persistent debug Inspector overlay, placeholder navigation glyphs, and a weak
+consent action layout. None of those defects invalidated the Compose semantics assertions, but all of
+them invalidated the screenshots as product evidence.
+
+M7 therefore makes visual evidence a first-class acceptance input with five rules:
+
+1. **OS noise is not product evidence.** Canonical captures must be free from known system dialogs.
+   Automation may target a known System UI condition, but it must never become a generic mechanism
+   that dismisses Webora crashes, ANRs, trust prompts, or security warnings.
+2. **Evidence must be cheap to review.** A reviewer should be able to see the entire canonical
+   journey by opening one contact sheet, while full-resolution PNGs remain immediately adjacent and
+   diagnostics are kept separately.
+3. **Debug tooling must not define the product composition.** The SiteSkin Inspector remains a
+   debug-build capability, but a persistent developer overlay is not part of canonical visual
+   acceptance.
+4. **Semantic customization is not arbitrary trusted-chrome customization.** SiteSkin may request a
+   semantic icon name. Webora maps that name to a bundled browser-owned vector asset. A site does not
+   get a URL, drawable id, font glyph, or remote image slot inside security-adjacent native chrome.
+5. **The reference integration is acceptance evidence.** Bloom Flowers is not only a protocol
+   fixture; after `DEMO-003` it deliberately exercises the supported icon/action vocabulary and is
+   the visual proof that the protocol can produce a coherent native-like experience.
+
+These rules add a visual-quality gate without weakening the original trust model. The protected
+registrable domain and TLS state remain browser-owned, first-use consent remains mandatory, and all
+manifest-derived styling remains inside the same bounded SiteSkin surface.
 
 ---
 
@@ -429,6 +480,13 @@ you ask.
 **Stops before:** any `:siteskin-core` implementation, any Composable, the normative spec body, the
 Bloom Flowers pages. Those are M1+ and run through the `/idea → /plan → /tasks → /implement` loop.
 
+### Planning amendment — 2026-08-11
+
+`docs/DEVELOPER_PLAN.md` is now the execution companion for work after the bootstrap. It exists to
+record ticket ordering, parallel tracks and quality gates without turning this north-star document
+or `ROADMAP.md` into tasklists. Future M7 PRDs/plans/tasklists are still created at ticket start;
+`BACKLOG.md` is their durable scope input.
+
 ---
 
 ## Verification
@@ -454,3 +512,6 @@ Bloom Flowers pages. Those are M1+ and run through the `/idea → /plan → /tas
 7. **Artifact completeness:** every ticket in the index has a `docs/prd/<TICKET>.prd.md` whose
    acceptance criteria end with the command gate, matching hermes' convention, and
    `docs/DEVELOPMENT_PLAN.md` is committed.
+8. **M7 visual evidence:** a visual ticket is not accepted solely because instrumentation is green.
+   When its canonical surface changes, inspect the live Pixel 6 evidence and require it to be free
+   of known OS/debug contamination while retaining the protected domain/TLS and consent invariants.
