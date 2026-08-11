@@ -69,6 +69,18 @@ in [`design/directions/`](design/directions/index.html).
 - [ ] `UX-003` Browser-owned chrome rebuild — address bar, navigation controls, menu, error page
 - [ ] `UX-004` Home, onboarding and settings surfaces
 
+## M6 — Design refresh
+
+Browser-owned surfaces only. Opened after the `DIST-001` APK was run on an emulator: the browser
+gives *websites* a six-role colour system with a contrast guard and gives itself a bare
+`MaterialTheme {}`. Evidence in [`design/AUDIT.md`](design/AUDIT.md); the candidate directions are
+in [`design/directions/`](design/directions/index.html).
+
+- [x] `UX-001` Design direction sketches and selection — deliverable is a decision, plus `ADR-013`
+- [ ] `UX-002` Design system foundations — `WeboraTheme` tokens, icon set, dark theme
+- [ ] `UX-003` Browser-owned chrome rebuild — address bar, navigation controls, menu, error page
+- [ ] `UX-004` Home, onboarding and settings surfaces
+
 ## Descoped
 
 Not abandoned — parked, with the reasoning kept in [`BACKLOG.md`](BACKLOG.md) so reviving any of
