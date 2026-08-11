@@ -4,6 +4,9 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.graphics.Color
+import app.webora.browser.siteskin.SiteSkinConsentModel
+import dev.siteskin.core.origin.SiteOrigin
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -12,9 +15,11 @@ class SiteSkinConsentDialogTest {
     @get:Rule val compose = createComposeRule()
 
     @Test fun consentDialogNamesExactOriginAndBrowserOwnedBoundary() {
+        val origin = requireNotNull(SiteOrigin.parse("https://checkout.shop.example:8443/cart"))
         compose.setContent {
             SiteSkinConsentDialog(
-                origin = "https://checkout.shop.example:8443",
+                origin = origin.canonical,
+                model = consentModel(),
                 onAllow = {},
                 onNotNow = {},
                 onNever = {},
@@ -34,6 +39,7 @@ class SiteSkinConsentDialogTest {
         compose.setContent {
             SiteSkinConsentDialog(
                 origin = "https://shop.example",
+                model = consentModel(),
                 onAllow = { selected = "allow" },
                 onNotNow = { selected = "not-now" },
                 onNever = { selected = "never" },
@@ -42,9 +48,34 @@ class SiteSkinConsentDialogTest {
 
         compose.onNodeWithText("Allow").assertIsDisplayed()
         compose.onNodeWithText("Not now").assertIsDisplayed()
+        compose.onNodeWithText("Allow").performClick()
+        assertEquals("allow", selected)
+        compose.onNodeWithText("Not now").performClick()
+        assertEquals("not-now", selected)
         compose.onNodeWithText("Never for this site").performClick()
 
         assertEquals("never", selected)
+    }
+
+    @Test fun consentDialogRendersOnlyTheBoundedSiteProjection() {
+        val boundedTitle = "A".repeat(64)
+        compose.setContent {
+            SiteSkinConsentDialog(
+                origin = "https://shop.example",
+                model = consentModel(title = boundedTitle, subtitle = "Fresh flowers"),
+                onAllow = {},
+                onNotNow = {},
+                onNever = {},
+            )
+        }
+
+        compose.onNodeWithText("Requested by this site").assertIsDisplayed()
+        compose.onNodeWithText(boundedTitle).assertIsDisplayed()
+        compose.onNodeWithText("Fresh flowers").assertIsDisplayed()
+        compose.onNodeWithText("Sets a brand colour").assertIsDisplayed()
+        compose.onNodeWithText("1 navigation tab").assertIsDisplayed()
+        compose.onNodeWithText("2 quick actions").assertIsDisplayed()
+        compose.onNodeWithText("3 menu items").assertIsDisplayed()
     }
 
     @Test fun externalUrlRequiresExplicitConfirmation() {
@@ -55,4 +86,16 @@ class SiteSkinConsentDialogTest {
         compose.onNodeWithText("Open").performClick()
         assertEquals(true, confirmed)
     }
+
+    private fun consentModel(
+        title: String = "Bloom Flowers",
+        subtitle: String? = null,
+    ) = SiteSkinConsentModel(
+        title = title,
+        subtitle = subtitle,
+        brandColor = Color.Blue,
+        navigationCount = 1,
+        quickActionCount = 2,
+        menuCount = 3,
+    )
 }

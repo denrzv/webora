@@ -8,6 +8,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.Density
+import app.webora.browser.siteskin.SiteSkinConsentModel
 import org.junit.Rule
 import org.junit.Test
 
@@ -52,6 +53,14 @@ class BrowserFontScaleTest {
             AtDoubleFontScale {
                 SiteSkinConsentDialog(
                     origin = "https://example.test",
+                    model = SiteSkinConsentModel(
+                        title = "Example",
+                        subtitle = "A site-provided description",
+                        brandColor = null,
+                        navigationCount = 5,
+                        quickActionCount = 5,
+                        menuCount = 20,
+                    ),
                     onAllow = {},
                     onNotNow = {},
                     onNever = {},
