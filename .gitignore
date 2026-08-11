@@ -14,4 +14,9 @@ local.properties
 keystore.properties
 *.jks
 *.keystore
+# One exception, and only this one. The debug keystore is the well-known Android debug identity
+# (androiddebugkey / "android"), deliberately shared so that demo builds from CI and from a
+# developer's machine sign identically and can therefore be installed over one another. It carries
+# no security value and cannot sign a release build. Every other keystore stays excluded above.
+!app/debug.keystore
 /.kotlin/

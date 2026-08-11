@@ -55,3 +55,28 @@ References:
   - Note: the sharing question is settled — the repository stays private, and the APK is passed on
     as a file or by granting repository access. `INSTALL.md` records that instead of the previous
     three-option table.
+
+- [x] TASK-FIX-2: Pin the debug signing key so successive builds can upgrade each other
+  - Source: field observation while verifying `TASK-FIX-1` — a bumped `versionCode` is necessary but
+    not sufficient. Android also requires both APKs to be signed with the same key.
+  - New: `app/debug.keystore`
+  - Modified: `app/build.gradle.kts`, `.gitignore`, `docs/INSTALL.md`
+  - Acceptance: `signingConfigs.getByName("debug")` points at a keystore in the repository holding
+    the well-known Android debug identity (`androiddebugkey` / `android`), so a CI build and a local
+    build of the same commit are signed identically. `.gitignore` keeps `*.keystore` and `*.jks`
+    excluded and adds exactly one negative rule for this file. The `release` config is untouched and
+    still resolves credentials from the environment, leaving `signingConfig` null when they are
+    absent so a release build fails loudly rather than shipping debug-signed.
+  - Negative control, run twice around the change: build, move `~/.android/debug.keystore` aside,
+    rebuild, compare signer certificates.
+    - **Before:** `bde6baa1b8b5a496…` then `391c4ab11b57f7ca…` — a different key per machine, so no
+      CI-built demo build could ever install over another.
+    - **After:** `dff9c3d5b06e023f…` both times, matching the committed keystore's fingerprint
+      `DF:F9:C3:D5:…`.
+  - Note: this is not a secret. It is the published Android debug identity, its credentials are in
+    the build file in plain sight, and it cannot sign a release build. Committing it is what makes
+    the artifact reproducible across machines; the alternative (a base64 secret) hides a key that
+    has nothing to hide and still leaves local builds unable to match CI.
+  - Consequence recorded in `INSTALL.md`: anyone who installed a build from `v0.1.0-7e6b620` or
+    earlier has a differently-signed APK and needs **one** uninstall before the next build. Every
+    build after that upgrades in place.

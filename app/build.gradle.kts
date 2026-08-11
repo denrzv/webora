@@ -25,6 +25,26 @@ android {
     // debug key. Absent credentials leave signingConfig null, which fails the release
     // build loudly instead of producing a debug-signed artifact.
     signingConfigs {
+        // The debug key is PINNED to a keystore in the repository rather than left to AGP's
+        // per-machine `~/.android/debug.keystore`.
+        //
+        // Android refuses to install an APK over one signed with a different key
+        // (INSTALL_FAILED_UPDATE_INCOMPATIBLE) whatever the versionCode, and AGP generates a fresh
+        // random debug key on any machine that lacks one. Every CI runner starts without one, so
+        // successive release builds were signed differently and could not upgrade each other —
+        // which defeated the point of deriving versionCode from the commit count.
+        //
+        // This is not a secret. It is the well-known Android debug identity, its credentials are
+        // published here in plain sight, and it cannot sign a release build: `release` resolves
+        // separate credentials from the environment and leaves signingConfig null when they are
+        // absent, failing the build loudly. `.gitignore` still excludes every other keystore.
+        getByName("debug") {
+            storeFile = rootProject.file("app/debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+
         create("release") {
             val storeFilePath = resolveSigning("WEBORA_UPLOAD_STORE_FILE")
             if (storeFilePath != null) {
