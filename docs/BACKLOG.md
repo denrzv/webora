@@ -3,12 +3,9 @@
 Every ticket in the roadmap, with the scope and the acceptance criteria that are already decided.
 
 **These are not PRDs.** `/idea <TICKET>` instantiates the real PRD from the template when the ticket
-starts, using the entry below as its input. Pre-writing twenty-three full PRDs would produce
+starts, using the entry below as its input. Pre-writing full PRDs for future work would produce
 artifacts that are stale before anyone reads them — the AIDD flow deliberately writes the PRD at
 ticket start, when the preceding tickets have already taught you something.
-
-`SPEC-001` and `CORE-001` were given full PRDs at `Status: PRD_READY` during the bootstrap, because
-they were next. `SPEC-001` and `SPEC-002` have since shipped; **`CORE-001` is the current ticket**.
 
 Every ticket's acceptance criteria end with the same final item, per repo convention:
 `bash scripts/pre-commit-check.sh` passes.
@@ -205,8 +202,9 @@ a manifest gets a better-specified visual system than the browser rendering it.*
 gives websites six colour roles, a dark projection and a WCAG guard; `MainActivity.kt:38` gives
 Webora a bare `MaterialTheme {}` and the default baseline purple.
 
-Scope is **browser-owned surfaces only** — chrome, Home, onboarding, errors, settings. SiteSkin
-integrated chrome is `UX-005`, descoped below.
+Scope is **browser-owned surfaces first** — chrome, Home, onboarding, errors, settings. SiteSkin
+integrated chrome follows in M7 as `UX-005` once `UX-002` provides the shared browser-owned icon
+foundation.
 
 The audit's §3 lists seven constraints every ticket here inherits. Two are worth repeating because
 they are build-breaking rather than advisory: `BrowserSurfaceConventionsTest`'s `RAW_BUTTON_IMPORT`
@@ -265,24 +263,191 @@ changed; `bash scripts/pre-commit-check.sh` passes.
 
 ---
 
+## M7 — Visual quality, evidence & integration polish
+
+Opened from the first successful live Pixel 6 / API 33 screenshot journey. Functionally, the journey
+passed: emulator booted, Bloom Flowers activated, consent completed, and the instrumentation test
+finished green. Visually, the evidence exposed problems that semantic assertions did not: Android
+System UI ANR overlays covered all canonical frames, review required drilling into an artifact ZIP,
+the debug inspector obscured the integrated composition, navigation used placeholder glyphs, and
+the consent action layout looked accidental at phone width.
+
+M7 treats **reviewability and visual intent as product quality**, while preserving every existing
+trust-boundary rule.
+
+### `CI-002` — Deterministic clean Android screenshot capture
+
+**Priority:** P0  
+**Depends on:** `CI-001`  
+**Goal:** make a green screenshot run produce clean product evidence rather than screenshots that
+happen to contain the right Compose nodes underneath an OS dialog.
+
+**Scope**
+- Determine why the hosted API 33 emulator presents `System UI isn't responding` after boot and
+  distinguish startup/resource noise from an actual Webora ANR.
+- Add an explicit post-boot visual-readiness/settling strategy; `sys.boot_completed=1` alone is not a
+  sufficient screenshot-ready signal.
+- If the known system-owned ANR dialog can still occur, detect and dismiss **only that known System
+  UI dialog** before canonical captures, preferring `Wait` over killing System UI where possible.
+- Preserve logcat and enough diagnostics to prove what was dismissed.
+- Do not add generic popup dismissal that could hide a Webora crash, ANR, permission prompt, TLS
+  warning, or consent regression.
+
+**Acceptance**
+- A fresh cold-hosted workflow run returns canonical Home, consent, and integrated screenshots with
+  no `System UI isn't responding` overlay.
+- Repeated clean runs do not depend on a manually chosen fixed delay alone; readiness has an
+  observable condition or a bounded settle policy with diagnostics.
+- A deliberately induced Webora failure still makes the workflow red rather than being dismissed.
+- `bash scripts/pre-commit-check.sh` passes.
+
+### `DEVX-002` — Screenshot review experience
+
+**Priority:** P1  
+**Depends on:** `CI-001`; may proceed in parallel with `CI-002`  
+**Goal:** reduce screenshot review from archive archaeology to one obvious visual artifact.
+
+**Scope**
+- Upload a human-facing screenshots artifact containing only canonical visual evidence.
+- Place `01-home.png`, `02-siteskin-consent.png`, and `03-siteskin-integrated.png` at the artifact
+  root rather than behind implementation-specific output directories.
+- Generate a labelled `preview.png` contact sheet showing the complete journey in order.
+- Upload logcat, instrumentation output, raw connected-test additional output, and result metadata as
+  a separate diagnostics artifact.
+- Summarize screenshot count, commit/run identity, and the two artifact names in the job summary.
+- Do not introduce external image hosting or another SaaS only to make previews clickable.
+
+**Acceptance**
+- A reviewer downloads one screenshots artifact, opens one `preview.png`, and can judge the complete
+  journey immediately.
+- Individual full-resolution PNGs are adjacent to the preview at the artifact root.
+- Failure diagnostics remain available without cluttering the human-facing bundle.
+- `bash scripts/pre-commit-check.sh` passes.
+
+### `DEVX-003` — Inspector isolation and canonical evidence mode
+
+**Priority:** P1  
+**Depends on:** `DEVX-001`  
+**Goal:** keep the SiteSkin Inspector useful without making a developer overlay part of Webora's
+canonical product presentation.
+
+**Scope**
+- Remove the persistent `SiteSkin inspector` floating action from canonical screenshots and normal
+  demo composition.
+- Keep the inspector debug-only and reachable through an explicit developer affordance: an overflow
+  item, dedicated debug action, or deterministic visual-evidence mode is acceptable; silently
+  deleting the inspector is not.
+- Preserve the existing compile-time assertion that inspector implementation is absent from release
+  variants.
+- Ensure the mechanism cannot be controlled by a SiteSkin manifest.
+
+**Acceptance**
+- The integrated canonical screenshot contains no inspector overlay.
+- A developer in a debug build can still reach the inspector in no more than two deliberate
+  interactions.
+- Release variants remain inspector-free and the existing negative gate still detects leakage.
+- `bash scripts/pre-commit-check.sh` passes.
+
+### `UX-005` — SiteSkin integrated chrome & semantic icon set *(revived)*
+
+**Priority:** P0  
+**Depends on:** `UX-002`  
+**Goal:** replace prototype glyphs with an intentional icon system while keeping trusted chrome
+browser-owned.
+
+This ticket was previously descoped because browser-owned surfaces had no design system at all. Live
+Pixel 6 evidence now shows the cost of leaving it parked: the headline Bloom Flowers screen still
+renders `⌂`, `▦`, `▣`, `●`, `☎`, while the quick-action affordance reads as a generic `+` rather
+than a meaningful action. `UX-002` remains the prerequisite; once its vector/icon foundation lands,
+this ticket is the next visible quality step.
+
+**Scope**
+- Replace Unicode placeholder rendering in `SiteSkinIcon` with bundled browser-owned vector icons.
+- Keep the manifest contract semantic: a site supplies an icon **name**, never an arbitrary URL,
+  drawable, font glyph, or remote asset for trusted browser chrome.
+- Define/document a small supported semantic vocabulary covering at least Home, catalog/storefront,
+  a flower or equivalent domain-specific catalog cue, cart, account/person, call, search/menu, and
+  deterministic fallback.
+- If new semantic names are added, update the validator allow-list, spec/fixtures/documentation as
+  required without unnecessarily bumping the schema version: the schema intentionally allows
+  forward-compatible icon-name strings and the trusted allow-list remains authoritative.
+- Render bottom navigation with real icon + label states, including a clear selected state.
+- Give quick actions meaningful icons rather than a generic `+` when their semantic action is known.
+- Preserve TalkBack labels, selected semantics, >=48 dp touch targets, contrast, and 200% font-scale
+  behaviour.
+
+**Acceptance**
+- No canonical SiteSkin navigation or supported quick action uses the old placeholder glyph set.
+- Bloom Flowers demonstrates at least Home, catalog/flowers, Cart, Account, and Call with meaningful
+  browser-owned icons.
+- An unknown manifest icon name still produces a deterministic safe fallback plus the existing
+  diagnostic; it cannot load site-supplied trusted-chrome artwork.
+- A negative control proves a manifest cannot address an arbitrary drawable/resource.
+- Pixel 6 visual evidence shows a deliberate selected nav state and no icon/label collision.
+- `bash scripts/pre-commit-check.sh` passes.
+
+### `UX-007` — Adaptive SiteSkin consent action hierarchy
+
+**Priority:** P1  
+**Depends on:** `UX-006`  
+**Goal:** make the trust decision visually legible and balanced on real phone widths without
+weakening the protected consent copy.
+
+**Scope**
+- Establish a clear hierarchy: `Allow` is primary, `Not now` is secondary, and `Never for this site`
+  is the persistent-denial action.
+- Use an adaptive action layout that can stack or reflow deliberately on narrow widths rather than
+  leaving one action isolated above an accidental-looking row.
+- Keep the exact protected origin, explanation of what the site may customise, and browser/security
+  ownership message outside SiteSkin-controlled styling.
+- Exercise long/localised action labels and 200% font scale.
+- Preserve current persistence semantics for Allow / Not now / Never.
+
+**Acceptance**
+- Pixel 6 / API 33 consent evidence has an intentional visual hierarchy with no clipping or awkward
+  split caused by width.
+- At 200% font scale all three actions remain readable, reachable, and >=48 dp where applicable.
+- Tests still prove the protected origin shown to the user is the committed origin and cannot be
+  rewritten by manifest data.
+- Consent behaviour/persistence is unchanged apart from presentation.
+- `bash scripts/pre-commit-check.sh` passes.
+
+### `DEMO-003` — Bloom Flowers visual fidelity & protocol showcase
+
+**Priority:** P1  
+**Depends on:** `DEMO-001`, `UX-005`, `UX-007`, `DEVX-003`; clean evidence supplied by `CI-002` and
+`DEVX-002`  
+**Goal:** make the one reference integration demonstrate the quality of the protocol, not merely its
+functional existence.
+
+**Scope**
+- Update the Bloom Flowers live manifest/reference fixture to exercise the final semantic icon
+  vocabulary selected by `UX-005`.
+- Use meaningful navigation semantics for Home, Flowers/Catalog, Cart, and Account, plus a Call-shop
+  quick action with its matching browser-owned icon.
+- Keep the site implementation readable as reference material; do not add framework complexity or
+  arbitrary browser-specific visual assets merely to make screenshots attractive.
+- Verify labels, routes, active matching, quick action, consent preview, and live origin continue to
+  describe the actual deployed site.
+- Treat the clean Home → consent → integrated Pixel 6 screenshot journey as visual acceptance
+  evidence.
+
+**Acceptance**
+- `siteskin-lint https://denrzv.github.io` remains green.
+- The integrated screenshot contains meaningful vector icons, a clear selected nav item, a coherent
+  quick action, no inspector overlay, and no OS contamination.
+- The consent screenshot satisfies `UX-007` and the integrated screenshot satisfies `UX-005`.
+- `INTEGRATION.md` documents the semantic icon choices so a site owner can reproduce the pattern.
+- `DEMO-002` remains descoped; this ticket improves the existing reference origin rather than adding
+  unrelated demos.
+- `bash scripts/pre-commit-check.sh` passes.
+
+---
+
 ## Descoped
 
 Parked with their reasoning, not deleted — `SCOPE-001` records the decisions. Each entry keeps its
 original definition so reviving it does not start from nothing.
-
-**`UX-005` SiteSkin integrated chrome and icon set.** The top bar, bottom navigation, quick-action
-FAB and side menu, and replacing `SiteSkinChrome.kt:135`'s Unicode placeholder glyphs
-(`⌂ ▦ ▣ ● ☎`) with the real icon set `UX-002` introduces.
-- *Why not now:* the browser's own surfaces have no design system at all, while the integrated
-  chrome already has a real `NavigationBar`, a six-role theme projection and a contrast guard. The
-  surface with nothing goes first.
-- *What lapses:* the Bloom Flowers screen — **the headline screen of any demo** — keeps its
-  placeholder glyphs through M6. Worth stating plainly rather than discovering during a demo: the
-  surface being fixed first is not the surface most on show.
-- *What would revive it:* `UX-002` landing the vector-drawable icon set, which is the actual
-  dependency. Once eight real icons exist in `res/drawable`, `SiteSkinIcon`'s closed decorative
-  mapping is a small change — and it must stay closed, since the icon name is a manifest-supplied
-  value and an open mapping would hand a website an arbitrary glyph slot.
 
 **`DEMO-002` PixelPlay, Daily Journal, Example News.** Three more origins, the last deliberately
 without a manifest as the negative control. Acceptance was: all four served over HTTPS on **distinct
