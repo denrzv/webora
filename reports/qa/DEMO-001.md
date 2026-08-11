@@ -127,3 +127,36 @@ ticket's scope — recorded here and in the tasklist for a ticket of its own.
 
 Every tracked text file in both repositories was scanned for the same class of violation before the
 fix was pushed; the tasklist was the only one this ticket introduced.
+
+---
+
+## Addendum — 2026-08-11, live origin (`SCOPE-001`)
+
+Scenario 23 was blocked when this report was written because
+`bloomflowers.webora.app` had no DNS record. `webora.app` turned out to be registered by someone
+else, so `SCOPE-001` moved the deployment to `https://denrzv.github.io` — a GitHub Pages **user**
+site, which owns its origin root and therefore satisfies the same rule that disqualified a project
+site. The scenario is now verified against that origin.
+
+| # | Scenario | Result |
+|---|---|---|
+| 23 | `siteskin-lint` exits 0 against the deployed origin | **Pass** — `./gradlew :siteskin-lint:run --args="https://denrzv.github.io"` → exit 0 |
+| 24 | The app renders the skin on-device | **Still blocked** — no emulator available; unchanged by this addendum |
+
+Evidence gathered against the live origin:
+
+- `GET /.well-known/siteskin.json` → `200`, `application/json; charset=utf-8`, served at the origin
+  root.
+- The live bytes hash to `ed0ca884eac5f5c0014454266a16f70487980ce7e60f29184d3b6afcf2d96e1d` and
+  compare byte-identical to `spec/fixtures/valid/bloom-flowers.json` — so the five-copy chain now
+  verifies **over the network**, not just across two checkouts.
+- `/catalog`, `/cart` and `/account` each return `301` to their trailing-slash form on real GitHub
+  Pages. This closes a gap the original report carried without saying so: scenario 13 verified the
+  redirect against `python3 -m http.server`, and the research note's GitHub Pages row was reasoned
+  rather than tested. It is now tested, and it behaves as predicted — which is what makes the
+  published `match` arrays correct on this host.
+- `/` and `/assets/siteskin/logo.png` → `200`.
+
+**What this does not prove.** On-device rendering, the first-use consent dialog and the
+tab-highlight transitions remain unverified; `AGENTS.md` rules out an emulator in this environment.
+Scenario 24 stays blocked, and `siteskin-lint` exit 0 is not evidence for it.

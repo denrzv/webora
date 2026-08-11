@@ -637,7 +637,18 @@ one is how four copies agree and the fifth does not.
 `/.well-known/siteskin.json` belongs to whatever owns the user-site root, and `internal_url: "/catalog"`
 resolves outside the deployment. This is stricter than `DEVELOPMENT_PLAN.md`'s argument that a
 shared origin destroys the skin-swap demo — that one is about `DEMO-002`; this one applies to a
-single site. Hence `CNAME` and `bloomflowers.webora.app`.
+single site.
+
+That rule selected the hosting twice. `DEMO-001` chose a custom domain; `SCOPE-001` re-chose when
+`webora.app` turned out to be taken, and the answer was the only other free shape that owns an
+origin root: a Pages **user** site. `denrzv/denrzv.github.io` publishes by checking out
+`denrzv/bloom-flowers` at deploy time — nothing is copied, so the manifest keeps one source of
+truth — and it strips that repository's `CNAME`, because Pages honours a custom domain even with no
+DNS behind it and will 301 every request into a void. The manifest itself never needed editing:
+every URL in it is origin-relative, which is what lets one byte-identical file be both the fixture
+bound to `bloomflowers.example` and the document served from `denrzv.github.io`.
+
+`denrzv.github.io` is a stopgap and cannot supply the distinct origins `DEMO-002` would need.
 
 **Route layout is decided by the manifest, not by taste.** Manifest paths are origin-absolute and
 cannot be re-authored per host, and only the directory layout (`catalog/index.html`) resolves

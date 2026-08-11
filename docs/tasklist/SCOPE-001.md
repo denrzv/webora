@@ -38,15 +38,21 @@ References:
     domain; both remaining workflows parse. The lint workflow's "manual because DNS" rationale was
     replaced with the real one — `denrzv/webora` is private, so its checkout needs a token.
 
-- [ ] TASK-3: Narrow the roadmap and backlog to one demo, and replace Play with APK distribution
+- [x] TASK-3: Narrow the roadmap and backlog to one demo, and replace Play with APK distribution
   - Modified: `docs/ROADMAP.md`, `docs/BACKLOG.md`
   - Acceptance: `DEMO-002` and `PLAY-001..003` sit under a descoped heading, each keeping its
     original text plus why it is not being built and what would revive it; `M5` is Distribution;
     `DIST-001` defines `:app:assembleDebug` on a GitHub Release with install instructions, and
     states explicitly that signing, R8 keep verification and store assets are out of scope.
   - Tests: `bash scripts/pre-commit-check.sh`
+  - Result: `M5` is Distribution with `DIST-001`; a `Descoped` section in both files keeps
+    `DEMO-002` and `PLAY-001..003` with why-not-now and what-would-revive-it lines. The roadmap's
+    definition-of-done no longer names PixelPlay, Daily Journal or Example News.
+  - Deviation: also recorded three carve-outs the descoping would otherwise have swallowed —
+    `targetSdk 36` already shipped, `ADR-006`/`HARDEN-002` impersonation controls are security
+    rather than Play compliance, and `DATA_SAFETY.md` still stands.
 
-- [ ] TASK-4: Correct the development plan's hosting and distribution reasoning
+- [x] TASK-4: Correct the development plan's hosting and distribution reasoning
   - Modified: `docs/DEVELOPMENT_PLAN.md`
   - Acceptance: the `webora.app` subdomain table is replaced by what is true — the domain is taken,
     the origin-root rule makes a user Pages site the only free option that can host a SiteSkin
@@ -56,8 +62,12 @@ References:
     descoped heading with an explicit carve-out that **targetSdk 36 already shipped** and is not
     descoped.
   - Tests: `bash scripts/pre-commit-check.sh`
+  - Result: the subdomain table is replaced by the origin-root argument and the live origin; the
+    multi-origin case is preserved verbatim inside a blockquote marked deferred with `DEMO-002`,
+    since it was postponed rather than refuted. The Play section keeps its risk table under a
+    `Descoped:` heading with the three carve-outs stated above it.
 
-- [ ] TASK-5: Record the live verification and update the architecture note
+- [x] TASK-5: Record the live verification and update the architecture note
   - Modified: `CLAUDE.md`, `reports/qa/DEMO-001.md`
   - Acceptance: `CLAUDE.md`'s `DEMO-001` hosting paragraph names the live origin and its stopgap
     status while keeping the origin-root rule that selected it. `reports/qa/DEMO-001.md` gains an
@@ -65,3 +75,9 @@ References:
     matching `BLOOM_FLOWERS_SHA256`, the `/catalog` → `/catalog/` redirect observed on real GitHub
     Pages, `siteskin-lint` exit 0) and restating that scenario 24 remains blocked.
   - Tests: `bash scripts/pre-commit-check.sh`
+  - Result: `CLAUDE.md` now records that the origin-root rule selected the hosting twice, and why
+    the publisher strips `CNAME`. The QA addendum passes scenario 23 with evidence and explicitly
+    restates that scenario 24 stays blocked, so it cannot be read as closing more than it does.
+  - Note: the addendum also closes a gap the original report did not flag — scenario 13's redirect
+    behaviour had only ever been tested on `python3 -m http.server`, with the GitHub Pages row
+    reasoned rather than observed. It is now observed, and matches.

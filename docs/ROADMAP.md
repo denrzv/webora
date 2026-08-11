@@ -50,13 +50,23 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 - [x] `A11Y-001` Accessibility
 - [x] `DEVX-001` SiteSkin Integration Inspector
 - [x] `DEMO-001` Bloom Flowers reference integration
-- [ ] `DEMO-002` PixelPlay, Daily Journal, Example News
 
-## M5 — Google Play
+## M5 — Distribution
 
-- [ ] `PLAY-001` Compliance sweep
-- [ ] `PLAY-002` Release signing, R8 keeps, versioning
-- [ ] `PLAY-003` Store listing, Data safety, internal testing track
+- [ ] `DIST-001` Debug APK on a GitHub Release, with install instructions
+
+## Descoped
+
+Not abandoned — parked, with the reasoning kept in [`BACKLOG.md`](BACKLOG.md) so reviving any of
+them does not start from nothing. `SCOPE-001` records the decisions.
+
+- `DEMO-002` PixelPlay, Daily Journal, Example News — one demo is enough for now. The browser
+  behaviour they would have demonstrated live (skin swap, skin drop on origin change) is implemented
+  and unit-tested under `SKIN-004`; what lapses is the demonstration, not the capability.
+- `PLAY-001` Compliance sweep · `PLAY-002` Release signing, R8 keeps, versioning ·
+  `PLAY-003` Store listing, Data safety, internal testing track — distribution is an APK handed to
+  friends, not a store listing. **`targetSdk 36` is not descoped**: it shipped in `FOUND-002` and is
+  in the build today.
 
 ---
 
@@ -67,9 +77,10 @@ From concept §62. All must hold:
 - app installs and launches; arbitrary HTTPS browsing works
 - regular websites remain fully usable
 - manifests are discovered, and invalid ones fail safely
-- Bloom Flowers, PixelPlay and Daily Journal each render with their own branding
-- Example News stays in regular mode
+- Bloom Flowers renders with its own branding
+- a site without a manifest stays in regular mode
 - native bottom navigation opens the correct routes
-- an origin change deactivates SiteSkin mode
+- an origin change deactivates SiteSkin mode — covered by `SKIN-004`'s tests rather than by a second
+  demo origin, which is descoped with `DEMO-002`
 - **no manifest can hide the domain or the TLS indicator** (`ADR-006`)
 - core validation and navigation logic is covered by automated tests

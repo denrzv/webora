@@ -179,27 +179,69 @@ rejected actions (concept §31). Acceptance: absent from release builds — asse
 
 **`DEMO-001` Bloom Flowers.** Full reference site in `denrzv/bloom-flowers` plus `INTEGRATION.md`.
 Acceptance: `siteskin-lint` exits 0 against the deployed origin; the app renders mockup screen 3.
-
-**`DEMO-002` PixelPlay, Daily Journal, Example News.** Three more origins, the last deliberately
-without a manifest as the negative control. Acceptance: all four served over HTTPS on **distinct
-origins**, enabling `SKIN-004`'s transition tests.
+**Done** — served from `https://denrzv.github.io`, lint exit 0 against it.
 
 ---
 
-## M5 — Google Play
+## M5 — Distribution
+
+**`DIST-001` Debug APK on a GitHub Release.** Build `:app:assembleDebug`, attach the APK to a
+GitHub Release, and write install instructions covering the "install from unknown sources" prompt
+Android shows for a sideloaded build. Acceptance: a friend with the link installs it and Bloom
+Flowers renders with its branded chrome.
+
+Deliberately **not** in scope, and this is the point of choosing a debug build: no signing config,
+no keystore handling, no R8 keep verification, no store assets, no Data safety form. The debug
+variant also carries the `DEVX-001` SiteSkin Inspector, which is useful when demonstrating and is
+absent from the release variants by construction.
+
+---
+
+## Descoped
+
+Parked with their reasoning, not deleted — `SCOPE-001` records the decisions. Each entry keeps its
+original definition so reviving it does not start from nothing.
+
+**`DEMO-002` PixelPlay, Daily Journal, Example News.** Three more origins, the last deliberately
+without a manifest as the negative control. Acceptance was: all four served over HTTPS on **distinct
+origins**, enabling `SKIN-004`'s transition tests.
+- *Why not now:* one demo is enough to show the protocol working end to end.
+- *What lapses:* only the live demonstration of skin **swap** (Bloom → PixelPlay) and skin **drop**
+  (Bloom → News), concept §46 steps 14–15. The behaviour itself is implemented and unit-tested in
+  `SKIN-004`; no capability is lost.
+- *What would revive it:* a domain with per-demo subdomains. A single GitHub Pages user site cannot
+  supply distinct origins, so this cannot be revived on the current hosting.
 
 **`PLAY-001` Compliance sweep.** targetSdk 36; AAB; permissions minimized; edge-to-edge; predictive
 back; 16 KB page sizes; Policy 4.3 minimum-functionality evidence prepared (Webora is a
-general-purpose browser, and the reviewer note should say why in one paragraph). Acceptance: a
+general-purpose browser, and the reviewer note should say why in one paragraph). Acceptance was: a
 completed checklist with evidence per line.
+- *Why not now:* distribution is an APK handed to friends; there is no listing to comply with.
+- **`targetSdk 36` is not descoped.** It shipped in `FOUND-002`'s first commit precisely so it would
+  not become a cleanup ticket, and it is in the build today.
+- *Worth keeping:* the Policy 4.3 analysis. Reviewers pattern-match "WebView app" and reject; the
+  answer is that Webora is a general-purpose browser with arbitrary URL entry, history, downloads
+  and a default-browser role, and the SiteSkin engine is substantial native functionality.
 
 **`PLAY-002` Release signing and R8.** Implement the signing config — env → gradle property →
 `local.properties`. Verify R8 keeps against a real release build; confirm kotlinx.serialization
-serializers survive minification. Acceptance: a signed AAB installs and runs, and SiteSkin mode
+serializers survive minification. Acceptance was: a signed AAB installs and runs, and SiteSkin mode
 still activates in the minified build. Missing credentials must fail the release build loudly, not
 silently fall back to the debug key.
+- *Why not now:* `DIST-001` ships a debug APK, which needs none of it.
+- *Live risk if revived:* kotlinx.serialization serializers are the thing minification breaks
+  quietly — the manifest would stop parsing in the release build only.
 
 **`PLAY-003` Store listing.** Listing copy, screenshots, feature graphic, launcher icons, Data
-safety form, privacy policy hosted on the product domain, internal testing track. Acceptance: Play
-Console pre-launch report clean; the privacy policy URL resolves from both the listing and inside
-the app.
+safety form, privacy policy hosted on the product domain, internal testing track. Acceptance was:
+Play Console pre-launch report clean; the privacy policy URL resolves from both the listing and
+inside the app.
+- *Why not now:* no store listing, and no product domain to host a privacy policy on — `webora.app`
+  is taken.
+- *Already done and worth keeping:* `docs/privacy/DATA_SAFETY.md` from `PRIV-001` is the
+  implementation-backed mapping a Data safety form would be filled from.
+
+**Impersonation risk is not descoped with any of this.** `ADR-006`'s non-suppressible domain and TLS
+indicator, and `HARDEN-002`'s controls, were justified partly by Play's Deceptive Behavior policy —
+but they are load-bearing security regardless of how the app is distributed, and an APK handed to
+friends does not relax them.
