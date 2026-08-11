@@ -212,12 +212,18 @@ collections · `HARDEN-002` Brand-impersonation controls (the two decisions abov
 default telemetry, global + per-site SiteSkin toggle, clear-browsing-data, Data-safety mapping ·
 `A11Y-001` TalkBack, font scaling, 48dp targets, contrast, no-colour-alone · `DEVX-001` SiteSkin
 Integration Inspector, debug builds only (concept §31) · `DEMO-001` **Bloom Flowers reference
-integration** (own repo, own origin) · `DEMO-002` PixelPlay / Daily Journal / Example News on
-distinct origins — the cross-origin skin-swap and skin-drop cases.
+integration** (own repo, own origin).
 
-### M5 — Google Play
-`PLAY-001` Compliance sweep · `PLAY-002` Real release signing + R8 keeps + versioning ·
-`PLAY-003` Store listing, Data safety form, internal testing track.
+*Descoped by `SCOPE-001`:* `DEMO-002` PixelPlay / Daily Journal / Example News on distinct origins —
+the cross-origin skin-swap and skin-drop cases. The behaviour is implemented and unit-tested in
+`SKIN-004`; only the live demonstration lapses, and it cannot be revived on a single Pages origin.
+
+### M5 — Distribution
+`DIST-001` Debug APK on a GitHub Release, with install instructions.
+
+*Descoped by `SCOPE-001`:* `PLAY-001` Compliance sweep · `PLAY-002` Real release signing + R8 keeps
++ versioning · `PLAY-003` Store listing, Data safety form, internal testing track. Reasoning kept
+below and in `BACKLOG.md`.
 
 ---
 
@@ -240,39 +246,59 @@ bloom-flowers/
 `INTEGRATION.md` is a deliverable, not a README — it is the artifact that proves the protocol is
 adoptable by someone who is not us.
 
-### Hosting — you are buying a domain, so build for real origins
+### Hosting — an origin root, which is stricter than it sounds
 
-This matters more than it looks: GitHub Pages puts every project site on `denrzv.github.io`, so all
-four demos would share **one origin** — which destroys the origin-separation demo that is the whole
-security story. A real domain with per-demo subdomains fixes it, and subdomains are themselves
-distinct origins, so the setup demonstrates concept §26 ("subdomains are not trusted automatically")
-rather than papering over it.
+**Amended by `SCOPE-001`.** `webora.app` is registered by someone else. The demo is served from
+`https://denrzv.github.io`, and a dedicated domain is deferred until one is bought.
 
-Suggested layout once you have the domain — say `webora.app`:
+The binding constraint is not the domain, it is the **origin root**. SiteSkin discovery requests
+`/.well-known/siteskin.json` at the root of the origin, and a manifest's `internal_url` paths are
+origin-absolute. On a GitHub Pages *project* site — `denrzv.github.io/bloom-flowers/` — that
+well-known path belongs to whoever owns the user-site root, and `/catalog` resolves outside the
+deployment entirely. **A project page cannot host a SiteSkin integration at all**, for one site,
+independently of any argument about multiple demos.
 
-| Origin | Serves | Why |
-|---|---|---|
-| `webora.app` | Product page + **privacy policy** | Play requires a reachable privacy-policy URL on the listing *and* in-app (`PLAY-003`) |
-| `bloomflowers.webora.app` | Bloom Flowers demo (`bloom-flowers` repo) | Primary reference integration, mockup screen 3 |
-| `pixelplay.webora.app` | PixelPlay Games demo | Proves SiteSkin isn't e-commerce-specific (screen 4) |
-| `journal.webora.app` | Daily Journal demo | Productivity case (screen 5) |
-| `news.webora.app` | Example News — **no manifest** | The negative control (screen 6) |
+A GitHub Pages *user* site owns its root, which makes it the only free option that works. So
+`denrzv/denrzv.github.io` is the publisher: its workflow checks out `denrzv/bloom-flowers` at deploy
+time, so nothing is copied and the manifest keeps one source of truth. HTTPS, which `ADR-001`
+requires, comes free on `*.github.io`. `github.io` sits in the Public Suffix List's PRIVATE section,
+so the browser displays `denrzv.github.io` as its own registrable domain rather than merging every
+GitHub Pages user into one identity — a property `CORE-001` already loads both PSL sections to get
+right.
 
-Two properties this buys that a single origin cannot: navigating Bloom → PixelPlay must *swap*
-skins, and Bloom → News must *drop* to regular mode. Those are the two transitions in the concept's
-MVP success scenario (§46 steps 14–15) and the acceptance criteria for `SKIN-004`.
+This is a stopgap, and it has one hard limit: **a single user site is a single origin.** The
+argument below is deferred, not refuted.
 
-HTTPS is mandatory for SiteSkin mode (`ADR-001`), so the demo hosting must serve valid TLS —
-GitHub Pages or Cloudflare Pages both issue certificates for custom subdomains automatically.
-
-Serving all five from one repo is simplest (`bloom-flowers` grows a `sites/` directory and one
-Pages deploy per subdomain); if you would rather keep Bloom clean as the reference, the other three
-can live in `webora/demo/` with a `serve.mjs` for local work. I will assume the first and flag it
-in `DEMO-002` — tell me if you prefer the split.
+> **Deferred with `DEMO-002`.** Four demos on one origin would destroy the origin-separation
+> demonstration that is the whole security story. A real domain with per-demo subdomains fixes it,
+> and subdomains are themselves distinct origins, so the setup demonstrates concept §26
+> ("subdomains are not trusted automatically") rather than papering over it. Two properties it buys
+> that a single origin cannot: Bloom → PixelPlay must *swap* skins, and Bloom → News must *drop* to
+> regular mode — concept §46 steps 14–15, and `SKIN-004`'s acceptance criteria. That behaviour is
+> implemented and unit-tested today; what is missing is only the live demonstration.
 
 ---
 
-## Google Play compliance — the parts that actually bite
+## Distribution
+
+**Amended by `SCOPE-001`.** The app is handed to friends as an APK, not published to Google Play.
+`DIST-001` builds `:app:assembleDebug` and attaches it to a GitHub Release. That choice deliberately
+removes signing configuration, R8 keep verification, store assets and the Data safety form from the
+critical path, and it keeps the `DEVX-001` SiteSkin Inspector in the build people are shown, where
+it is useful.
+
+The Play analysis below is **descoped, not deleted** — it encodes constraints that were expensive to
+establish and would be expensive to reconstruct. Three things about it still apply today:
+
+- **`targetSdk 36` is not descoped.** It shipped in `FOUND-002`'s first commit for the reason given
+  below and is in the build now.
+- **The impersonation controls are not descoped.** `ADR-006` and `HARDEN-002` were justified partly
+  by Play's Deceptive Behavior policy, but they are load-bearing security whatever the distribution
+  channel. An APK handed to friends relaxes nothing.
+- **`docs/privacy/DATA_SAFETY.md` still stands** as the implementation-backed mapping `PRIV-001`
+  produced; a Data safety form would be filled from it if one were ever needed.
+
+### Descoped: Google Play compliance — the parts that actually bite
 
 Deadline: **new apps must target API 36 from 31 Aug 2026** — three weeks out. So `compileSdk = 36`
 and `targetSdk = 36` land in `FOUND-002`'s first commit, not as a `PLAY-001` cleanup. `minSdk = 26`
