@@ -56,6 +56,17 @@ jobs:
           echo "=== Disk after Android SDK cleanup ==="
           df -h /
 
+      # Built here, deliberately, and not inside the emulator step. Run 31491580516 —
+      # the first green screenshot run — executed 72 Gradle tasks over 8m39s while the
+      # emulator was already up, on a 4-vCPU runner. system_server and com.android.systemui
+      # finish their own start-up inside that window and are measured by wall-clock ANR
+      # timers, so the `System UI isn't responding` dialog that covered every canonical
+      # frame was caused by the build, not by the emulator. Compiling before boot removes
+      # the contention; scripts/android-screenshot-ci.sh then refuses to run at all if
+      # these two APKs are missing, so a regression here cannot quietly move the build back.
+      - name: Build the app and Android-test APKs
+        run: ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest
+
       - name: Run live SiteSkin screenshot journey
         uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
