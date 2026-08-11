@@ -105,15 +105,18 @@ inspector (`DEVX-001`), not to a user-facing error.
 anticipated that the security half would need re-arguing, and it does — so it lives where it can be
 cited rather than summarised.
 
-The selection is **direction B, "Get out of the way"**, amended with the fixed identity frame from
-direction C: the identity surface never takes a colour from anything, in either theme.
+The selection is **direction A, "Soft instrument"**, unamended: a tonal search pill, a floating dock,
+and the security identity in **its own tonal chip below the field**. B was selected first and
+reversed once both directions were rendered at 360 dp — the renders are kept beside the sketches as
+the evidence.
 
 The rule the stub reserved this ADR for survives unchanged: Webora's palette, typography and shape
 scale are **compiled into the app**, with no path from a manifest value into them, and
 `SiteSkinColorScheme` remains the entire website-influenceable colour surface.
 
-The condition of the selection, in one line: B's address bar is **two states**, and dropping the
-second — leaving the domain inside the editable field — violates `ADR-006` however it looks.
+The condition of the selection, in one line: the identity chip is a **separate element from the
+address field**, and moving the domain into the field — or dropping the chip on focus — violates
+`ADR-006` however it looks.
 
 ## ADR-012 — Signed manifests deferred
 

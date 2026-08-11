@@ -16,90 +16,103 @@ Three directions were rendered as 360 dp mockups of the four surfaces, light and
 geometry, icon budget and — the part that can eliminate a direction outright — its mechanism for
 keeping the registrable domain and TLS state browser-owned under `ADR-006`.
 
-This ADR records which one won, what was amended, and the rule that would have survived whichever
-had.
+This ADR records which one won, why the selection changed once it was drawn, and the rule that would
+have survived whichever had.
 
 ## Decision
 
-**Direction B — "Get out of the way", amended with the fixed identity frame from direction C — "The
-instrument frame".**
+**Direction A — "Soft instrument", unamended.**
 
-B is the conventional shape people already know from Chrome, Safari and Firefox: one compact 48 dp
-omnibox showing the domain rather than the URL, a hairline 52 dp toolbar of icon-only controls, and
-as little chrome as the job allows. It was selected for maximum page area and zero learning cost,
-and because it stays densest at 200% font scale.
+A leans into the platform's current language: a 52 dp rounded search pill, tonal containers instead
+of outlines, and a floating pill dock that lifts the navigation controls off the bottom edge. The
+identity lives in **its own tonal chip below the field** — adjacent to the address, never inside it.
 
 | | |
 |---|---|
-| Chrome | 48 dp omnibox + 52 dp toolbar; hairline elevation only (1 dp) |
-| Palette | Near-monochrome. Action `#1552C4` light / `#8AB4F8` dark; TLS secure `#146C43`; chrome surface `#F1F3F5`; ground `#FFFFFF`; hairline `#D5D9DF` |
-| Geometry | Radius 8 dp controls, 10 dp cards; 4 dp base spacing, 16 dp gutter |
-| Type | 22 / 16 / 14 / 13 / 12, Roboto |
+| Chrome | 52 dp pill + identity chip + 60 dp floating dock; tonal elevation, not shadow |
+| Palette | Teal seed on a warm neutral ground. Primary `#00696E` light / `#5CDBD8` dark; primary container `#B4E5E3` / `#1F2C2C`; chrome surface `#D3EBEA`; ground `#F7F6F3` / `#0E1414`; ink `#191C1C` / `#DEE4E3` |
+| Geometry | Radius 999 dp pills, 20 dp cards; 4 dp base spacing, 20 dp gutter |
+| Type | 28 / 22 / 15 / 13 / 12, Roboto |
 | Icons | 8, at 20 dp, stroke 1.9 |
 
-Colour is reserved for the one action per screen and for TLS state — and TLS state is *also* carried
-by a lock glyph and the word "Secure", so no meaning rests on hue alone (`A11Y-001`).
+The teal was chosen to sit apart from the pink, blue and orange brands demo sites use: while SiteSkin
+is active the browser's own colour should not read as part of the page.
 
-### The amendment
+### Why this changed after B was drawn
 
-B's own verdict names its cost: *"Webora looks like every other browser — no identity of its own."*
-Direction C exists to solve exactly that, and its central idea is taken:
+B — "Get out of the way" — was selected first, from the annotated sketches, for maximum page area and
+zero learning cost. Two renders reversed that, and both are kept as evidence:
+[`selected-b.html`](../design/directions/selected-b.html) and
+[`selected-a.html`](../design/directions/selected-a.html), each showing the same two scenes — a
+regular site and the Bloom Flowers integration — in the direction's own tokens.
 
-> **The identity surface never takes a colour from anything.** It is the same graphite in light mode
-> and in dark mode, sourced from a token outside the light/dark pair.
+- B's cost is not theoretical. Its own verdict says *"Webora looks like every other browser"*, and
+  drawn at 360 dp beside the integrated chrome that is exactly what it is: the regular-mode frame
+  carries no signal that the integrated frame is a different thing the browser decided to do.
+- B is the direction with the `C1` risk. Its identity mechanism is a two-state omnibox, and dropping
+  the second state — so the domain sits inside the editable field — violates `ADR-006`. That is a
+  live regression risk on every future change to the address bar, carried for the sake of ~40 dp.
 
-This was chosen over A's tonal identity chip because it answers B's cost **without adding chrome
-height**, which is the single thing B is optimising for. Per C's own annotation, it makes contrast
-checking *simpler* rather than harder: the frame is verified once against a fixed colour instead of
-once per theme.
+A costs the ~40 dp and buys back both. Its identity chip is a separate element that cannot collapse
+into the address field, because there is nothing to collapse: the chip and the field were never the
+same control.
 
-**Cost, corrected.** This section first said "one extra token concept". Rendering the amendment in
-[`../design/directions/selected-b.html`](../design/directions/selected-b.html) showed that is
-optimistic: a strip that never follows the theme cannot reuse the theme's foreground colours, so it
-needs its own set. Measured against the fixed graphite `#1C1F26`:
+**A decision that survives being drawn is stronger than one made from a description.** The sketches
+in `index.html` annotate the trade; they do not show it at the size the trade is felt.
 
-| On the fixed strip | Light theme's value | Needed instead |
+### The amendment was tried and does not transfer
+
+The B decision carried an amendment from direction C: an identity surface fixed to one graphite
+colour in both themes, so it can never take a colour from anything. It was re-measured against A's
+palette and **rejected**, on numbers rather than taste:
+
+| Fixed chip | vs A light ground `#F7F6F3` | vs A dark ground `#0E1414` |
 |---|---|---|
-| TLS indicator | `#146C43` — **2.56:1**, fails | `#5BC98A` — 7.98:1 |
-| Action / focus | `#1552C4` — **2.38:1**, fails | `#8AB4F8` — 7.83:1 |
-| Body text | — | `#EDEEF2` — 14.22:1 |
-| Secondary text | — | `#99A0B0` — 6.29:1 |
+| `#1C1F26` graphite | 15.26:1 | **1.13:1** |
+| `#00363A` | 12.23:1 | **1.41:1** |
+| `#04413F` | 10.6:1 | **1.62:1** |
 
-So the amendment is **four tokens** — a theme-independent on-strip foreground set — not one. Still
-cheaper than A's identity chip, which costs chrome height on every screen, and still checked once
-rather than per theme.
+The mechanism works in B because the fixed thing is a **full-bleed band that *is* the surface** —
+nothing sits behind it to separate from. A's identity is a **chip**, an element *on* a surface, and a
+fixed dark chip on A's dark ground stops reading as a chip at all. Applying it would trade a legible
+identity element in dark mode for theme independence that A does not need: `C2` already keeps
+manifest values out of browser tokens, and A satisfies `C1` structurally rather than chromatically.
 
-It also does security work rather than decoration. An identity surface that can never take a site's
-colour is harder to confuse with site chrome while SiteSkin is active — the boundary between what
-Webora says and what the site says becomes something you can see, not something you have to read
-about.
+So A is taken pure, and it is also the cheaper of the two in tokens. B plus the amendment needed four
+theme-independent on-strip foregrounds — measured in the previous revision of this ADR after
+rendering showed `#146C43` at 2.56:1 and `#1552C4` at 2.38:1 on graphite. A's chip needs an ordinary
+light/dark pair:
+
+| On the identity chip | Light `#B4E5E3` | Dark `#1F2C2C` |
+|---|---|---|
+| Identity text | `#00201F` — 12.44:1 | `#B4E5E3` — 10.49:1 |
+| TLS secure | `#0F5132` — 6.80:1 | `#6DD58C` — 7.94:1 |
+| TLS not secure | `#7A1B14` — 7.65:1 | `#FFB4AB` — 8.50:1 |
+
+The chip separates from its ground at only 1.27:1 light / 1.29:1 dark. **This is correct and should
+not be "fixed".** The chip is a status display, not an interactive control, so WCAG 1.4.11 does not
+require its boundary to carry contrast; the identity is carried by text at 10.49:1 or better, and TLS
+state is carried by a lock glyph and the word "Secure" as well as by hue, so no meaning rests on
+colour alone (`A11Y-001`).
 
 ## The C1 mechanism, and what violates it
 
-B is the direction that has to answer `C1` most carefully, and it is the reason B is the
-highest-effort of the three. The effort is not in the styling.
+**Separate element, always.** The identity chip renders `securityPresentation(state.mode)`, derived
+from the committed `SiteOrigin` — never `state.addressText`, never document content, never a manifest
+field. The pill above it renders `state.addressText` and is never an identity claim. The two can
+visibly disagree, which is precisely the signal `ADR-006` exists to preserve.
 
-**Two states, and the second is mandatory.**
+The browser-authored semantics node carrying `BROWSER_SECURITY_TAG` hangs on the chip. It is half the
+guarantee — assistive technology reads the semantics tree, not the pixels — and the visible chip is
+the other half.
 
-1. **Display state.** The omnibox is **not a text field at all.** It renders
-   `securityPresentation(state.mode)` as non-editable, browser-owned text, with the path in a dimmer
-   weight. That value derives from the committed `SiteOrigin` — never `state.addressText`, never
-   document content, never a manifest field.
-2. **Edit state.** Tapping swaps in the real editable field, and the identity moves to a **separate
-   row beneath it**. An editable value and an identity claim are never the same pixels.
+> **Violation condition.** Moving the domain or TLS state *into* the address pill, or deleting the
+> chip when the pill gains focus, **violates `ADR-006`**. An editable value and an identity claim are
+> never the same pixels. The chip is the cheapest correct answer available; collapsing it to recover
+> vertical space is a regression, not a simplification.
 
-The browser-authored semantics node carrying `BROWSER_SECURITY_TAG` survives both states. It is half
-the guarantee — assistive technology reads the semantics tree, not the pixels — and the visible row
-is the other half.
-
-> **Violation condition.** Dropping the second state, so that the domain sits inside the editable
-> address field, **violates `ADR-006`** regardless of how it looks. A Chrome-style omnibox collapses
-> browser identity into a field whose value is also page-derived and user-editable. This is the
-> single most important thing to hold onto now that B is chosen, and it is the thing most likely to
-> be dropped late for simplicity.
-
-`UX-003` owns implementing it. A future change that unifies the two states, or removes the semantics
-node, is a regression against this ADR and against `ADR-006`, not a simplification.
+`UX-003` owns implementing it. This is A's lowest-risk property and the reason it was chosen over B on
+`C1` as well as on identity — but low risk is not no risk, so the condition is written down.
 
 ## The rule that survives whichever direction won
 
@@ -119,8 +132,8 @@ implicit.
 
 | Direction | What it offered | The trade that lost it |
 |---|---|---|
-| **A — Soft instrument** | Feels current; a floating pill dock that is thumb-reachable and reads as deliberate. Identity in its own tonal chip below the field, satisfying `C1` cheaply. Lowest risk — nothing fights an existing gate. | Tallest chrome of the three: pill, chip and dock consume roughly 140 dp of a 720 dp screen — directly opposed to the priority B was chosen for. |
-| **C — The instrument frame** | Webora gains an identity, argued from the same thesis as the product's security model. Contrast checked once against a fixed frame. | An always-dark bar is a strong opinion, and some users read it as heavy in light mode. Its best idea survives here as the amendment. |
+| **B — Get out of the way** | The shape people know from Chrome, Safari and Firefox: a 48 dp omnibox and a hairline 52 dp toolbar, ~100 dp of chrome against A's ~140 dp, and it stays densest at 200% font scale. | No identity of its own — drawn beside the integrated chrome, regular mode reads as Chrome. Its `C1` mechanism is a two-state omnibox whose second state is easy to drop late for simplicity, and dropping it breaks `ADR-006`. |
+| **C — The instrument frame** | Webora gains an identity argued from the same thesis as the product's security model, with contrast checked once against a fixed frame rather than per theme. | An always-dark bar is a strong opinion many users read as heavy in light mode. Its fixed-surface idea was measured against A above and does not transfer to a chip. |
 
 Neither was eliminated on `C1`; all three stated an implementable mechanism. The selection is a trade
 between page area, learning cost and identity — recorded so it can be revisited on that basis rather
@@ -128,11 +141,14 @@ than re-argued from taste.
 
 ## Consequences
 
-- **`UX-002`** builds `WeboraTheme` to the palette, geometry and type scale above, plus the
-  four-token on-strip set from the corrected cost table. It carries the `C2` test.
-- **`UX-003`** implements the two-state address bar. It is the largest piece of `M6` and the one with
-  a security acceptance criterion rather than a visual one.
+- **`UX-002`** builds `WeboraTheme` to the palette, geometry and type scale above, including the
+  identity-chip pairs from the measured table. It carries the `C2` test.
+- **`UX-003`** implements the pill plus the separate identity chip. Its acceptance criterion is a
+  security one: the chip's value comes from `securityPresentation(state.mode)` and survives the pill
+  entering and leaving focus.
 - **`UX-004`** applies the same tokens to home, onboarding and settings.
+- Tonal roles need a full container/on-container token set in both themes; A re-derives fully for
+  dark rather than fixing any surface.
 - Every direction inherits `C3`–`C7` unchanged: the `RAW_BUTTON_IMPORT` gate, no string literals
   reaching the screen, `A11Y-001` intact, an icon source that does not yet exist, and edge-to-edge
   already on.
