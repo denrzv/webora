@@ -10,25 +10,19 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.platform.io.PlatformTestStorageRegistry
 import app.webora.browser.MainActivity
 import app.webora.browser.R
 import app.webora.browser.siteskin.SITESKIN_BOTTOM_NAV_TAG
 import app.webora.browser.siteskin.SITESKIN_SECURITY_TAG
 import org.junit.Assert.assertTrue
-import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import java.io.File
-import java.io.FileOutputStream
+import java.io.ByteArrayOutputStream
 
 class LiveSiteScreenshotTest {
     @get:Rule
     val composeRule = createAndroidComposeRule<MainActivity>()
-
-    @Before
-    fun clearPreviousScreenshots() {
-        screenshotDirectory().deleteRecursively()
-    }
 
     @Test
     fun capturesLiveBloomFlowersSiteSkinJourney() {
@@ -64,17 +58,17 @@ class LiveSiteScreenshotTest {
         val bitmap = requireNotNull(instrumentation.uiAutomation.takeScreenshot()) {
             "UiAutomation returned no screenshot for $name"
         }
-        val output = screenshotDirectory().resolve(name)
-        output.parentFile?.mkdirs()
-        val compressed = FileOutputStream(output).use {
-            bitmap.compress(Bitmap.CompressFormat.PNG, PNG_QUALITY, it)
+        val png = ByteArrayOutputStream().use { buffer ->
+            val compressed = bitmap.compress(Bitmap.CompressFormat.PNG, PNG_QUALITY, buffer)
+            assertTrue("PNG compression failed for $name", compressed)
+            buffer.toByteArray()
         }
-        assertTrue("PNG compression failed for $output", compressed)
-        assertTrue("Screenshot is empty: $output", output.length() > 0L)
-    }
+        assertTrue("Screenshot is empty: $name", png.isNotEmpty())
 
-    private fun screenshotDirectory(): File =
-        requireNotNull(targetContext.getExternalFilesDir(SCREENSHOT_DIRECTORY))
+        testStorage.openOutputFile("$SCREENSHOT_DIRECTORY/$name").use { output ->
+            output.write(png)
+        }
+    }
 
     private fun string(id: Int, vararg arguments: Any): String =
         targetContext.getString(id, *arguments)
@@ -84,6 +78,9 @@ class LiveSiteScreenshotTest {
 
     private val targetContext
         get() = instrumentation.targetContext
+
+    private val testStorage
+        get() = PlatformTestStorageRegistry.getInstance()
 
     private companion object {
         const val LIVE_ORIGIN = "https://denrzv.github.io"
