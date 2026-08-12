@@ -773,3 +773,52 @@ This is field-tested: three frames covered by `System UI isn't responding` were 
 evidence when they came from run #5 (`328bd08d`), which predates every commit of `CI-002`. Making
 evidence easier to open makes opening the wrong one easier too. Check the SHA against the commit you
 mean to judge.
+
+### Capture waits for pixels, not semantics (CI-003)
+
+`CI-002` stopped the harness photographing a screen Webora does not own. `DEVX-002`'s first contact
+sheet then showed the same lie through a different mechanism: **SiteSkin chrome over an empty page,
+on a green job where every assertion passed.**
+
+They passed because every wait in the journey is a **semantics** assertion, and semantics precede
+pixels. `assertIsDisplayed()` claims a node has non-zero bounds inside the window — a *layout* fact,
+not a drawn one. `waitForIdle()` waits for Compose, and the page is a `WebView`, an Android view
+whose paint Compose does not track. A populated semantics tree over a blank surface satisfies all of
+it.
+
+**The measurement, from hosted run 11:** `PASSED differing=0.7530 after 696ms`. The page renders and
+occupies 75% of its region; the harness was photographing seven-tenths of a second too early. The
+integrated top bar was **unpainted, never absent** — deducible before the fix, because
+`assertIsDisplayed()` had been passing on `SITESKIN_SECURITY_TAG` all along, which a node missing
+from composition cannot do.
+
+**Ownership first, content second.** `requireAppOwnsScreen` runs before `captureWhenRendered`.
+Reversing them polls the pixels of a screen Webora does not own.
+
+**The rule is pure and takes samples, never a `Bitmap`.** `RenderedContentPolicy` lives beside
+`ScreenEvidencePolicy` in `src/screenshotPolicy/java` and consumes an `IntArray` of ARGB values. An
+Android type in its signature would drag the decision into a source set `./gradlew test` cannot
+compile — the mistake that let a compile error in `BrowserFontScaleTest` survive a green
+`scripts/pre-commit-check.sh`. The guard samples and records; the policy decides.
+
+**Modal colour, not brightness.** The reference integration's pages are near-white (`#FFF7FA`) and so
+is an undrawn surface. `MINIMUM_DIFFERING_FRACTION` is 1% and is a **liveness** bar, not a
+content-quality bar: the failure being caught is *nothing drawn*, and a rendered page is far above
+it. Two tests pin the boundary from both sides, so raising the constant to quiet a flaky run breaks a
+test rather than passing unnoticed.
+
+**Measure the page, never the chrome — and this is where it went wrong once.** `SiteSkinQuickActions`
+is composed *inside* the very `Box` tagged `BROWSER_CONTENT_TAG`, so the first version measured
+Webora's own floating button as page content and passed instantly over a blank page. The journey now
+passes chrome bounds from the semantics tree as excluded rects. **The `SiteSkin inspector` overlay is
+still inside that region and still unexcluded** — about 0.84% each, and two such buttons clear 1%
+together. `DEVX-003` removes the overlay from canonical evidence; if that changes, add the exclusion
+to `chromeInsidePageRegion` instead.
+
+**Record the measurement on success, not only on failure.** `rendered-<label>.txt` carries the
+winning fraction and elapsed time. A passing check that records nothing cannot be distinguished from
+one that barely passed for the wrong reason — which is exactly how the blank frame survived, with
+artifact byte counts the only available signal and useless for the question.
+
+**The threshold was never raised to make a run pass.** The symptom would have gone away; the region
+would still have been measuring chrome.

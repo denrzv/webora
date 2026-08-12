@@ -84,13 +84,18 @@ Evidence/DX track — can proceed without waiting for all M6 surfaces:
   contamination without hiding Webora failures
 - [x] `DEVX-002` Screenshot review experience — separate human/diagnostic artifacts and add one
   labelled contact-sheet preview
+- [x] `CI-003` Capture must wait for rendered content — pixel check on the page region, not semantics
 - [ ] `DEVX-003` Inspector isolation and canonical evidence mode — keep debug diagnostics available
-  without a persistent overlay in product evidence
+  without a persistent overlay in product evidence. **Also closes `CI-003`'s residual hole**: the
+  inspector overlay sits inside the measured page region, and two chrome buttons together clear the
+  rendered-content threshold
 
 Product-polish track:
 
 - [ ] `UX-005` SiteSkin integrated chrome & semantic icon set — **revived** after live evidence;
   replace placeholder glyphs with browser-owned vector icons and meaningful quick actions
+- [ ] `UX-008` Browser navigation controls in integrated mode — an active skin currently leaves no
+  visible back control; found by `CI-003`'s run 11 once the frame rendered
 - [ ] `UX-007` Adaptive SiteSkin consent action hierarchy — clear primary/secondary/persistent-deny
   actions across narrow widths and large font scales
 - [ ] `DEMO-003` Bloom Flowers visual fidelity & protocol showcase — exercise the polished icon and

@@ -340,12 +340,55 @@ canonical product presentation.
 - Preserve the existing compile-time assertion that inspector implementation is absent from release
   variants.
 - Ensure the mechanism cannot be controlled by a SiteSkin manifest.
+- **Carried in from `CI-003`:** removing the overlay also closes a hole in the rendered-content
+  check. `CI-003` measures the page region for drawn pixels, and the inspector floating action sits
+  *inside* that region without being excluded — roughly 0.84% of it on a Pixel 6, alongside the
+  quick action at a similar size. Two chrome buttons together clear the 1% liveness threshold, so a
+  completely blank page could still satisfy the check on Webora's own UI. Invisible while the page
+  renders at ~75% coverage, and real. `CI-003` deliberately did not add a second exclusion here,
+  because this ticket deletes the overlay from canonical evidence outright; if that plan changes,
+  the exclusion has to be added to `LiveSiteScreenshotTest.chromeInsidePageRegion` instead.
 
 **Acceptance**
 - The integrated canonical screenshot contains no inspector overlay.
+- With the overlay gone, a blank page in the integrated frame fails `CI-003`'s rendered check rather
+  than passing on chrome. Verifiable by inspection of what remains inside `BROWSER_CONTENT_TAG`.
 - A developer in a debug build can still reach the inspector in no more than two deliberate
   interactions.
 - Release variants remain inspector-free and the existing negative gate still detects leakage.
+- `bash scripts/pre-commit-check.sh` passes.
+
+### `UX-008` — Browser navigation controls in integrated mode
+
+**Priority:** P2  
+**Depends on:** `UX-003`  
+**Goal:** give the user a visible way back while a SiteSkin skin is active.
+
+**Found by:** `CI-003`'s hosted run 11, once the integrated frame finally rendered and could be read.
+The screenshot is the evidence: `03-siteskin-integrated.png` at `7629c620`.
+
+**The observation.** In integrated mode `SiteSkinTopBar` *replaces* the `AddressBar` outright
+(`BrowserScreen.kt`, `RegularBrowser`), and `SKIN-002` specifies that bar as logo, title, subtitle,
+registrable domain and TLS state. Nothing in that list is a navigation control, so an active skin
+leaves **no visible back, forward or reload** — only system back, which `BROWSE-002` handles but
+which is invisible and unavailable to anyone browsing with gestures disabled or on a device where
+the gesture is unreliable.
+
+This is a gap rather than a decision: no ADR or ticket ever says integrated mode should drop the
+browser's own navigation, and `SKIN-002` did not say where it goes because the top bar was designed
+as a standalone component before it reached the runtime screen in `SKIN-004`.
+
+**Scope**
+- Decide where browser navigation lives while a skin is active, and put it there.
+- Keep it browser-owned: a manifest must not be able to hide, relabel, reorder or restyle it, for
+  the same reason `ADR-006` protects the domain and TLS indicator.
+- Do not spend the site's chrome budget on it — the point of integrated mode is that the site's
+  navigation is the primary one.
+
+**Acceptance**
+- A back affordance is visible and reachable in integrated mode without relying on system back.
+- No manifest field can suppress or restyle it; a negative control proves it.
+- `SKIN-002`'s security identity row keeps its position and its browser-authored semantics node.
 - `bash scripts/pre-commit-check.sh` passes.
 
 ### `UX-005` — SiteSkin integrated chrome & semantic icon set *(revived)*
