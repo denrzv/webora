@@ -1,0 +1,108 @@
+# DEVX-002: Tasklist
+Status: TASKLIST_READY
+
+References:
+- PRD: `docs/prd/DEVX-002.prd.md`
+- Research: `docs/research/DEVX-002.md`
+- Plan: `docs/plan/DEVX-002.md`
+
+## Tasks
+
+- [ ] TASK-1: The contact-sheet composer, as a JVM module the gate can fail
+  - New: `evidence-sheet/build.gradle.kts`
+  - New: `evidence-sheet/src/main/kotlin/app/webora/evidence/ContactSheet.kt`
+  - New: `evidence-sheet/src/test/kotlin/app/webora/evidence/ContactSheetTest.kt`
+  - Modified: `settings.gradle.kts`
+  - Acceptance: `:evidence-sheet` is a pure-JVM module shaped on `:siteskin-lint` — kotlin-jvm plus
+    `application`, JDK 25 toolchain, `jvmTarget` 21, `testImplementation(libs.junit)` and **no other
+    dependency**. `composeContactSheet(dir: Path): Int` discovers `*.png` in one directory excluding
+    `preview.png`, sorts by filename, decodes each through `ImageIO`, draws one aspect-preserving
+    tile per frame in a single left-to-right row at `TILE_WIDTH` 360 with a 48 px label band, writes
+    `preview.png` into the same directory, and returns the tile count. It takes **no** parameter for
+    a title, caption or label: a tile's label is derived from that tile's own `Path` inside one loop
+    iteration, so no workflow, page or manifest text can reach the image. Missing directory, zero
+    frames, and any file that fails to decode are **fatal** — thrown, never skipped. No `System.exit`
+    and no printing in this file. `./gradlew test` picks the module up with no extra wiring, and
+    root-applied detekt gates it.
+  - Tests: `ContactSheetTest` — `composesOneTilePerFrameInFilenameOrder`;
+    `labelsAreDrawnAndNotBlank` (ink pixels > 0 inside each label band);
+    `labelComesFromTheFileItDraws`; `refusesADirectoryWithNoFrames`; `refusesAnUndecodablePng`;
+    `excludesAnExistingPreviewFromItsOwnInput`; `preservesAspectRatio`. Fixtures are written by the
+    test through `ImageIO`, so no binary is committed.
+  - Negative control 1: remove the `preview.png` exclusion —
+    `excludesAnExistingPreviewFromItsOwnInput` must fail while the rest pass.
+  - Negative control 2: turn the undecodable-input throw into a `continue` —
+    `refusesAnUndecodablePng` must fail while every happy-path test still passes, which is the point:
+    they would mask it.
+  - Negative control 3: draw labels with a zero-alpha colour — `labelsAreDrawnAndNotBlank` must fail
+    while every dimension and count assertion still passes.
+  - Gate: `bash scripts/pre-commit-check.sh`
+
+- [ ] TASK-2: The CLI wrapper, and the count contract the workflow checks
+  - New: `evidence-sheet/src/main/kotlin/app/webora/evidence/Main.kt`
+  - New: `evidence-sheet/src/test/kotlin/app/webora/evidence/MainTest.kt`
+  - Acceptance: `main` takes exactly one argument, the directory. It prints `tiles=N` on stdout and
+    exits 0 on success; on a usage error or any failure from `composeContactSheet` it writes the
+    reason to stderr and exits non-zero, printing no `tiles=` line. `tiles=N` is the contract
+    `TASK-4` compares against `png_count`, so its format is asserted rather than assumed. The
+    argument parsing and exit mapping live here and nowhere else; `ContactSheet.kt` stays free of
+    process concerns.
+  - Tests: `MainTest` — the success path prints exactly one `tiles=` line matching the frame count;
+    zero arguments and two arguments are both usage errors; a failing compose prints no `tiles=`
+    line. Driven by invoking the entry point with a redirected stdout/stderr rather than by spawning
+    a process.
+  - Gate: `bash scripts/pre-commit-check.sh`
+
+- [ ] TASK-3: Split the staging directories in the emulator script
+  - Modified: `scripts/android-screenshot-ci.sh`
+  - Acceptance: canonical PNGs are copied to **`review/`** at the repo root instead of
+    `artifacts/screenshots/`; `png_count` counts `review/*.png`; `mkdir -p artifacts/screenshots` is
+    gone and `artifacts/` carries only diagnostics. Two disjoint directories rather than one
+    directory with a negated glob, so the split cannot be broken by a YAML typo. The `CI-002`
+    responsibilities in this script are untouched: the prebuilt-APK precondition, the readiness gate,
+    the logcat capture, the zero-screenshot diagnosis and `exit "$test_status"` all keep their
+    current behaviour and their comments.
+  - Tests: `shellcheck` via the gate; `bash -n`; sourcing the script still defines its functions and
+    runs nothing (the existing property at lines 88-92). Verified by inspection that no path outside
+    `review/` and `artifacts/` changes, since the emulator half cannot run here.
+  - Gate: `bash scripts/pre-commit-check.sh`
+
+- [ ] TASK-4: Two artifacts, the compose step, and a summary that names them
+  - Modified: `.github/workflows/android-screenshots.yml`
+  - Acceptance: a new step runs the composer **after the emulator step and outside it** with
+    `if: always()`, then fails the run if the composer's `tiles=` disagrees with `png_count=` in
+    `artifacts/result.txt`. The single upload becomes two: `webora-screenshots-${{ github.sha }}`
+    from `review/` with `if-no-files-found: warn`, and
+    `webora-screenshot-diagnostics-${{ github.sha }}` from `artifacts/`,
+    `app/build/outputs/androidTest-results/`,
+    `app/build/outputs/connected_android_test_additional_output/` and
+    `app/build/reports/androidTests/` with `if-no-files-found: error`. Both retain 7 days. The
+    asymmetry is deliberate and commented: a run that dies before capturing anything must still
+    publish logcat. The summary states screenshot count, `GITHUB_SHA`, `GITHUB_RUN_ID` and both
+    artifact names, and says plainly when no screenshots artifact was produced rather than naming one
+    that is not there. No secret or environment value beyond SHA and run id is interpolated.
+  - Tests: **none possible here** — this file runs only on a GitHub runner. `actionlint` if the gate
+    provides it, otherwise YAML parse plus review. Recorded as reviewed-not-enforced, not as passing.
+  - Gate: `bash scripts/pre-commit-check.sh`
+
+- [ ] TASK-5: Document the two artifacts as shipped
+  - Modified: `docs/SCREENSHOTS.md`
+  - Acceptance: the single-artifact table becomes two tables, one per artifact, naming
+    `preview.png`, the three canonical PNGs at the artifact root, and every diagnostic including the
+    `CI-002` `focus-*` / `interference-*` / `window-*` files and where they arrive from. The "Run it"
+    numbered steps reflect downloading the screenshots artifact and opening one image. Nothing claims
+    the workflow YAML is gate-verified.
+  - Tests: `bash scripts/pre-commit-check.sh` (whitespace/EOF hooks); no source change.
+  - Gate: `bash scripts/pre-commit-check.sh`
+
+- [ ] TASK-6: Record the decision in the project's own documentation
+  - Modified: `CLAUDE.md`, `docs/ROADMAP.md`
+  - Acceptance: `CLAUDE.md` gains a `DEVX-002` section in the same register as `CI-002`'s, stating
+    the label rule (a tile's caption derives only from its own filename, and the composer has no
+    parameter through which page or manifest text could arrive), the two-artifact split and the
+    `if-no-files-found` asymmetry behind it, and why composition is a JVM module rather than a shell
+    step or an instrumented test — with the `androidTest` compile error this session found as the
+    concrete reason. `docs/ROADMAP.md` ticks `DEVX-002`. No source, test, resource or build file
+    changes in this task.
+  - Tests: `bash scripts/pre-commit-check.sh`.
+  - Gate: `bash scripts/pre-commit-check.sh`
