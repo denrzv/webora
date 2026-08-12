@@ -9,7 +9,6 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.awt.Color
 import java.awt.image.BufferedImage
-import java.io.File
 import java.nio.file.Path
 import javax.imageio.ImageIO
 
@@ -137,6 +136,48 @@ class ContactSheetTest {
         assertEquals(expectedSheetWidth(2), sheet.width)
     }
 
+    /**
+     * A refusal must not leave the previous sheet behind. The screenshots upload runs with
+     * `if: always()`, so a surviving `preview.png` would be published beside frames it does not
+     * describe — a picture of a journey that did not happen, on a run that already went red.
+     */
+    @Test fun aFailedCompositionLeavesNoStaleSheet() {
+        val dir = frames("01-home.png", "02-siteskin-consent.png")
+        assertEquals(2, composeContactSheet(dir))
+        assertTrue(dir.resolve(PREVIEW_FILE_NAME).toFile().exists())
+
+        dir.resolve("03-siteskin-integrated.png").toFile().writeText("not a PNG at all")
+        val failure = runCatching { composeContactSheet(dir) }.exceptionOrNull()
+
+        assertTrue("expected a failure, got none", failure is ContactSheetFailure)
+        assertFalse(
+            "the sheet from the previous composition survived a refusal",
+            dir.resolve(PREVIEW_FILE_NAME).toFile().exists(),
+        )
+    }
+
+    /** A long caption stays inside its own tile rather than colliding with the next one. */
+    @Test fun labelsAreClippedToTheirOwnTile() {
+        val longName = "01-" + "wide".repeat(30) + ".png"
+        val dir = temp.newFolder("clip").toPath()
+        writeFrame(dir.resolve(longName), width = 540, height = 1200, marker = Color.RED)
+        writeFrame(dir.resolve("02-short.png"), width = 540, height = 1200, marker = Color.GREEN)
+
+        composeContactSheet(dir)
+
+        val sheet = ImageIO.read(dir.resolve(PREVIEW_FILE_NAME).toFile())
+        val background = sheet.getRGB(1, 1)
+        val bandTop = sheet.height - PADDING - LABEL_BAND
+        // The gutter between the two label columns must stay clean.
+        var gutterInk = 0
+        for (y in bandTop until bandTop + LABEL_BAND) {
+            for (x in tileColumnLeft(0) + TILE_WIDTH until tileColumnLeft(1)) {
+                if (sheet.getRGB(x, y) != background) gutterInk++
+            }
+        }
+        assertEquals("a caption overran its tile into the gutter", 0, gutterInk)
+    }
+
     /** Evidence is never stretched to fit a slot. */
     @Test fun preservesAspectRatio() {
         val dir = temp.newFolder("aspect").toPath()
@@ -175,7 +216,7 @@ class ContactSheetTest {
         g.color = marker
         g.fillRect(0, 0, width, height)
         g.dispose()
-        ImageIO.write(image, "png", path.toFile() as File)
+        ImageIO.write(image, "png", path.toFile())
     }
 
     private fun expectedSheetWidth(tiles: Int) = PADDING + tiles * (TILE_WIDTH + PADDING)

@@ -219,3 +219,31 @@ References:
     `review/` staged and committable. A checked-in frame would be a screenshot with no run behind
     it — the exact confusion `TASK-5`'s stale-artifact paragraph warns about, made permanent.
   - Gate: `bash scripts/pre-commit-check.sh`
+
+- [x] TASK-FIX-2: Close the review findings
+  - Source: `/review` — `reports/review/DEVX-002.md`, `FINDING-1` (low, integrity), `FINDING-2`
+    (low, cosmetic), `FINDING-3` (nit).
+  - Modified: `evidence-sheet/src/main/kotlin/app/webora/evidence/ContactSheet.kt`,
+    `evidence-sheet/src/test/kotlin/app/webora/evidence/ContactSheetTest.kt`
+  - `FINDING-1` — **a refusal left the previous sheet on disk.** Reproduced before fixing: compose
+    three frames, corrupt one, recompose; the throw is correct but `preview.png` survived it. The
+    screenshots upload runs `if: always()`, so a red run could publish current frames beside a sheet
+    describing an earlier composition — the picture-of-a-journey-that-did-not-happen this ticket is
+    written against. Not reachable in CI today, because each run starts with an empty `review/`; the
+    invariant should not rest on a property of the environment. Fixed by deleting the output before
+    composing, so after any call the sheet is either current or absent.
+  - `FINDING-2` — a caption longer than its tile ran into the neighbouring label. Today's names fit,
+    so it was latent, but the caption is the one thing on the sheet claiming which frame is which and
+    two overlapping claims are worse than one truncated. Each label is now clipped to its own column.
+  - `FINDING-3` — dropped a redundant `as File` cast and its now-unused import.
+  - Also: the unreadable-frame message now names the absolute path, matching what `TASK-FIX-1` did
+    for the other two refusals. One rule for all three rather than two out of three.
+  - Tests: `aFailedCompositionLeavesNoStaleSheet`; `labelsAreClippedToTheirOwnTile` (asserts zero ink
+    in the gutter between two label columns, with a 123-character filename).
+  - Negative control A: removed `Files.deleteIfExists` → `aFailedCompositionLeavesNoStaleSheet`
+    alone failed (1 of 15). Restored.
+  - Negative control B: removed the `clipRect`/restore pair → `labelsAreClippedToTheirOwnTile` alone
+    failed (1 of 15). Restored.
+  - Result: 15 tests in the module, 0 failures. `bash scripts/pre-commit-check.sh` OK.
+  - Deviation: none.
+  - Gate: `bash scripts/pre-commit-check.sh`

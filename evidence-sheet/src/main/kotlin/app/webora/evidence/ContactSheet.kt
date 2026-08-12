@@ -46,9 +46,17 @@ class ContactSheetFailure(message: String) : RuntimeException(message)
  */
 fun composeContactSheet(directory: Path): Int {
     val frames = discoverFrames(directory)
+
+    // Any earlier sheet is void the moment composition begins. Without this, a refusal leaves the
+    // previous preview.png on disk, and the workflow uploads `review/` with `if: always()` — so a
+    // red run could publish current frames beside a sheet describing an earlier composition. That
+    // is the picture-of-a-journey-that-did-not-happen this whole function exists to prevent, and
+    // it must not depend on CI happening to start from an empty directory.
+    Files.deleteIfExists(directory.resolve(PREVIEW_FILE_NAME))
+
     val images = frames.map { frame ->
         val image = runCatching { ImageIO.read(frame.toFile()) }.getOrNull()
-            ?: throw ContactSheetFailure("Not a readable image: $frame")
+            ?: throw ContactSheetFailure("Not a readable image: ${frame.toAbsolutePath()}")
         frame to image
     }
 
@@ -115,7 +123,13 @@ private fun drawSheet(tiles: List<Tile>): BufferedImage {
             val left = PADDING + index * (TILE_WIDTH + PADDING)
             g.drawImage(tile.image, left, PADDING, TILE_WIDTH, tile.height, null)
             g.color = LABEL_INK
+            // Clipped to its own column. The caption is the one thing on the sheet that claims
+            // which frame is which, and a long name running into the next tile's label produces
+            // two overlapping claims — worse than one truncated.
+            val clip = g.clip
+            g.clipRect(left, height - PADDING - LABEL_BAND, TILE_WIDTH, LABEL_BAND)
             g.drawString(tile.label, left, labelBaseline)
+            g.clip = clip
         }
     } finally {
         g.dispose()
