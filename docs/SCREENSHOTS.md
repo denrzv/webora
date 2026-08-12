@@ -109,6 +109,12 @@ Since `CI-002` there are three more shapes of red, and each names itself:
 | `MISSING prebuilt APK` | `prebuilt-apks.txt` | The pre-build step regressed. Do not "fix" it by building inside the emulator step; that is the contention this ticket removed. |
 | `The emulator never settled` | `readiness.txt` | Every sample and its verdict is there. A run of `package-manager-silent` is a slow runner; `no-focused-window` throughout is a device that never presented anything. |
 | `Refusing to capture <frame>` | `diagnostics/window-<frame>.txt` | Something Webora does not own was on screen. The message names it. If it is a Webora crash or ANR, that is the product failing and the screenshot job is doing its job. |
+| `Refusing to capture <frame>: the page region never rendered` | `diagnostics/rendered-<frame>.txt` | `CI-003`. The screen was Webora's, and the page area had nothing drawn in it. Every sample is recorded with its differing fraction, modal colour and elapsed time — a run of near-zero fractions is a page that never started drawing, a rising series is one that ran out of time. |
+
+**`rendered-<frame>.txt` is written on success too**, carrying the fraction that passed and how long
+it took. A passing check that records nothing cannot be told apart from one that barely passed for
+the wrong reason, which is exactly how a blank frame survived run 10: browser-owned chrome inside the
+measured region cleared the threshold and there was no measurement to notice it by.
 
 Screenshots are written through AndroidX `PlatformTestStorage`, so the Android Gradle Plugin copies
 them from the device into its connected-test additional-output directory before test teardown removes

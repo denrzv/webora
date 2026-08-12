@@ -2,11 +2,15 @@ package app.webora.browser.visual
 
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.app.UiAutomation
+import android.graphics.Bitmap
+import android.graphics.Rect
 import android.os.ParcelFileDescriptor
 import android.os.SystemClock
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.test.platform.io.PlatformTestStorage
+import app.webora.browser.evidence.ContentVerdict
 import app.webora.browser.evidence.FocusVerdict
+import app.webora.browser.evidence.RenderedContentPolicy
 import app.webora.browser.evidence.ScreenEvidencePolicy
 
 /**
@@ -72,6 +76,108 @@ class ScreenEvidenceGuard(
 
         throw evidenceFailure(label, lastDump, lastReason)
     }
+
+    /**
+     * Returns a screenshot whose [region] has actually been drawn.
+     *
+     * `requireAppOwnsScreen` answers *who* owns the window; this answers *what is drawn in it*, and
+     * they are different questions. Every wait in the journey before this point is a semantics
+     * assertion — `assertIsDisplayed()` claims a node has bounds, not that anything was painted into
+     * them, and `waitForIdle()` waits for Compose, which does not track a `WebView`'s paint. So a
+     * capture could fire on a populated semantics tree over an empty page, which is precisely what
+     * run 9 published.
+     *
+     * A `null` [region] means the frame carries no content requirement — Home has no renderer, so
+     * there is no page rectangle to measure.
+     *
+     * Returns **the bitmap that satisfied the check**, never a fresh one: a second `takeScreenshot`
+     * could differ from the frame that passed, which would make the check a claim about a picture
+     * nobody kept.
+     */
+    fun captureWhenRendered(label: String, region: Rect?, excluded: List<Rect> = emptyList()): Bitmap {
+        if (region == null) return takeScreenshot(label)
+
+        val deadline = SystemClock.uptimeMillis() + RENDER_TIMEOUT_MILLIS
+        val started = SystemClock.uptimeMillis()
+        val samples = StringBuilder()
+        var attempt = 0
+
+        while (SystemClock.uptimeMillis() < deadline) {
+            attempt++
+            val bitmap = takeScreenshot(label)
+            when (val verdict = RenderedContentPolicy.verdict(sampleRegion(bitmap, region, excluded))) {
+                is ContentVerdict.Rendered -> {
+                    // Recorded on success too, not only on failure. A passing check that leaves no
+                    // measurement cannot be told apart from one that barely passed for the wrong
+                    // reason — which is exactly what happened in run 10, where a browser-owned
+                    // quick-action button inside the measured region cleared the bar on a blank page.
+                    record(
+                        "rendered-$label.txt",
+                        renderedReport(label, region, excluded, "PASSED differing=" +
+                            "${verdict.differingFraction} after ${SystemClock.uptimeMillis() - started}ms\n" +
+                            samples),
+                    )
+                    return bitmap
+                }
+                is ContentVerdict.Blank -> samples.appendLine(
+                    "attempt=$attempt elapsed=${SystemClock.uptimeMillis() - started}ms " +
+                        "differing=${verdict.differingFraction} " +
+                        "modal=#${Integer.toHexString(verdict.modalColor)} " +
+                        "samples=${verdict.sampleCount}",
+                )
+            }
+            SystemClock.sleep(POLL_INTERVAL_MILLIS)
+        }
+
+        record("rendered-$label.txt", renderedReport(label, region, excluded, "NEVER RENDERED\n$samples"))
+        throw AssertionError(
+            "Refusing to capture $label: the page region never rendered within " +
+                "${RENDER_TIMEOUT_MILLIS}ms. Every sample is in $DIAGNOSTICS_DIRECTORY/" +
+                "rendered-$label.txt.",
+        )
+    }
+
+    private fun renderedReport(label: String, region: Rect, excluded: List<Rect>, samples: String) = buildString {
+        appendLine("label=$label")
+        appendLine("region=$region")
+        appendLine("excluded=$excluded")
+        appendLine("stride=$SAMPLE_STRIDE")
+        appendLine("minimum_differing_fraction=${RenderedContentPolicy.MINIMUM_DIFFERING_FRACTION}")
+        appendLine("timeout_ms=$RENDER_TIMEOUT_MILLIS")
+        appendLine()
+        append(samples)
+    }
+
+    /**
+     * A strided read, not a full one. `CI-002` established that work on the runner while the device
+     * is alive is what starves `system_server`, and every fourth pixel on both axes is a sixteenth
+     * of the region — still tens of thousands of samples, which is far more than the modal colour
+     * needs to be stable.
+     */
+    private fun sampleRegion(bitmap: Bitmap, region: Rect, excluded: List<Rect>): IntArray {
+        val left = region.left.coerceIn(0, bitmap.width)
+        val top = region.top.coerceIn(0, bitmap.height)
+        val right = region.right.coerceIn(left, bitmap.width)
+        val bottom = region.bottom.coerceIn(top, bitmap.height)
+
+        val samples = ArrayList<Int>()
+        var y = top
+        while (y < bottom) {
+            var x = left
+            while (x < right) {
+                // Browser-owned overlays live inside this rectangle — the quick-action button is a
+                // child of the very Box that bounds the page — so a sample landing on one is chrome,
+                // not page. Counting it lets a frame pass on the strength of Webora's own UI.
+                if (excluded.none { it.contains(x, y) }) samples.add(bitmap.getPixel(x, y))
+                x += SAMPLE_STRIDE
+            }
+            y += SAMPLE_STRIDE
+        }
+        return samples.toIntArray()
+    }
+
+    private fun takeScreenshot(label: String): Bitmap =
+        requireNotNull(uiAutomation.takeScreenshot()) { "UiAutomation returned no screenshot for $label" }
 
     private fun dismissSystemAnr(verdict: FocusVerdict.DismissableSystemAnr, label: String, attempt: Int) {
         val candidates = WAIT_VIEW_IDS.flatMap { viewId ->
@@ -158,6 +264,8 @@ class ScreenEvidenceGuard(
         const val POLL_INTERVAL_MILLIS = 500L
         const val IDLE_QUIET_MILLIS = 500L
         const val IDLE_TIMEOUT_MILLIS = 5_000L
+        const val RENDER_TIMEOUT_MILLIS = 20_000L
+        const val SAMPLE_STRIDE = 4
 
         /**
          * `AppNotRespondingDialog` is an `AlertDialog`, so `Wait` is its negative button; the crash

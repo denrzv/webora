@@ -466,7 +466,7 @@ internal fun RegularBrowser(
             )
         }
         BrowserStatusRegion(state)
-        Box(Modifier.fillMaxWidth().weight(1f)) {
+        Box(Modifier.fillMaxWidth().weight(1f).testTag(BROWSER_CONTENT_TAG)) {
             HardenedWebView(
                 initialUrl = state.displayedUrl,
                 controller = controller,
@@ -679,6 +679,15 @@ private fun BrowserStatusRegion(state: BrowserState) {
 
 internal const val BROWSER_SECURITY_TAG = "browser_security"
 internal const val BROWSER_STATUS_TAG = "browser_status"
+
+/**
+ * The page rectangle — the renderer and any error page, and none of the chrome.
+ *
+ * `CI-003`'s screenshot check measures this region to decide whether the page has actually been
+ * drawn. Excluding the chrome is the point: a frame must not be able to pass that check on the
+ * strength of its own navigation bar.
+ */
+internal const val BROWSER_CONTENT_TAG = "browser_content"
 private val STATUS_REGION_HEIGHT = 4.dp
 internal const val BROWSER_ERROR_RETRY_TAG = "browser_error_retry"
 internal const val BROWSER_ERROR_HOME_TAG = "browser_error_home"
