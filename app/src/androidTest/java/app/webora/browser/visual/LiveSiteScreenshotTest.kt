@@ -16,6 +16,7 @@ import app.webora.browser.MainActivity
 import app.webora.browser.R
 import app.webora.browser.browser.BROWSER_CONTENT_TAG
 import app.webora.browser.siteskin.SITESKIN_BOTTOM_NAV_TAG
+import app.webora.browser.siteskin.SITESKIN_QUICK_ACTIONS_TAG
 import app.webora.browser.siteskin.SITESKIN_SECURITY_TAG
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -71,7 +72,8 @@ class LiveSiteScreenshotTest {
         // this screen may be photographed at all, and only then is it worth asking whether anything
         // has been drawn on it.
         guard.requireAppOwnsScreen(label)
-        val bitmap = guard.captureWhenRendered(label, pageRegionIfRequired(requirePageContent))
+        val region = pageRegionIfRequired(requirePageContent)
+        val bitmap = guard.captureWhenRendered(label, region, chromeInsidePageRegion(region))
         val png = ByteArrayOutputStream().use { buffer ->
             val compressed = bitmap.compress(Bitmap.CompressFormat.PNG, PNG_QUALITY, buffer)
             assertTrue("PNG compression failed for $name", compressed)
@@ -94,6 +96,30 @@ class LiveSiteScreenshotTest {
             bounds.right.roundToInt(),
             bounds.bottom.roundToInt(),
         )
+    }
+
+    /**
+     * Browser-owned overlays that are children of the page rectangle, so their pixels must not count
+     * as page content.
+     *
+     * `SiteSkinQuickActions` is composed *inside* the very `Box` that bounds the renderer
+     * (`BrowserScreen.kt`), and in run 10 that one floating button was enough to clear the rendered
+     * threshold over a completely blank page. Excluding it is the difference between measuring the
+     * page and measuring Webora's own chrome.
+     */
+    private fun chromeInsidePageRegion(region: Rect?): List<Rect> {
+        if (region == null) return emptyList()
+        return composeRule.onAllNodes(hasTestTag(SITESKIN_QUICK_ACTIONS_TAG))
+            .fetchSemanticsNodes()
+            .map { node ->
+                val bounds = node.boundsInWindow
+                Rect(
+                    bounds.left.roundToInt(),
+                    bounds.top.roundToInt(),
+                    bounds.right.roundToInt(),
+                    bounds.bottom.roundToInt(),
+                )
+            }
     }
 
     private fun string(id: Int, vararg arguments: Any): String =

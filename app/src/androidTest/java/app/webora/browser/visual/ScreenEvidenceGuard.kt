@@ -94,7 +94,7 @@ class ScreenEvidenceGuard(
      * could differ from the frame that passed, which would make the check a claim about a picture
      * nobody kept.
      */
-    fun captureWhenRendered(label: String, region: Rect?): Bitmap {
+    fun captureWhenRendered(label: String, region: Rect?, excluded: List<Rect> = emptyList()): Bitmap {
         if (region == null) return takeScreenshot(label)
 
         val deadline = SystemClock.uptimeMillis() + RENDER_TIMEOUT_MILLIS
@@ -105,8 +105,20 @@ class ScreenEvidenceGuard(
         while (SystemClock.uptimeMillis() < deadline) {
             attempt++
             val bitmap = takeScreenshot(label)
-            when (val verdict = RenderedContentPolicy.verdict(sampleRegion(bitmap, region))) {
-                is ContentVerdict.Rendered -> return bitmap
+            when (val verdict = RenderedContentPolicy.verdict(sampleRegion(bitmap, region, excluded))) {
+                is ContentVerdict.Rendered -> {
+                    // Recorded on success too, not only on failure. A passing check that leaves no
+                    // measurement cannot be told apart from one that barely passed for the wrong
+                    // reason — which is exactly what happened in run 10, where a browser-owned
+                    // quick-action button inside the measured region cleared the bar on a blank page.
+                    record(
+                        "rendered-$label.txt",
+                        renderedReport(label, region, excluded, "PASSED differing=" +
+                            "${verdict.differingFraction} after ${SystemClock.uptimeMillis() - started}ms\n" +
+                            samples),
+                    )
+                    return bitmap
+                }
                 is ContentVerdict.Blank -> samples.appendLine(
                     "attempt=$attempt elapsed=${SystemClock.uptimeMillis() - started}ms " +
                         "differing=${verdict.differingFraction} " +
@@ -117,7 +129,7 @@ class ScreenEvidenceGuard(
             SystemClock.sleep(POLL_INTERVAL_MILLIS)
         }
 
-        record("rendered-$label.txt", renderedFailureReport(label, region, samples.toString()))
+        record("rendered-$label.txt", renderedReport(label, region, excluded, "NEVER RENDERED\n$samples"))
         throw AssertionError(
             "Refusing to capture $label: the page region never rendered within " +
                 "${RENDER_TIMEOUT_MILLIS}ms. Every sample is in $DIAGNOSTICS_DIRECTORY/" +
@@ -125,9 +137,10 @@ class ScreenEvidenceGuard(
         )
     }
 
-    private fun renderedFailureReport(label: String, region: Rect, samples: String) = buildString {
+    private fun renderedReport(label: String, region: Rect, excluded: List<Rect>, samples: String) = buildString {
         appendLine("label=$label")
         appendLine("region=$region")
+        appendLine("excluded=$excluded")
         appendLine("stride=$SAMPLE_STRIDE")
         appendLine("minimum_differing_fraction=${RenderedContentPolicy.MINIMUM_DIFFERING_FRACTION}")
         appendLine("timeout_ms=$RENDER_TIMEOUT_MILLIS")
@@ -141,7 +154,7 @@ class ScreenEvidenceGuard(
      * of the region — still tens of thousands of samples, which is far more than the modal colour
      * needs to be stable.
      */
-    private fun sampleRegion(bitmap: Bitmap, region: Rect): IntArray {
+    private fun sampleRegion(bitmap: Bitmap, region: Rect, excluded: List<Rect>): IntArray {
         val left = region.left.coerceIn(0, bitmap.width)
         val top = region.top.coerceIn(0, bitmap.height)
         val right = region.right.coerceIn(left, bitmap.width)
@@ -152,7 +165,10 @@ class ScreenEvidenceGuard(
         while (y < bottom) {
             var x = left
             while (x < right) {
-                samples.add(bitmap.getPixel(x, y))
+                // Browser-owned overlays live inside this rectangle — the quick-action button is a
+                // child of the very Box that bounds the page — so a sample landing on one is chrome,
+                // not page. Counting it lets a frame pass on the strength of Webora's own UI.
+                if (excluded.none { it.contains(x, y) }) samples.add(bitmap.getPixel(x, y))
                 x += SAMPLE_STRIDE
             }
             y += SAMPLE_STRIDE
