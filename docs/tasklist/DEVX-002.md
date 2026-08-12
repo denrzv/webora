@@ -113,7 +113,7 @@ References:
   - Deviation: none.
   - Gate: `bash scripts/pre-commit-check.sh`
 
-- [ ] TASK-4: Two artifacts, the compose step, and a summary that names them
+- [x] TASK-4: Two artifacts, the compose step, and a summary that names them
   - Modified: `.github/workflows/android-screenshots.yml`
   - Acceptance: a new step runs the composer **after the emulator step and outside it** with
     `if: always()`, then fails the run if the composer's `tiles=` disagrees with `png_count=` in
@@ -129,6 +129,30 @@ References:
     that is not there. No secret or environment value beyond SHA and run id is interpolated.
   - Tests: **none possible here** — this file runs only on a GitHub runner. `actionlint` if the gate
     provides it, otherwise YAML parse plus review. Recorded as reviewed-not-enforced, not as passing.
+  - Result: `bash scripts/pre-commit-check.sh` OK.
+  - Result: **more was verifiable than the task predicted.** The YAML parses, all 11 steps enumerate,
+    every embedded `run:` block passes `bash -n`, and the two uploads carry the intended asymmetry
+    (`warn` for screenshots, `error` for diagnostics). The task's "none possible here" was written
+    about the file; the *logic inside it* is shell and can be extracted and driven directly.
+  - Result: the compose step's comparison was exercised against four scenarios with a stubbed
+    `gradlew` whose reported tile count is controlled:
+    | Scenario | Behaviour |
+    |---|---|
+    | `tiles=3`, `png_count=3` | exit 0, prints the comparison |
+    | `tiles=2`, `png_count=3` | **exit 1** — refuses to publish a sheet that does not account for every frame |
+    | `png_count=0` | exit 0, nothing to compose |
+    | no `result.txt` at all | exit 0, says the emulator step ended before collecting |
+    The failing case is the one that matters: a composer bug that dropped a tile cannot publish.
+  - Result: both summary branches were rendered to a file with `GITHUB_SHA`/`GITHUB_RUN_ID` set. The
+    populated branch states commit, run, count and both artifact names; the empty branch says no
+    screenshots artifact was produced and points at the diagnostics one, rather than naming an
+    artifact that does not exist.
+  - Note: `./gradlew … | sed` masks Gradle's exit status, which looks like a defect and is not one —
+    a Gradle failure leaves `tiles` empty, and the empty-vs-`png_count` comparison then fails the
+    step. The run goes red either way, so no second `PIPESTATUS` check is needed.
+  - Deviation: none. What could not be verified is what genuinely needs a runner — that
+    `actions/upload-artifact` produces the two bundles with the intended contents, and that the
+    emulator step's outputs land where the paths expect. `/qa` records that.
   - Gate: `bash scripts/pre-commit-check.sh`
 
 - [ ] TASK-5: Document the two artifacts as shipped
