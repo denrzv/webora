@@ -189,3 +189,33 @@ References:
     this ticket: a contact sheet composed from the three contaminated frames would have made bad
     evidence easier to glance at and approve. That is the one way this feature could actively harm
     the project, so it is written where the next person will read it before adding to the sheet.
+
+- [x] TASK-FIX-1: The composer resolved `review` against the wrong directory
+  - Source: hosted run **8** (`31568159235`, `ca981f9`). The journey succeeded and captured three
+    frames; `Compose the contact sheet` failed with `Not a directory: review`, and the count guard
+    then failed the run because `tiles=` was empty against `png_count=3`.
+  - Modified: `evidence-sheet/build.gradle.kts`,
+    `evidence-sheet/src/main/kotlin/app/webora/evidence/ContactSheet.kt`,
+    `evidence-sheet/src/test/kotlin/app/webora/evidence/ContactSheetTest.kt`, `.gitignore`
+  - Cause: the `application` plugin's `run` task defaults `workingDir` to **the module's own
+    directory**, so `--args="review"` resolved to `evidence-sheet/review`. The frames are staged in
+    the repository root's `review/`, by a script and a workflow that both run from the root. Nothing
+    in `TASK-2`'s smoke test caught it because that test passed an absolute path.
+  - Fix: `tasks.named<JavaExec>("run") { workingDir = rootProject.projectDir }`, so a relative
+    argument means what every caller of this tool already means by it.
+  - Second fix, and the one that matters more next time: **path failures now name the path they
+    resolved to.** `Not a directory: review` is a message about the argument; the interesting fact
+    was which `review` the process actually looked in, and finding it cost a whole hosted run.
+    The message is now absolute, and two tests assert that — including one that passes a relative
+    path and requires the absolute form in the message.
+  - Negative control: removed the `workingDir` line and re-ran from the repository root with frames
+    in `review/`. Reproduced run 8 exactly, and the new message names the cause outright:
+    `Not a directory: /home/user/webora/evidence-sheet/review`. Restored → `tiles=3`.
+  - Result: 14 tests in the module, 0 failures. `bash scripts/pre-commit-check.sh` OK.
+    `./gradlew --quiet :evidence-sheet:run --args="review"` from the repository root, with the three
+    real captured frames in `review/`, prints `tiles=3`.
+  - Deviation: also added `/review/` and `/artifacts/` to `.gitignore`, which no task listed. Both
+    are created at the repository root by the workflow, and running the composer by hand leaves
+    `review/` staged and committable. A checked-in frame would be a screenshot with no run behind
+    it — the exact confusion `TASK-5`'s stale-artifact paragraph warns about, made permanent.
+  - Gate: `bash scripts/pre-commit-check.sh`

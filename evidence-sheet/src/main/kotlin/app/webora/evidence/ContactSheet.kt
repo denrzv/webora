@@ -68,8 +68,11 @@ private class Tile(val label: String, val image: BufferedImage) {
 }
 
 private fun discoverFrames(directory: Path): List<Path> {
+    // Absolute, always. `Not a directory: review` cost a whole hosted run to diagnose,
+    // because the interesting part was not the name — it was which `review` the process
+    // had actually looked in. A path failure should name the path it resolved to.
     if (!Files.isDirectory(directory)) {
-        throw ContactSheetFailure("Not a directory: $directory")
+        throw ContactSheetFailure("Not a directory: ${directory.toAbsolutePath()}")
     }
     val frames = Files.list(directory).use { paths ->
         paths.filter { Files.isRegularFile(it) }
@@ -80,7 +83,7 @@ private fun discoverFrames(directory: Path): List<Path> {
             .toList()
     }
     if (frames.isEmpty()) {
-        throw ContactSheetFailure("No frames to compose in $directory")
+        throw ContactSheetFailure("No frames to compose in ${directory.toAbsolutePath()}")
     }
     return frames
 }

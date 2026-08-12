@@ -33,6 +33,15 @@ application {
     applicationName = "evidence-sheet"
 }
 
+// The `application` plugin's `run` task defaults its working directory to this module's
+// own directory, so `--args="review"` resolved to `evidence-sheet/review` and run 8 failed
+// with `Not a directory: review` while the frames sat in the repository root's `review/`.
+// Screenshot paths are written from the root, by the emulator script and the workflow, so
+// that is the directory a relative argument has to mean.
+tasks.named<JavaExec>("run") {
+    workingDir = rootProject.projectDir
+}
+
 dependencies {
     testImplementation(libs.junit)
 }

@@ -80,12 +80,35 @@ class ContactSheetTest {
         assertFalse(dir.resolve(PREVIEW_FILE_NAME).toFile().exists())
     }
 
-    @Test fun refusesAMissingDirectory() {
+    /**
+     * The message names the path it resolved to, not the path it was handed. Run 8 failed with
+     * `Not a directory: review` — a relative argument the `run` task had resolved against the
+     * module directory rather than the repository root — and the bare name is what made a
+     * one-line cause take a whole hosted run to find.
+     */
+    @Test fun refusesAMissingDirectoryAndNamesTheResolvedPath() {
         val missing = temp.root.toPath().resolve("never-created")
 
         val failure = runCatching { composeContactSheet(missing) }.exceptionOrNull()
 
         assertTrue("expected a failure, got none", failure is ContactSheetFailure)
+        val message = failure?.message.orEmpty()
+        assertTrue(
+            "message must name an absolute path, got: $message",
+            message.contains(missing.toAbsolutePath().toString()),
+        )
+    }
+
+    @Test fun namesTheResolvedPathWhenARelativeDirectoryIsEmpty() {
+        val relative = java.nio.file.Path.of("definitely-not-here-" + System.nanoTime())
+
+        val failure = runCatching { composeContactSheet(relative) }.exceptionOrNull()
+
+        assertTrue("expected a failure, got none", failure is ContactSheetFailure)
+        assertTrue(
+            "a relative argument must be reported as the absolute path it resolved to",
+            failure?.message.orEmpty().contains(relative.toAbsolutePath().toString()),
+        )
     }
 
     /**
