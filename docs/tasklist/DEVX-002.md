@@ -86,7 +86,7 @@ References:
     assertions on a CLI contract, not protections that could be silently reverted.
   - Gate: `bash scripts/pre-commit-check.sh`
 
-- [ ] TASK-3: Split the staging directories in the emulator script
+- [x] TASK-3: Split the staging directories in the emulator script
   - Modified: `scripts/android-screenshot-ci.sh`
   - Acceptance: canonical PNGs are copied to **`review/`** at the repo root instead of
     `artifacts/screenshots/`; `png_count` counts `review/*.png`; `mkdir -p artifacts/screenshots` is
@@ -98,6 +98,19 @@ References:
   - Tests: `shellcheck` via the gate; `bash -n`; sourcing the script still defines its functions and
     runs nothing (the existing property at lines 88-92). Verified by inspection that no path outside
     `review/` and `artifacts/` changes, since the emulator half cannot run here.
+  - Result: `bash -n` and `shellcheck` clean; sourcing the file printed nothing, defined
+    `require_prebuilt_apks`, and exposed `REVIEW_DIR=review` — so the "sourcing runs nothing"
+    property survives. `bash scripts/pre-commit-check.sh` OK.
+  - Result: repository-wide grep for `artifacts/screenshots` leaves exactly two live references, and
+    both are owned by later tasks in this ticket — `.github/workflows/android-screenshots.yml:29`
+    (`TASK-4`) and `docs/SCREENSHOTS.md:85` (`TASK-5`). Recorded so the intermediate state is a known
+    handover rather than something to rediscover: **between this commit and `TASK-4` the workflow
+    still creates `artifacts/screenshots` and uploads one artifact**, so the pipeline is briefly
+    inconsistent on the branch. It is coherent again at `TASK-4`.
+  - Note: `REVIEW_DIR` is a constant rather than a literal repeated at the three sites that use it,
+    because the whole integrity argument for this split is that the two directories are disjoint. One
+    spelling is one place for that to be true.
+  - Deviation: none.
   - Gate: `bash scripts/pre-commit-check.sh`
 
 - [ ] TASK-4: Two artifacts, the compose step, and a summary that names them

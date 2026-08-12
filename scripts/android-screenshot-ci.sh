@@ -11,6 +11,13 @@ set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
+# Two disjoint staging directories, not one directory with a negated upload glob.
+# `review/` becomes the human-facing artifact and holds nothing but images; `artifacts/`
+# becomes the diagnostics artifact and holds no images. Neither can leak into the other
+# through a YAML path expression, which is the way this split would otherwise break
+# quietly — a duplicated PNG in the diagnostics bundle looks like nothing is wrong.
+REVIEW_DIR="review"
+
 DEBUG_APK="app/build/outputs/apk/debug/app-debug.apk"
 TEST_APK="app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk"
 SCREENSHOT_TEST_CLASS="app.webora.browser.visual.LiveSiteScreenshotTest"
@@ -34,7 +41,7 @@ require_prebuilt_apks() {
 
 main() {
   cd "${ROOT}" || exit 1
-  mkdir -p artifacts/screenshots
+  mkdir -p artifacts "${REVIEW_DIR}"
 
   if ! require_prebuilt_apks > artifacts/prebuilt-apks.txt 2>&1; then
     cat artifacts/prebuilt-apks.txt >&2
@@ -63,12 +70,12 @@ main() {
   local additional_output_root="app/build/outputs/connected_android_test_additional_output"
   if [[ -d "$additional_output_root" ]]; then
     while IFS= read -r -d '' screenshot; do
-      cp "$screenshot" artifacts/screenshots/
+      cp "$screenshot" "${REVIEW_DIR}/"
     done < <(find "$additional_output_root" -type f -path '*/screenshots/*.png' -print0)
   fi
 
   local png_count
-  png_count=$(find artifacts/screenshots -maxdepth 1 -type f -name '*.png' | wc -l | tr -d ' ')
+  png_count=$(find "${REVIEW_DIR}" -maxdepth 1 -type f -name '*.png' | wc -l | tr -d ' ')
   printf 'test_status=%s\npng_count=%s\n' "$test_status" "$png_count" | tee artifacts/result.txt
 
   if [[ "$png_count" -eq 0 ]]; then
