@@ -8,7 +8,7 @@ References:
 
 ## Tasks
 
-- [ ] TASK-1: The contact-sheet composer, as a JVM module the gate can fail
+- [x] TASK-1: The contact-sheet composer, as a JVM module the gate can fail
   - New: `evidence-sheet/build.gradle.kts`
   - New: `evidence-sheet/src/main/kotlin/app/webora/evidence/ContactSheet.kt`
   - New: `evidence-sheet/src/test/kotlin/app/webora/evidence/ContactSheetTest.kt`
@@ -36,6 +36,23 @@ References:
     they would mask it.
   - Negative control 3: draw labels with a zero-alpha colour — `labelsAreDrawnAndNotBlank` must fail
     while every dimension and count assertion still passes.
+  - Result: 8 tests, 0 failures. `bash scripts/pre-commit-check.sh` OK. All three negative controls
+    behaved:
+    1. exclusion removed → `excludesAnExistingPreviewFromItsOwnInput` alone failed (1 of 8);
+    2. undecodable frame skipped via `mapNotNull` → `refusesAnUndecodablePng` alone failed (1 of 8),
+       with every happy-path test still green, which is the point: they would have masked it;
+    3. zero-alpha label ink → **2 of 8** failed, not the 1 the plan predicted.
+  - Note on control 3: `labelComesFromTheFileItDraws` fails alongside `labelsAreDrawnAndNotBlank`
+    because it also measures ink — it compares label bands between two runs, and with no ink drawn
+    both bands read zero, so the "these must differ" assertion collapses. That is correct behaviour
+    for both tests rather than a flaw in either, but the plan's "exactly one will fail" was wrong and
+    is recorded here rather than quietly satisfied.
+  - Deviation: `refusesAMissingDirectory` was added beyond the planned list. `Files.isDirectory`
+    returns false for both an absent path and a regular file, and the empty-directory test does not
+    reach that branch, so without it the "not a directory" refusal had no coverage.
+  - Deviation: the test's marker map was renamed `MARKERS` → `markers`. Detekt's `VariableNaming`
+    fails a non-const private `val` in PascalCase, and `warningsAsErrors` makes that fatal — the
+    module is gated by the root detekt configuration exactly as intended.
   - Gate: `bash scripts/pre-commit-check.sh`
 
 - [ ] TASK-2: The CLI wrapper, and the count contract the workflow checks
