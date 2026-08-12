@@ -112,6 +112,19 @@ android {
             java.srcDir("src/release/java")
             kotlin.srcDir("src/release/java")
         }
+
+        // CI-002's screenshot-evidence policy decides what the capture harness may dismiss, so it
+        // needs a test that fails when it is widened. In `androidTest` alone that test could not run
+        // here — managed checkouts have no /dev/kvm — and in `main` it would ship harness policy
+        // inside the browser. Sharing one directory into both test source sets and into no variant
+        // gives the JVM gate the decision and the device the same bytes, with no second copy to
+        // drift. `kotlin.srcDir` as well as `java.srcDir`, for the same AGP 9 reason as above.
+        listOf("test", "androidTest").forEach { testSourceSet ->
+            getByName(testSourceSet) {
+                java.srcDir("src/screenshotPolicy/java")
+                kotlin.srcDir("src/screenshotPolicy/java")
+            }
+        }
     }
 
     testOptions {

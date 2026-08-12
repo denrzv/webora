@@ -20,3 +20,10 @@ keystore.properties
 # no security value and cannot sign a release build. Every other keystore stays excluded above.
 !app/debug.keystore
 /.kotlin/
+
+# Screenshot-evidence staging, created at the repository root by the Android screenshots
+# workflow: review/ becomes the human-facing artifact, artifacts/ the diagnostics one.
+# Neither is ever committed — evidence belongs to a run, and a checked-in frame would be
+# a screenshot with no commit behind it.
+/review/
+/artifacts/

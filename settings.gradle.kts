@@ -30,3 +30,4 @@ rootProject.name = "Webora"
 include(":app")
 include(":siteskin-core")
 include(":siteskin-lint")
+include(":evidence-sheet")

@@ -80,9 +80,9 @@ Unicode glyphs, and the consent actions were visually weak on a phone-sized view
 
 Evidence/DX track — can proceed without waiting for all M6 surfaces:
 
-- [ ] `CI-002` Deterministic clean Android screenshot capture — eliminate known System UI
+- [x] `CI-002` Deterministic clean Android screenshot capture — eliminate known System UI
   contamination without hiding Webora failures
-- [ ] `DEVX-002` Screenshot review experience — separate human/diagnostic artifacts and add one
+- [x] `DEVX-002` Screenshot review experience — separate human/diagnostic artifacts and add one
   labelled contact-sheet preview
 - [ ] `DEVX-003` Inspector isolation and canonical evidence mode — keep debug diagnostics available
   without a persistent overlay in product evidence

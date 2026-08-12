@@ -668,3 +668,108 @@ analytics, cookie, form or storage — it is the artifact most likely to be copi
 anything it does becomes a pattern. It also derives its own darker brand shades for body text rather
 than shipping white-on-`#D94F8A` at 3.86:1, mirroring the contrast guard `SKIN-001` runs over
 manifest colours so the page and the native chrome agree.
+
+### Screenshot evidence integrity (CI-002)
+
+`CI-001` made the hosted screenshot journey possible and immediately produced the failure mode a
+semantic assertion cannot catch: **three frames that passed every Compose assertion while covered by
+`System UI isn't responding`.** A green job and worthless evidence. The rules that keep that from
+recurring are as much a trust boundary as anything in the manifest pipeline, just one layer up — the
+question is not what a website may influence, but what the harness may hide from the person looking
+at the picture.
+
+**The cause was contention, and the fix is ordering.** The emulator step used to boot a device and
+then run a full Gradle build — 72 tasks, 8m39s in run `31491580516` — on the same 4-vCPU runner.
+Android's ANR timers are wall-clock and do not care that the delay came from the host. Both APKs are
+now assembled *before* the emulator launches, and `scripts/android-screenshot-ci.sh` refuses to run
+when either is missing. That precondition is the load-bearing half: without it a regressed pre-build
+step is invisible, because `connectedDebugAndroidTest` would simply rebuild inside the emulator step
+and still go green.
+
+**`sys.boot_completed=1` is not a screenshot-ready signal.** It means the boot broadcast fired.
+`scripts/android-emulator-ready.sh` requires four observable conditions on three consecutive samples
+under a deadline, and writes every sample it took to the artifact. `readiness_verdict` is a pure
+shell function of four strings precisely so a checkout with no `/dev/kvm` can still test the gate
+that decides when an emulator may be photographed.
+
+**The harness may clear exactly one obstruction, and it is an allow-list of one process.**
+`ScreenEvidencePolicy.focusVerdict` classifies `dumpsys window`'s focused window into `OwnedByApp`,
+`DismissableSystemAnr` or `Blocked`. Only `Application Not Responding: com.android.systemui` is
+dismissable, and only by pressing `Wait`. A System UI *crash*, an ANR in any other process, an
+unrecognised window, a null focus, an unparseable dump and two disagreeing focus lines are all
+`Blocked`. There is deliberately no `else` branch that dismisses. The obvious "close whatever dialog
+is in the way" would also clear a Webora crash dialog and photograph the screen behind it — silently,
+with the job still green.
+
+The decision reads only what the OS supplies. AOSP builds those titles from a **process name**
+(`"Application Not Responding: " + processName`), so no translated string, page content, dialog text
+or manifest field reaches the classification. Do not re-key it on anything a website can influence.
+
+**Ownership is a whole-token package match, not a `package/activity` prefix.** A dialog or popup
+window is not guaranteed to be titled that way, and the consent frame is captured with a dialog
+focused — the strict shape would fail the journey the guard protects. A bare `contains` was rejected
+too: it accepts `com.evil.app.webora.browser.debug`. Both halves have a test.
+
+**`src/screenshotPolicy/java` is shared into `test` and `androidTest` and into no variant.** In
+`androidTest` alone the decision would live where `./gradlew test` cannot reach it, and managed
+checkouts have no emulator — the test would exist and never have run. In `main` it would ship harness
+policy inside the browser. As with `debugRelease`'s `src/release/java`, AGP 9 needs both
+`java.srcDir` and `kotlin.srcDir`.
+
+**Readiness records the focused window and never classifies it.** That knowledge has one owner, and
+the shell self-test asserts the non-duplication directly: a System UI ANR dialog in `mCurrentFocus`
+is a *ready* device. Adding classification to the shell would create a second copy free to disagree
+with the first, and nothing would notice until they did.
+
+### Screenshot review experience (DEVX-002)
+
+`CI-002` made the frames trustworthy and left them unreviewable: three canonical PNGs behind a
+staging directory, inside one ZIP that also carried an HTML test-report tree, with a job summary that
+said `png_count=3` and told you to go find the artifact. `DEVX-002` splits that into a **screenshots
+artifact containing nothing but images** — the frames flattened to the root plus one `preview.png`
+contact sheet — and a **diagnostics artifact** carrying logcat, instrumentation, readiness samples
+and `CI-002`'s `focus-*` / `interference-*` / `window-*` files.
+
+**Convenience is not integrity, and this ticket only buys the first.** `CI-002` decides whether a
+frame was allowed to exist; `DEVX-002` decides what happens to it afterwards. A contact sheet
+composed from contaminated frames is contaminated evidence that is now easy to glance at and approve,
+which is worse than the same evidence being awkward. Nothing here may ever be presented as making a
+frame trustworthy.
+
+**A tile's caption derives only from that tile's own filename.** `composeContactSheet` takes a
+directory and nothing else — there is no parameter for a title, a caption or a label, so there is no
+argument through which workflow, page or manifest text could reach the image. The frames depict
+manifest-driven UI; nothing manifest-driven may caption Webora's own evidence. Adding such a
+parameter is the violation this shape exists to prevent, not merely a smell.
+
+**The composer is total or it throws, and the workflow checks its arithmetic anyway.** An unreadable
+frame is never skipped, because a sheet one tile short still reads as a complete journey to whoever
+opens it. On top of that the CLI prints `tiles=N` and the workflow fails the run when that disagrees
+with the `png_count` the run collected. A failed compose prints **no** `tiles=` line rather than
+`tiles=0` — an absent count and a real count must not look alike to the shell comparing them, and
+`tiles=0` would agree with `png_count=0` and pass a check that should never have been reached.
+
+**Order is filename order, which is journey order by construction.** The capturing test names frames
+`01-`, `02-`, `03-`; sorting the discovered files means there is no second list of frame names to
+fall out of step with the first.
+
+**`:evidence-sheet` is a Gradle module for the same reason `ScreenEvidencePolicy` is in a shared
+source set.** A composer living in `scripts/android-screenshot-ci.sh` or in `androidTest` would be
+verified by nothing on a developer machine — the gate never compiles `androidTest` at all, which is
+how a compile error in `BrowserFontScaleTest` once survived a green `scripts/pre-commit-check.sh`. As
+a JVM module, `./gradlew test` picks it up with no wiring and root-applied detekt gates it. It takes
+no third-party dependency: `javax.imageio` ships a PNG reader and writer, and `java.awt` draws
+headless. **Assert ink pixels, not file existence** — a host with no usable font writes a
+structurally perfect PNG with invisible labels, and only pixel counting tells the two apart.
+
+**The two uploads are deliberately asymmetric.** Diagnostics use `if-no-files-found: error` and
+screenshots use `warn`: a run that dies before capturing anything is the run someone most needs to
+read, and it must not also fail for having no pictures. Composition runs *outside* the emulator step,
+because `CI-002` established that work on the runner while the device is alive is what starved
+`system_server` into an ANR.
+
+**Artifact names carry the commit SHA because a stale artifact looks exactly like a current one.**
+This is field-tested: three frames covered by `System UI isn't responding` were read as current
+evidence when they came from run #5 (`328bd08d`), which predates every commit of `CI-002`. Making
+evidence easier to open makes opening the wrong one easier too. Check the SHA against the commit you
+mean to judge.

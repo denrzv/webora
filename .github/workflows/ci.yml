@@ -15,6 +15,12 @@ jobs:
           python-version: '3.12'
       - run: pipx install pre-commit
       - run: pre-commit run --all-files
+      # scripts/pre-commit-check.sh is not what CI runs, so a gate wired only into that script runs
+      # on developer machines and nowhere else. The emulator readiness gate decides when a hosted
+      # screenshot run may start, and its verdict function is pure precisely so a machine with no
+      # /dev/kvm can test it — which includes this one.
+      - name: Emulator readiness gate self-test
+        run: bash scripts/android-emulator-ready-selftest.sh
 
   core:
     # :siteskin-core must build and test with NO Android SDK. This job installs no

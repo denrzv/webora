@@ -26,7 +26,7 @@ jobs:
 
       - name: Initialize diagnostic artifact
         run: |
-          mkdir -p artifacts/screenshots
+          mkdir -p artifacts review
           printf 'commit=%s\nrun_id=%s\n' "$GITHUB_SHA" "$GITHUB_RUN_ID" \
             > artifacts/run.txt
 
@@ -56,6 +56,17 @@ jobs:
           echo "=== Disk after Android SDK cleanup ==="
           df -h /
 
+      # Built here, deliberately, and not inside the emulator step. Run 31491580516 —
+      # the first green screenshot run — executed 72 Gradle tasks over 8m39s while the
+      # emulator was already up, on a 4-vCPU runner. system_server and com.android.systemui
+      # finish their own start-up inside that window and are measured by wall-clock ANR
+      # timers, so the `System UI isn't responding` dialog that covered every canonical
+      # frame was caused by the build, not by the emulator. Compiling before boot removes
+      # the contention; scripts/android-screenshot-ci.sh then refuses to run at all if
+      # these two APKs are missing, so a regression here cannot quietly move the build back.
+      - name: Build the app and Android-test APKs
+        run: ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest
+
       - name: Run live SiteSkin screenshot journey
         uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
@@ -76,11 +87,55 @@ jobs:
             du -sh "$ANDROID_HOME/system-images" 2>/dev/null || true
           script: bash scripts/android-screenshot-ci.sh
 
-      - name: Upload screenshots and diagnostics
+      # Deliberately outside the emulator step. CI-002 established that running work on
+      # this runner while the device is alive is what starved system_server into the ANR
+      # that covered every canonical frame; composing here costs the emulator nothing.
+      #
+      # The comparison below is the integrity check. composeContactSheet is total or it
+      # throws, but a bug that dropped a tile would still write a plausible-looking sheet,
+      # and a sheet missing a frame reads as a complete journey to whoever opens it. So the
+      # count it reports is checked against the number of screenshots the run collected,
+      # and a disagreement fails the run rather than publishing the picture.
+      - name: Compose the contact sheet
+        if: always()
+        run: |
+          if [[ ! -f artifacts/result.txt ]]; then
+            echo "No result.txt: the emulator step ended before it collected screenshots." >&2
+            exit 0
+          fi
+
+          png_count=$(sed -n 's/^png_count=//p' artifacts/result.txt)
+          if [[ "${png_count:-0}" -eq 0 ]]; then
+            echo "No screenshots were collected; there is nothing to compose." >&2
+            exit 0
+          fi
+
+          tiles=$(./gradlew --quiet :evidence-sheet:run --args="review" | sed -n 's/^tiles=//p')
+          echo "composed tiles=${tiles} against png_count=${png_count}"
+
+          if [[ "$tiles" != "$png_count" ]]; then
+            echo "Contact sheet has ${tiles} tiles but the run collected ${png_count} screenshots." >&2
+            echo "Refusing to publish a sheet that does not account for every frame." >&2
+            exit 1
+          fi
+
+      # Two artifacts, and the if-no-files-found settings are not symmetrical on purpose.
+      # A run that dies before capturing anything is the run a person most needs to read,
+      # so missing diagnostics are an error and missing screenshots are not.
+      - name: Upload screenshots for review
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: webora-screenshots-api33-${{ github.sha }}
+          name: webora-screenshots-${{ github.sha }}
+          path: review/
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: webora-screenshot-diagnostics-${{ github.sha }}
           path: |
             artifacts/
             app/build/outputs/androidTest-results/
@@ -89,15 +144,37 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+      # Only the commit SHA, the run id, filenames and counts reach this text. Nothing
+      # else from the environment is interpolated, and nothing from the page under test
+      # or its manifest reaches the summary or the contact sheet's labels.
       - name: Summarize the evidence
         if: always()
         run: |
+          png_count=0
+          if [[ -f artifacts/result.txt ]]; then
+            png_count=$(sed -n 's/^png_count=//p' artifacts/result.txt)
+          fi
+
           {
             echo '## Webora live-site screenshots'
             echo
             echo "Origin: \`https://denrzv.github.io\`"
             echo 'Device: Pixel 6 profile, Android API 33'
-            echo "Download the \`webora-screenshots-api33-*\` artifact from this run."
+            echo "Commit: \`$GITHUB_SHA\`"
+            echo "Run: \`$GITHUB_RUN_ID\`"
+            echo "Screenshots captured: **${png_count:-0}**"
+            echo
+            if [[ "${png_count:-0}" -gt 0 ]]; then
+              echo "| Artifact | Contents |"
+              echo "|---|---|"
+              echo "| \`webora-screenshots-$GITHUB_SHA\` | \`preview.png\` plus each full-resolution frame |"
+              echo "| \`webora-screenshot-diagnostics-$GITHUB_SHA\` | logcat, instrumentation, readiness, test output |"
+              echo
+              echo 'Open `preview.png` first — it shows the whole journey in order.'
+            else
+              echo 'No screenshots were captured, so no screenshots artifact was produced.'
+              echo "Diagnostics are in \`webora-screenshot-diagnostics-$GITHUB_SHA\`."
+            fi
             echo
             if [[ -f artifacts/result.txt ]]; then
               echo '```text'
