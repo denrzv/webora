@@ -129,7 +129,7 @@ References:
     ignores `open` entirely. Neither relies on the other.
   - Gate: `bash scripts/pre-commit-check.sh` plus `./gradlew :app:compileDebugAndroidTestKotlin`
 
-- [ ] TASK-4: Run the hosted workflow and confirm the frames
+- [x] TASK-4: Run the hosted workflow and confirm the frames
   - Modified: `docs/SCREENSHOTS.md` if the frames' description changes
   - Acceptance: the Android screenshots workflow runs on this branch and a human opens `preview.png`
     to confirm **no inspector affordance in any of the three canonical frames**. The session cannot
@@ -139,6 +139,24 @@ References:
     well clear of the 1% threshold — the page, not the chrome, is what clears it now. The `excluded=`
     line should still name only the quick action, confirming nothing new needed excluding.
   - Tests: hosted run. `bash scripts/pre-commit-check.sh`.
+  - Result: run **12** (`31617251038`, `140d206e`) succeeded. `test_status=0`, `png_count=3`,
+    `composed tiles=3 against png_count=3`. APKs built in 5m42s *before* the emulator launched, per
+    `CI-002`'s ordering; the journey then took 6m13s on the device.
+  - What that already proves, without opening anything: **frame 03 passed `CI-003`'s rendered check
+    with the overlay gone.** `captureWhenRendered` fails the run when the page region never clears
+    `MINIMUM_DIFFERING_FRACTION`, and the inspector's pixels are no longer in that region to help it
+    — so a green run is the page itself clearing the bar. If the overlay had been load-bearing, this
+    is the run that would have gone red.
+  - What still needs the artifact, and is therefore **owner-confirmed instrumented evidence, never a
+    gate claim**: the winning fraction in `rendered-03-siteskin-integrated.txt`, the `excluded=` line
+    naming only `SITESKIN_QUICK_ACTIONS_TAG`, and the visual confirmation that no inspector
+    affordance appears in any of the three frames of `preview.png`. This session cannot download
+    artifacts (`403 GitHub access is not enabled for this session`).
+  - `webora-screenshots-140d206ebc51761eb4a3efe43dbb5b2706320af5` — check the SHA against the commit
+    being judged before reading it, which `DEVX-002` added the naming for after run #5's frames were
+    read as current evidence.
+  - No change needed to `docs/SCREENSHOTS.md`: the frames' journey and descriptions are unchanged.
+    What left the frames was chrome the document never described.
   - Gate: `bash scripts/pre-commit-check.sh`
 
 - [x] TASK-5: Record the decision in the project's own documentation
@@ -166,3 +184,26 @@ References:
     tasklist. A variant-gated decision read inline is untestable in the only variant AGP builds tests
     for, and the next person adding one will reach for exactly that shape.
   - Gate: `bash scripts/pre-commit-check.sh`
+
+## Review fixes
+
+- [x] TASK-FIX-1: Delete the affordance's orphaned label
+  - Modified: `app/src/debug/res/values/strings.xml`
+  - Acceptance: `inspector_open` is gone. It lost its only call site when the affordance did, and its
+    value is identical to the live `inspector_title` — two identical strings where one is dead is how
+    someone later edits the wrong one and sees no change. The menu entry's label stays
+    `inspector_menu_entry` in `src/main/res`, which is where it has to live: `main` compiles in every
+    variant and cannot see a debug-only resource.
+  - Result: `bash scripts/pre-commit-check.sh` OK, `./gradlew :app:assembleDebug` BUILD SUCCESSFUL —
+    the variant that compiles the debug resource set and would have failed on a dangling reference.
+  - Gate: `bash scripts/pre-commit-check.sh` plus `./gradlew :app:assembleDebug`
+
+- [ ] TASK-FIX-2: A browser command's handler is not optional
+  - Modified: `app/src/main/java/app/webora/browser/browser/BrowserScreen.kt`,
+    `app/src/androidTest/java/app/webora/browser/browser/BrowserSiteSkinLayoutTest.kt`
+  - Acceptance: `RegularBrowser` no longer defaults `onSettings` or `onInspector` to `{}`. The
+    ticket's own rule is that a variant must not offer a command it cannot service — which is why the
+    list is built from the constant rather than rendered-then-no-opped. A defaulted no-op callback
+    reintroduces that failure one layer down, and `BrowserSiteSkinLayoutTest` already composes
+    `RegularBrowser` with both entries inert. Both call sites pass explicit handlers.
+  - Gate: `bash scripts/pre-commit-check.sh` plus `./gradlew :app:compileDebugAndroidTestKotlin`

@@ -7,7 +7,6 @@
   browser-owned surface.
 -->
 <resources>
-    <string name="inspector_open">SiteSkin inspector</string>
     <string name="inspector_title">SiteSkin inspector</string>
     <string name="inspector_read_only">Read-only. Nothing here changes what the browser does.</string>
     <string name="inspector_close">Close</string>
