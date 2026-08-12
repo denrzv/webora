@@ -1,6 +1,6 @@
 # Review: DEVX-003
 Date: 2026-08-12
-Status: OPEN
+Status: RESOLVED
 
 ## Summary
 
@@ -143,6 +143,10 @@ repository uses for Android-touching code, applied to a variant-gated decision f
 `FINDING-2` is the ticket's own rule — do not offer what you cannot service — holding at the list
 layer and not at the callback layer. Both are cheap, both are in scope, and both become `TASK-FIX`
 micro-tasks with their own commits.
+
+Both fixed after this review, each in its own commit. `TASK-FIX-2` carries a negative control: the
+instrumented test's previous call now fails compilation on both missing parameters, so the compiler
+enforces what the convention used to.
 
 The ticket's premise held end to end: the overlay was the problem, removal was the fix, and
 `CI-003`'s residual hole closed with no second exclusion list to maintain.
