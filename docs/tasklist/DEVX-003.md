@@ -90,7 +90,7 @@ References:
     never touched it. Its only readers were this file and the tickets' own prose.
   - Gate: `bash scripts/pre-commit-check.sh` plus `./gradlew :app:assembleDebugRelease`
 
-- [ ] TASK-3: Reach the inspector from both menus, in two interactions
+- [x] TASK-3: Reach the inspector from both menus, in two interactions
   - Modified: `app/src/main/java/app/webora/browser/browser/BrowserScreen.kt`,
     `app/src/main/java/app/webora/browser/siteskin/SiteSkinChrome.kt`,
     `app/src/main/res/values/strings.xml`
@@ -108,6 +108,25 @@ References:
     finding rather than a fix, because the browser section is closed on purpose.
     `./gradlew :app:compileDebugAndroidTestKotlin` explicitly, since `INSPECTOR_AFFORDANCE_TAG` may
     have instrumented references and the gate never compiles that source set.
+  - Result: `bash scripts/pre-commit-check.sh` OK, `./gradlew :app:compileDebugAndroidTestKotlin`
+    and `:app:assembleDebugRelease` BUILD SUCCESSFUL. `BrowserSurfaceConventionsTest` green over all
+    three roots; `SiteSkinChromeModelTest`'s expectations needed no change, which is the outcome the
+    plan wanted — a closed section that had to be loosened would have been a finding.
+  - Regular mode now renders **the same list**, not a second copy of it. `AddressBar`'s
+    `DropdownMenu` iterates `browserMenuCommands()` and dispatches through an exhaustive `when`,
+    where `PAGE_INFORMATION` keeps its existing no-op. Before this it hardcoded two
+    `DropdownMenuItem`s, so the two modes' browser sections were free to drift; now a command added
+    to the enum fails to compile until both dispatchers handle it.
+  - `browserMenuLabel(command)` was extracted alongside, for the same reason `browserMenuCommands()`
+    is one expression: with the label `when` duplicated, the two menus could offer one command under
+    two names. One decision and one label mapping, two renderers.
+  - Interaction count, as the criterion requires: regular is `More` (1) → `SiteSkin inspector` (2);
+    integrated is the SiteSkin menu (1) → the same entry in the closed browser section (2). An entry
+    inside `PrivacySettingsScreen` would have been three in both, because `Settings` is itself
+    reached through these very menus.
+  - `INSPECTOR` is not reachable in a release variant by two independent mechanisms, not one: it is
+    absent from `browserMenuCommands()`, so nothing draws it; and the release `SiteSkinInspectorHost`
+    ignores `open` entirely. Neither relies on the other.
   - Gate: `bash scripts/pre-commit-check.sh` plus `./gradlew :app:compileDebugAndroidTestKotlin`
 
 - [ ] TASK-4: Run the hosted workflow and confirm the frames
