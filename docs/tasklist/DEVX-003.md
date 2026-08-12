@@ -141,7 +141,7 @@ References:
   - Tests: hosted run. `bash scripts/pre-commit-check.sh`.
   - Gate: `bash scripts/pre-commit-check.sh`
 
-- [ ] TASK-5: Record the decision in the project's own documentation
+- [x] TASK-5: Record the decision in the project's own documentation
   - Modified: `CLAUDE.md`, `docs/ROADMAP.md`
   - Acceptance: `CLAUDE.md` gains a `DEVX-003` section stating that the affordance moved into the two
     menus rather than being hidden during capture, and **why a screenshot mode was refused** — a
@@ -153,4 +153,16 @@ References:
     and drops the "also closes `CI-003`'s residual hole" forward-reference now that it has happened.
     No source, test, resource or build file changes in this task.
   - Tests: `bash scripts/pre-commit-check.sh`
+  - Result: `bash scripts/pre-commit-check.sh` OK. `CLAUDE.md` gains *The inspector lives in the
+    menus (DEVX-003)*, leading with the refused screenshot mode, since that is the decision most
+    likely to be re-proposed. `docs/ROADMAP.md` ticks the ticket and states the hole as closed rather
+    than pending.
+  - Also corrected, outside the stated list but in the same file: `CLAUDE.md`'s `CI-003` section
+    claimed the inspector overlay **is** still inside the measured region and unexcluded. That was
+    true when written and is now false — leaving it would have made the guidance document describe a
+    hole that no longer exists, which is worse than silence. Rewritten in past tense with the rule
+    that outlives it: anything new composed into that `Box` must be excluded or kept out.
+  - The negative-control finding from `TASK-1` is recorded in `CLAUDE.md` too, not only in this
+    tasklist. A variant-gated decision read inline is untestable in the only variant AGP builds tests
+    for, and the next person adding one will reach for exactly that shape.
   - Gate: `bash scripts/pre-commit-check.sh`

@@ -85,10 +85,10 @@ Evidence/DX track — can proceed without waiting for all M6 surfaces:
 - [x] `DEVX-002` Screenshot review experience — separate human/diagnostic artifacts and add one
   labelled contact-sheet preview
 - [x] `CI-003` Capture must wait for rendered content — pixel check on the page region, not semantics
-- [ ] `DEVX-003` Inspector isolation and canonical evidence mode — keep debug diagnostics available
-  without a persistent overlay in product evidence. **Also closes `CI-003`'s residual hole**: the
-  inspector overlay sits inside the measured page region, and two chrome buttons together clear the
-  rendered-content threshold
+- [x] `DEVX-003` Inspector isolation and canonical evidence mode — the affordance moved into the two
+  browser menus, one per mode, and left canonical composition. `CI-003`'s residual hole is closed:
+  `SiteSkinQuickActions` is now the only non-page chrome inside the measured region, and it was
+  already excluded
 
 Product-polish track:
 
