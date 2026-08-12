@@ -103,6 +103,7 @@ internal fun SiteSkinMenu(
             val label = when (command) {
                 BrowserMenuCommand.PAGE_INFORMATION -> stringResource(R.string.page_information)
                 BrowserMenuCommand.SETTINGS -> stringResource(R.string.settings)
+                BrowserMenuCommand.INSPECTOR -> stringResource(R.string.inspector_menu_entry)
             }
             MenuItem(label, null) { onBrowserSelect(command) }
         }

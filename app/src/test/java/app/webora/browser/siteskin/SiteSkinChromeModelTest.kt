@@ -1,5 +1,6 @@
 package app.webora.browser.siteskin
 
+import app.webora.browser.inspector.SITESKIN_INSPECTOR_AVAILABLE
 import dev.siteskin.core.SiteSkinLimits
 import dev.siteskin.core.SiteSkinValidationOutcome
 import dev.siteskin.core.SiteSkinValidator
@@ -10,6 +11,39 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SiteSkinChromeModelTest {
+
+    /**
+     * Both answers, driven explicitly.
+     *
+     * Only `testDebugUnitTest` exists, so a test that read the constant could never see the release
+     * answer — and an implementation returning `BrowserMenuCommand.entries` unconditionally would
+     * pass it. The `false` case is the one that catches that, and it is why the function takes a
+     * parameter instead of reading the constant inline.
+     */
+    @Test fun `a variant without a panel is not offered the inspector`() {
+        assertTrue(browserMenuCommands(inspectorAvailable = true).contains(BrowserMenuCommand.INSPECTOR))
+        assertFalse(browserMenuCommands(inspectorAvailable = false).contains(BrowserMenuCommand.INSPECTOR))
+    }
+
+    /** The default argument is wired to the variant constant, not to a second copy of the decision. */
+    @Test fun `the default reads this variant's constant`() {
+        assertEquals(
+            browserMenuCommands(inspectorAvailable = SITESKIN_INSPECTOR_AVAILABLE),
+            browserMenuCommands(),
+        )
+    }
+
+    /** The closed browser section keeps its members in every variant. A floor, so it cannot shrink. */
+    @Test fun `browser menu always offers page information and settings`() {
+        listOf(true, false).forEach { available ->
+            val commands = browserMenuCommands(inspectorAvailable = available)
+
+            assertTrue(commands.contains(BrowserMenuCommand.PAGE_INFORMATION))
+            assertTrue(commands.contains(BrowserMenuCommand.SETTINGS))
+            assertEquals(BrowserMenuCommand.PAGE_INFORMATION, commands.first())
+        }
+    }
+
     @Test fun `trusted collections preserve order and enforce surface limits`() {
         val model = SiteSkinChromeModel.from(configuration(6, 6, 21), "https://shop.example/item")
 
@@ -42,10 +76,15 @@ class SiteSkinChromeModelTest {
         val model = SiteSkinChromeModel.from(configuration, "https://shop.example/")
 
         assertSame(configuration.quickActions?.single(), model.quickActions.single().item)
+        // The claim is that the *manifest* cannot change this section, which is what "immutable"
+        // meant. Two very different configurations must produce the same browser menu. Asserting a
+        // hardcoded pair would now also be asserting which variant is running, which is a different
+        // question and not the one this test exists to ask.
         assertEquals(
-            listOf(BrowserMenuCommand.PAGE_INFORMATION, BrowserMenuCommand.SETTINGS),
+            SiteSkinChromeModel.from(configuration(6, 6, 21), "https://shop.example/").browserMenu,
             model.browserMenu,
         )
+        assertEquals(browserMenuCommands(), model.browserMenu)
     }
 
     @Test

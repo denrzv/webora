@@ -8,7 +8,7 @@ References:
 
 ## Tasks
 
-- [ ] TASK-1: One expression decides whether the inspector is offered
+- [x] TASK-1: One expression decides whether the inspector is offered
   - Modified: `app/src/main/java/app/webora/browser/siteskin/SiteSkinChromeModel.kt`
   - New tests in: `app/src/test/java/.../SiteSkinChromeModelTest.kt` (or a sibling if the existing
     file is already large — decided by reading it, not guessed here)
@@ -28,6 +28,30 @@ References:
   - Negative control: return the full enum unconditionally.
     `browserMenuCommandsOffersInspectorWhenAvailable` must fail while the closed-section test still
     passes, proving the second cannot stand in for the first.
+  - Result: 9 tests in `SiteSkinChromeModelTest`, 0 failures. `bash scripts/pre-commit-check.sh` OK.
+  - **The first negative control passed, and that was the finding.** With
+    `browserMenuCommands()` reading `SITESKIN_INSPECTOR_AVAILABLE` inline, replacing the body with
+    `BrowserMenuCommand.entries.toList()` changed nothing any test could see: AGP 9.1 creates only
+    `testDebugUnitTest`, where the constant is always `true`, so the correct and the broken
+    implementation return the same list. The test was decoration in the only variant that runs it.
+  - Fix: `browserMenuCommands(inspectorAvailable: Boolean = SITESKIN_INSPECTOR_AVAILABLE)` — the
+    thin-wrapper-over-pure-function shape the repository already uses for Android-touching code, for
+    the same reason. Both answers are now reachable, and a separate test asserts the default is wired
+    to the constant rather than to a second copy of the decision.
+  - Negative control, retried: the unconditional enum now fails
+    `a variant without a panel is not offered the inspector` alone (1 of 9), on its `false` case.
+  - Deviation: `BrowserMenuCommand.INSPECTOR` forced two changes outside the task's file list in the
+    same commit, because the compiler requires them. The `when` in `SiteSkinChrome.kt` is exhaustive,
+    so the enum value needs its branch immediately; and that branch needs a label **visible to
+    `main`**, which `inspector_open` is not — it lives in `src/debug/res` and `main` must compile in
+    every variant. Added `inspector_menu_entry` to `app/src/main/res/values/strings.xml`. `TASK-3`
+    inherits the rest of the menu wiring.
+  - Deviation: `selection retains trusted item and browser menu remains immutable` was updated, which
+    research flagged as a warning sign. It is not a loosening: the test's claim is that the
+    **manifest** cannot change the section, and it asserted a hardcoded pair as a proxy. That proxy
+    now also asserts which *variant* is running, which is a different question. It compares the
+    browser menu across two very different configurations instead — the original intent, stated
+    directly rather than by proxy.
   - Gate: `bash scripts/pre-commit-check.sh`
 
 - [ ] TASK-2: The host renders the panel and nothing else
