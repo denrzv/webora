@@ -155,7 +155,7 @@ References:
     emulator step's outputs land where the paths expect. `/qa` records that.
   - Gate: `bash scripts/pre-commit-check.sh`
 
-- [ ] TASK-5: Document the two artifacts as shipped
+- [x] TASK-5: Document the two artifacts as shipped
   - Modified: `docs/SCREENSHOTS.md`
   - Acceptance: the single-artifact table becomes two tables, one per artifact, naming
     `preview.png`, the three canonical PNGs at the artifact root, and every diagnostic including the
@@ -163,7 +163,14 @@ References:
     numbered steps reflect downloading the screenshots artifact and opening one image. Nothing claims
     the workflow YAML is gate-verified.
   - Tests: `bash scripts/pre-commit-check.sh` (whitespace/EOF hooks); no source change.
-  - Gate: `bash scripts/pre-commit-check.sh`
+  - Result: `bash scripts/pre-commit-check.sh` OK.
+  - Deviation: added a paragraph the task did not ask for — **a stale artifact looks exactly like a
+    current one**. Field evidence, not speculation: the owner reviewed three frames covered by
+    `System UI isn't responding` and read them as current, when the artifact was run #5
+    (`328bd08d`, 12:30 UTC), which predates every commit of `CI-002`. The post-fix run is #7
+    (`eb00683`, 16:39 UTC) under a different artifact name. Splitting the artifacts makes the
+    evidence easier to open, which makes opening the wrong one easier too, so the document now says
+    to check the SHA on the artifact against the commit being judged.
 
 - [ ] TASK-6: Record the decision in the project's own documentation
   - Modified: `CLAUDE.md`, `docs/ROADMAP.md`

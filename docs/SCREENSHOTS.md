@@ -10,30 +10,60 @@ return full-device screenshots without a local Android phone.
 3. Select **Run workflow**, choose the branch containing the commit to inspect, and confirm.
 4. Open the resulting **Bloom Flowers on Pixel 6 API 33** job. A cold emulator normally takes
    several minutes; the job has a 40-minute timeout.
-5. Under **Artifacts**, download `webora-screenshots-api33-<commit-sha>`.
+5. Read the job summary: it states the commit, the run id, how many screenshots were captured, and
+   the names of both artifacts.
+6. Under **Artifacts**, download `webora-screenshots-<commit-sha>` and open `preview.png`.
 
-The ZIP contains:
+## Two artifacts, and which one you want
+
+`DEVX-002` split the evidence in two. The one you normally want contains nothing but images.
+
+**`webora-screenshots-<commit-sha>`** — for looking at:
 
 | File | Expected evidence |
 |---|---|
-| `screenshots/01-home.png` | Fresh Webora Home after onboarding, including Bloom Flowers. |
-| `screenshots/02-siteskin-consent.png` | Exact `https://denrzv.github.io` consent identity and the attributed manifest preview. |
-| `screenshots/03-siteskin-integrated.png` | Live page inside native SiteSkin chrome, with browser-owned security identity and navigation. |
-| `instrumentation.txt` | Focused connected-test output. |
-| `logcat.txt` | Emulator logcat for diagnosing WebView, network, crash or ANR failures. |
-| `result.txt` | Instrumentation exit status and number of PNGs collected. |
-| `prebuilt-apks.txt` | The two APKs the emulator step found already built, with their sizes. |
-| `readiness.txt` | Every readiness sample taken after boot, with its verdict and when it settled. |
+| `preview.png` | Every canonical frame in journey order on one sheet, each tile captioned with its own filename. Open this first. |
+| `01-home.png` | Fresh Webora Home after onboarding, including Bloom Flowers. |
+| `02-siteskin-consent.png` | Exact `https://denrzv.github.io` consent identity and the attributed manifest preview. |
+| `03-siteskin-integrated.png` | Live page inside native SiteSkin chrome, with browser-owned security identity and navigation. |
+
+The PNGs sit at the archive root at full capture resolution. `preview.png` is a convenience for
+judging the journey at a glance, never a replacement for them — anything worth disputing should be
+checked against the full-resolution frame.
+
+**`webora-screenshot-diagnostics-<commit-sha>`** — for when something went wrong:
+
+| File | Contents |
+|---|---|
+| `artifacts/run.txt` | The commit and run id the evidence belongs to. |
+| `artifacts/instrumentation.txt` | Focused connected-test output. |
+| `artifacts/logcat.txt` | Emulator logcat for diagnosing WebView, network, crash or ANR failures. |
+| `artifacts/result.txt` | Instrumentation exit status and number of PNGs collected. |
+| `artifacts/prebuilt-apks.txt` | The two APKs the emulator step found already built, with their sizes. |
+| `artifacts/readiness.txt` | Every readiness sample taken after boot, with its verdict and when it settled. |
 | `…/diagnostics/focus-01-home.txt` etc. | The `mCurrentFocus` lines behind each successful capture. |
 | `…/diagnostics/interference-*.txt` | Present only if a System UI dialog was cleared: what it was, and what was pressed. |
 | `…/diagnostics/window-*.txt` | Present only on a refused capture: the whole `dumpsys window` output at that moment. |
+| `androidTest-results/`, `reports/androidTests/` | The test runner's own XML and HTML. |
 
 The `diagnostics/` files are written through Android test storage, so they arrive under
-`connected_android_test_additional_output/` rather than beside `screenshots/`.
+`connected_android_test_additional_output/` rather than beside the other diagnostics.
+
+The two upload steps are deliberately not symmetrical. Missing diagnostics fail the run
+(`if-no-files-found: error`); missing screenshots only warn. A run that dies before capturing
+anything is the run someone most needs to read, and it must not also fail on having no pictures to
+publish.
+
+**The contact sheet must account for every frame.** The composer is total or it throws — an
+unreadable frame is never skipped — and the workflow then compares the number of tiles it drew
+against the number of screenshots the run collected. A disagreement fails the run instead of
+publishing the sheet, because a sheet one tile short still reads as a complete journey to whoever
+opens it. Tile captions come only from the frame's own filename: nothing from the page under test or
+its manifest can caption Webora's own evidence.
 
 The workflow runs only when manually requested. It does not consume private-repository Actions
-minutes on every push, does not publish screenshots as a Release, and retains its artifact for seven
-days.
+minutes on every push, does not publish screenshots as a Release, and retains both artifacts for
+seven days.
 
 ## What the pipeline may clear off the screen, and what it never touches
 
@@ -82,11 +112,19 @@ Since `CI-002` there are three more shapes of red, and each names itself:
 
 Screenshots are written through AndroidX `PlatformTestStorage`, so the Android Gradle Plugin copies
 them from the device into its connected-test additional-output directory before test teardown removes
-app-specific storage. The CI helper then copies the three PNGs into `artifacts/screenshots/`.
+app-specific storage. The CI helper then copies the three PNGs into `review/`, which becomes the
+screenshots artifact. Diagnostics stage separately in `artifacts/`; the two directories share no
+ancestor, so neither can leak into the other through an upload path expression.
 
 The job fails if no PNG is collected, even when Gradle happened to return success. It uploads
-whatever diagnostics exist with `if: always()`, so a red job should still have an artifact unless
-the runner failed before artifact upload itself.
+whatever diagnostics exist with `if: always()`, so a red job should still have a diagnostics artifact
+unless the runner failed before artifact upload itself.
+
+**A stale artifact looks exactly like a current one.** Artifact names carry the commit SHA for
+precisely this reason: `webora-screenshots-<sha>` is evidence about *that* commit and nothing else.
+Before concluding that a defect is still present, check the SHA on the artifact you opened against
+the commit you mean to judge — the archive keeps seven days of runs, and the older ones predate
+whatever has been fixed since.
 
 ## Why this uses the debug APK
 
