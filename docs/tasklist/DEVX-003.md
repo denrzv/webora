@@ -198,7 +198,7 @@ References:
     the variant that compiles the debug resource set and would have failed on a dangling reference.
   - Gate: `bash scripts/pre-commit-check.sh` plus `./gradlew :app:assembleDebug`
 
-- [ ] TASK-FIX-2: A browser command's handler is not optional
+- [x] TASK-FIX-2: A browser command's handler is not optional
   - Modified: `app/src/main/java/app/webora/browser/browser/BrowserScreen.kt`,
     `app/src/androidTest/java/app/webora/browser/browser/BrowserSiteSkinLayoutTest.kt`
   - Acceptance: `RegularBrowser` no longer defaults `onSettings` or `onInspector` to `{}`. The
@@ -206,4 +206,12 @@ References:
     list is built from the constant rather than rendered-then-no-opped. A defaulted no-op callback
     reintroduces that failure one layer down, and `BrowserSiteSkinLayoutTest` already composes
     `RegularBrowser` with both entries inert. Both call sites pass explicit handlers.
+  - Result: `bash scripts/pre-commit-check.sh` OK, `./gradlew :app:compileDebugAndroidTestKotlin`
+    BUILD SUCCESSFUL.
+  - Negative control: restoring the instrumented test to its pre-fix call — the one that relied on
+    the defaults — fails compilation with `No value passed for parameter 'onSettings'` and
+    `'onInspector'` at that call site. The compiler now enforces what the convention used to. Without
+    this control the fix would only be a claim that removing a default changes something.
+  - `onSettings`'s default predated this ticket and was removed with `onInspector`'s. A half-defaulted
+    pair would have been arbitrary: both are browser-owned commands the menu offers unconditionally.
   - Gate: `bash scripts/pre-commit-check.sh` plus `./gradlew :app:compileDebugAndroidTestKotlin`

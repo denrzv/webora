@@ -454,8 +454,10 @@ internal fun RegularBrowser(
     brandAsset: BrandAsset?,
     onSiteSelect: (NavigationItem) -> Unit,
     onPageStarted: (String) -> Unit,
-    onSettings: () -> Unit = {},
-    onInspector: () -> Unit = {},
+    // Neither handler defaults to a no-op. A browser-owned menu command that is offered and does
+    // nothing is the same failure the offered list exists to prevent, one layer down.
+    onSettings: () -> Unit,
+    onInspector: () -> Unit,
     modifier: Modifier,
 ) {
     Column(modifier = modifier) {

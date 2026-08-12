@@ -44,6 +44,8 @@ class BrowserSiteSkinLayoutTest {
                     brandAsset = BrandAsset.Monogram("S"),
                     onSiteSelect = {},
                     onPageStarted = {},
+                    onSettings = {},
+                    onInspector = {},
                     modifier = Modifier.fillMaxSize(),
                 )
             }
