@@ -55,7 +55,7 @@ References:
     module is gated by the root detekt configuration exactly as intended.
   - Gate: `bash scripts/pre-commit-check.sh`
 
-- [ ] TASK-2: The CLI wrapper, and the count contract the workflow checks
+- [x] TASK-2: The CLI wrapper, and the count contract the workflow checks
   - New: `evidence-sheet/src/main/kotlin/app/webora/evidence/Main.kt`
   - New: `evidence-sheet/src/test/kotlin/app/webora/evidence/MainTest.kt`
   - Acceptance: `main` takes exactly one argument, the directory. It prints `tiles=N` on stdout and
@@ -68,6 +68,22 @@ References:
     zero arguments and two arguments are both usage errors; a failing compose prints no `tiles=`
     line. Driven by invoking the entry point with a redirected stdout/stderr rather than by spawning
     a process.
+  - Result: 12 tests across the module, 0 failures. `bash scripts/pre-commit-check.sh` OK.
+  - Result: end-to-end smoke test against three synthetic 1080×2400 frames —
+    `./gradlew :evidence-sheet:run --args="<dir>"` printed exactly `tiles=3` and wrote a 1144×880
+    `preview.png`. Inspected visually: three tiles in filename order, each captioned with its own
+    name, aspect preserved, no distortion. The geometry the plan fixed produces an image that opens
+    at a readable size, which was the point of choosing it rather than tiling at full resolution.
+  - Note: `main` is a two-line shell over `runContactSheetCommand(args, out, err)`, which returns the
+    exit code instead of calling `exitProcess`. That is what makes the contract testable in-process;
+    spawning a JVM would have tested the Gradle `application` wiring and made the stdout assertion
+    hostage to whatever else a launcher prints.
+  - Note: a failed run prints **no** `tiles=` line rather than `tiles=0`. An absent count and a real
+    count must not look alike to the shell comparing them, and `tiles=0` on a run that captured zero
+    frames would agree with `png_count=0` and pass a check that should never have been reached.
+  - Deviation: no negative control. Nothing here is a security control — the integrity rules live in
+    `composeContactSheet`, and `TASK-1` carries their three controls. The tests here are ordinary
+    assertions on a CLI contract, not protections that could be silently reverted.
   - Gate: `bash scripts/pre-commit-check.sh`
 
 - [ ] TASK-3: Split the staging directories in the emulator script
