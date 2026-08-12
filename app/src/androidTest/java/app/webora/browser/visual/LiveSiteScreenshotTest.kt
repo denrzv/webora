@@ -1,6 +1,7 @@
 package app.webora.browser.visual
 
 import android.graphics.Bitmap
+import android.graphics.Rect
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
@@ -13,12 +14,14 @@ import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.platform.io.PlatformTestStorageRegistry
 import app.webora.browser.MainActivity
 import app.webora.browser.R
+import app.webora.browser.browser.BROWSER_CONTENT_TAG
 import app.webora.browser.siteskin.SITESKIN_BOTTOM_NAV_TAG
 import app.webora.browser.siteskin.SITESKIN_SECURITY_TAG
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import java.io.ByteArrayOutputStream
+import kotlin.math.roundToInt
 
 class LiveSiteScreenshotTest {
     @get:Rule
@@ -44,7 +47,10 @@ class LiveSiteScreenshotTest {
         waitUntilNodeExists(hasTestTag(SITESKIN_BOTTOM_NAV_TAG))
         composeRule.onNodeWithTag(SITESKIN_SECURITY_TAG).assertIsDisplayed()
         composeRule.onNodeWithTag(SITESKIN_BOTTOM_NAV_TAG).assertIsDisplayed()
-        captureDeviceScreenshot("03-siteskin-integrated.png")
+        // The only frame with a content requirement. Every assertion above is about the semantics
+        // tree, and a region can have bounds with nothing painted into them — which is exactly the
+        // frame run 9 published: SiteSkin chrome over an empty page, on a green job.
+        captureDeviceScreenshot("03-siteskin-integrated.png", requirePageContent = true)
     }
 
     private fun waitUntilNodeExists(matcher: androidx.compose.ui.test.SemanticsMatcher) {
@@ -53,14 +59,19 @@ class LiveSiteScreenshotTest {
         }
     }
 
-    private fun captureDeviceScreenshot(name: String) {
+    /**
+     * @param requirePageContent whether this frame's evidence includes a rendered page. Frame 01 is
+     *   Home, which has no renderer and therefore no page rectangle; frame 02's evidence is the
+     *   consent dialog and its canonical origin, not the dimmed page behind it.
+     */
+    private fun captureDeviceScreenshot(name: String, requirePageContent: Boolean = false) {
         composeRule.waitForIdle()
-        // Compose idleness is not evidence that Webora is what a person would see: the first green
-        // run returned three frames under a `System UI isn't responding` dialog.
-        guard.requireAppOwnsScreen(name.removeSuffix(".png"))
-        val bitmap = requireNotNull(instrumentation.uiAutomation.takeScreenshot()) {
-            "UiAutomation returned no screenshot for $name"
-        }
+        val label = name.removeSuffix(".png")
+        // Ownership first, content second, and the order is not arbitrary: CI-002 decides whether
+        // this screen may be photographed at all, and only then is it worth asking whether anything
+        // has been drawn on it.
+        guard.requireAppOwnsScreen(label)
+        val bitmap = guard.captureWhenRendered(label, pageRegionIfRequired(requirePageContent))
         val png = ByteArrayOutputStream().use { buffer ->
             val compressed = bitmap.compress(Bitmap.CompressFormat.PNG, PNG_QUALITY, buffer)
             assertTrue("PNG compression failed for $name", compressed)
@@ -71,6 +82,18 @@ class LiveSiteScreenshotTest {
         testStorage.openOutputFile("$SCREENSHOT_DIRECTORY/$name").use { output ->
             output.write(png)
         }
+    }
+
+    /** The page rectangle from the semantics tree, so the check measures the region — not the chrome. */
+    private fun pageRegionIfRequired(required: Boolean): Rect? {
+        if (!required) return null
+        val bounds = composeRule.onNodeWithTag(BROWSER_CONTENT_TAG).fetchSemanticsNode().boundsInWindow
+        return Rect(
+            bounds.left.roundToInt(),
+            bounds.top.roundToInt(),
+            bounds.right.roundToInt(),
+            bounds.bottom.roundToInt(),
+        )
     }
 
     private fun string(id: Int, vararg arguments: Any): String =
