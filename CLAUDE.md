@@ -720,3 +720,56 @@ policy inside the browser. As with `debugRelease`'s `src/release/java`, AGP 9 ne
 the shell self-test asserts the non-duplication directly: a System UI ANR dialog in `mCurrentFocus`
 is a *ready* device. Adding classification to the shell would create a second copy free to disagree
 with the first, and nothing would notice until they did.
+
+### Screenshot review experience (DEVX-002)
+
+`CI-002` made the frames trustworthy and left them unreviewable: three canonical PNGs behind a
+staging directory, inside one ZIP that also carried an HTML test-report tree, with a job summary that
+said `png_count=3` and told you to go find the artifact. `DEVX-002` splits that into a **screenshots
+artifact containing nothing but images** — the frames flattened to the root plus one `preview.png`
+contact sheet — and a **diagnostics artifact** carrying logcat, instrumentation, readiness samples
+and `CI-002`'s `focus-*` / `interference-*` / `window-*` files.
+
+**Convenience is not integrity, and this ticket only buys the first.** `CI-002` decides whether a
+frame was allowed to exist; `DEVX-002` decides what happens to it afterwards. A contact sheet
+composed from contaminated frames is contaminated evidence that is now easy to glance at and approve,
+which is worse than the same evidence being awkward. Nothing here may ever be presented as making a
+frame trustworthy.
+
+**A tile's caption derives only from that tile's own filename.** `composeContactSheet` takes a
+directory and nothing else — there is no parameter for a title, a caption or a label, so there is no
+argument through which workflow, page or manifest text could reach the image. The frames depict
+manifest-driven UI; nothing manifest-driven may caption Webora's own evidence. Adding such a
+parameter is the violation this shape exists to prevent, not merely a smell.
+
+**The composer is total or it throws, and the workflow checks its arithmetic anyway.** An unreadable
+frame is never skipped, because a sheet one tile short still reads as a complete journey to whoever
+opens it. On top of that the CLI prints `tiles=N` and the workflow fails the run when that disagrees
+with the `png_count` the run collected. A failed compose prints **no** `tiles=` line rather than
+`tiles=0` — an absent count and a real count must not look alike to the shell comparing them, and
+`tiles=0` would agree with `png_count=0` and pass a check that should never have been reached.
+
+**Order is filename order, which is journey order by construction.** The capturing test names frames
+`01-`, `02-`, `03-`; sorting the discovered files means there is no second list of frame names to
+fall out of step with the first.
+
+**`:evidence-sheet` is a Gradle module for the same reason `ScreenEvidencePolicy` is in a shared
+source set.** A composer living in `scripts/android-screenshot-ci.sh` or in `androidTest` would be
+verified by nothing on a developer machine — the gate never compiles `androidTest` at all, which is
+how a compile error in `BrowserFontScaleTest` once survived a green `scripts/pre-commit-check.sh`. As
+a JVM module, `./gradlew test` picks it up with no wiring and root-applied detekt gates it. It takes
+no third-party dependency: `javax.imageio` ships a PNG reader and writer, and `java.awt` draws
+headless. **Assert ink pixels, not file existence** — a host with no usable font writes a
+structurally perfect PNG with invisible labels, and only pixel counting tells the two apart.
+
+**The two uploads are deliberately asymmetric.** Diagnostics use `if-no-files-found: error` and
+screenshots use `warn`: a run that dies before capturing anything is the run someone most needs to
+read, and it must not also fail for having no pictures. Composition runs *outside* the emulator step,
+because `CI-002` established that work on the runner while the device is alive is what starved
+`system_server` into an ANR.
+
+**Artifact names carry the commit SHA because a stale artifact looks exactly like a current one.**
+This is field-tested: three frames covered by `System UI isn't responding` were read as current
+evidence when they came from run #5 (`328bd08d`), which predates every commit of `CI-002`. Making
+evidence easier to open makes opening the wrong one easier too. Check the SHA against the commit you
+mean to judge.

@@ -172,7 +172,7 @@ References:
     evidence easier to open, which makes opening the wrong one easier too, so the document now says
     to check the SHA on the artifact against the commit being judged.
 
-- [ ] TASK-6: Record the decision in the project's own documentation
+- [x] TASK-6: Record the decision in the project's own documentation
   - Modified: `CLAUDE.md`, `docs/ROADMAP.md`
   - Acceptance: `CLAUDE.md` gains a `DEVX-002` section in the same register as `CI-002`'s, stating
     the label rule (a tile's caption derives only from its own filename, and the composer has no
@@ -182,4 +182,10 @@ References:
     concrete reason. `docs/ROADMAP.md` ticks `DEVX-002`. No source, test, resource or build file
     changes in this task.
   - Tests: `bash scripts/pre-commit-check.sh`.
-  - Gate: `bash scripts/pre-commit-check.sh`
+  - Result: `bash scripts/pre-commit-check.sh` OK. `CLAUDE.md` gains the `DEVX-002` section;
+    `docs/ROADMAP.md` ticks the ticket.
+  - Deviation: the section leads with a claim the task did not list — **convenience is not
+    integrity, and this ticket only buys the first**. It earns its place from what happened during
+    this ticket: a contact sheet composed from the three contaminated frames would have made bad
+    evidence easier to glance at and approve. That is the one way this feature could actively harm
+    the project, so it is written where the next person will read it before adding to the sheet.
