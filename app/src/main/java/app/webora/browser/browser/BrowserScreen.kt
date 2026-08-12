@@ -113,6 +113,7 @@ internal fun BrowserScreen(
     var siteMenuExpanded by remember { mutableStateOf(false) }
     var settingsVisible by remember { mutableStateOf(false) }
     var clearConfirmation by remember { mutableStateOf(false) }
+    var inspectorVisible by remember { mutableStateOf(false) }
     var pendingExternal by remember { mutableStateOf<ExternalNavigation?>(null) }
     var pendingExternalUrl by remember { mutableStateOf<String?>(null) }
     val snackbar = remember { SnackbarHostState() }
@@ -298,6 +299,8 @@ internal fun BrowserScreen(
                 darkTheme = isSystemInDarkTheme(),
             ),
         ),
+        open = inspectorVisible,
+        onClose = { inspectorVisible = false },
     )
     if (clearConfirmation) {
         val clearedMessage = stringResource(R.string.browsing_data_cleared)

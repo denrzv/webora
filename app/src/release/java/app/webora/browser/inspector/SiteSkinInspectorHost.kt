@@ -20,6 +20,7 @@ import androidx.compose.runtime.Composable
 internal const val SITESKIN_INSPECTOR_AVAILABLE: Boolean = false
 
 @Composable
-internal fun SiteSkinInspectorHost(snapshot: InspectorSnapshot?) {
-    // Nothing. The caller has already skipped assembling `snapshot`, which is always null here.
+internal fun SiteSkinInspectorHost(snapshot: InspectorSnapshot?, open: Boolean, onClose: () -> Unit) {
+    // Nothing. The caller has already skipped assembling `snapshot`, which is always null here, and
+    // `browserMenuCommands()` never offers the entry that would set `open`.
 }

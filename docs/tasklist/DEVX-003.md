@@ -54,7 +54,7 @@ References:
     directly rather than by proxy.
   - Gate: `bash scripts/pre-commit-check.sh`
 
-- [ ] TASK-2: The host renders the panel and nothing else
+- [x] TASK-2: The host renders the panel and nothing else
   - Modified: `app/src/debug/java/app/webora/browser/inspector/SiteSkinInspectorHost.kt`,
     `app/src/release/java/app/webora/browser/inspector/SiteSkinInspectorHost.kt`
   - Acceptance: `SiteSkinInspectorHost(snapshot, open, onClose)` renders the panel when it has a
@@ -69,6 +69,25 @@ References:
     moves in one file and not the other fails the build rather than shipping.
     `./gradlew :app:assembleDebugRelease` run explicitly, since that variant is the one that shares
     `src/release/java` and is easiest to break unnoticed.
+  - Result: `bash scripts/pre-commit-check.sh` OK — `assertInspectorAbsentFromReleaseVariants` green
+    on both halves, `BrowserSurfaceConventionsTest` green over all three roots.
+    `./gradlew :app:assembleDebugRelease` BUILD SUCCESSFUL.
+  - Both hosts lost every import except `Composable`. The debug file is now the constant, a KDoc and
+    a three-line composable; the release file is the constant and an empty one. The two signatures
+    moved in the same commit, which is the only way `debugRelease` — the variant that compiles
+    `src/release/java` against debug's caller — stays buildable.
+  - Deviation: `BrowserScreen.kt` changed in this task, outside its file list, because the compiler
+    requires it. `SiteSkinInspectorHost` gained two parameters, so its single call site cannot be
+    left for `TASK-3`. The minimum that compiles is the hoist itself — `var inspectorVisible by
+    remember { mutableStateOf(false) }` passed as `open`, with `onClose` clearing it — so that is
+    what was done, rather than a hardcoded `false` that would be a dead branch for one commit.
+    `TASK-3` keeps the menu wiring that sets it; after this commit the inspector is composed but not
+    yet reachable, which is the honest intermediate state.
+  - Checked, not assumed: `WeboraFloatingActionButton` is not now dead code — `SiteSkinQuickActions`
+    is its other caller. Removing the affordance took the last *browser-owned* floating button out of
+    canonical composition and left the site-driven one, which is exactly the split `CI-003` wants.
+  - `INSPECTOR_AFFORDANCE_TAG` had no `androidTest` reference to break; the instrumented journey
+    never touched it. Its only readers were this file and the tickets' own prose.
   - Gate: `bash scripts/pre-commit-check.sh` plus `./gradlew :app:assembleDebugRelease`
 
 - [ ] TASK-3: Reach the inspector from both menus, in two interactions
