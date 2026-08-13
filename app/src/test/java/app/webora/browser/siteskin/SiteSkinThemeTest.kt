@@ -2,6 +2,7 @@ package app.webora.browser.siteskin
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import app.webora.browser.design.contrastRatio
 import dev.siteskin.core.SiteSkinValidationOutcome
 import dev.siteskin.core.SiteSkinValidator
 import kotlin.random.Random
