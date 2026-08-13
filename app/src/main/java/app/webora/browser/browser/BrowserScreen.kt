@@ -467,7 +467,12 @@ internal fun RegularBrowser(
         val security = securityPresentation(state.mode)
         if (integrated != null && security != null && brandAsset != null) {
             val colors = SiteSkinTheme.from(integrated.configuration).scheme(isSystemInDarkTheme())
-            SiteSkinTopBar(SiteSkinTopBarModel.from(integrated.configuration, brandAsset, security), colors)
+            SiteSkinTopBar(
+                model = SiteSkinTopBarModel.from(integrated.configuration, brandAsset, security),
+                colors = colors,
+                canGoBack = state.canGoBack,
+                onBack = controller::goBack,
+            )
         } else {
             BrowserChrome(
                 state = state,

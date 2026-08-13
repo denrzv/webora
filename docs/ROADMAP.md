@@ -95,8 +95,8 @@ Product-polish track:
 
 - [ ] `UX-005` SiteSkin integrated chrome & semantic icon set — **revived** after live evidence;
   replace placeholder glyphs with browser-owned vector icons and meaningful quick actions
-- [ ] `UX-008` Browser navigation controls in integrated mode — an active skin currently leaves no
-  visible back control; found by `CI-003`'s run 11 once the frame rendered
+- [x] `UX-008` Browser navigation controls in integrated mode — integrated chrome now keeps a visible
+  browser-owned Back control independent of manifest styling
 - [ ] `UX-007` Adaptive SiteSkin consent action hierarchy — clear primary/secondary/persistent-deny
   actions across narrow widths and large font scales
 - [ ] `DEMO-003` Bloom Flowers visual fidelity & protocol showcase — exercise the polished icon and

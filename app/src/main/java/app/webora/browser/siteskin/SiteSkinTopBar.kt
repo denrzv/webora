@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,11 +34,14 @@ import androidx.compose.ui.unit.sp
 import app.webora.browser.R
 import app.webora.browser.browser.SecurityPresentation
 import app.webora.browser.browser.TransportSecurity
+import app.webora.browser.browser.WeboraIconButton
 
 @Composable
 internal fun SiteSkinTopBar(
     model: SiteSkinTopBarModel,
     colors: SiteSkinColorScheme,
+    canGoBack: Boolean,
+    onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -48,6 +52,8 @@ internal fun SiteSkinTopBar(
             .background(colors.background)
             .padding(horizontal = 12.dp, vertical = 8.dp),
     ) {
+        BrowserBack(canGoBack, onBack)
+        Spacer(Modifier.width(8.dp))
         BrandLogo(model.brandAsset, colors)
         Spacer(Modifier.width(12.dp))
         Column(
@@ -66,6 +72,23 @@ internal fun SiteSkinTopBar(
             }
             SecurityIdentity(model.security, colors)
         }
+    }
+}
+
+@Composable
+private fun BrowserBack(canGoBack: Boolean, onBack: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .testTag(SITESKIN_BACK_TAG),
+    ) {
+        WeboraIconButton(
+            icon = R.drawable.ic_back,
+            contentDescription = stringResource(R.string.back),
+            onClick = onBack,
+            enabled = canGoBack,
+        )
     }
 }
 
@@ -140,10 +163,13 @@ private fun SiteSkinTopBarPreview() {
             SecurityPresentation("bloomflowers.example", TransportSecurity.SECURE),
         ),
         colors,
+        canGoBack = true,
+        onBack = {},
     )
 }
 
 internal const val SITESKIN_LOGO_TAG = "siteskin_logo"
 internal const val SITESKIN_SECURITY_TAG = "siteskin_security"
+internal const val SITESKIN_BACK_TAG = "siteskin_back"
 internal val LOGO_SLOT_SIZE = 40.dp
 private val TOP_BAR_MIN_HEIGHT = 80.dp
