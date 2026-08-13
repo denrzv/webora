@@ -909,6 +909,40 @@ settings, both consuming this layer rather than re-deciding it. One handoff is r
 disabled and can fall below 3:1 whatever token is underneath — `UX-003` should treat unselected
 navigation state as a colour role, not an alpha multiplier.
 
+### Regular browser chrome keeps identity outside the address (UX-003)
+
+Direction A is now the regular browser's actual structure: a 52 dp editable address pill, a
+separate tonal identity chip and a 60 dp floating navigation dock. The split is the security
+mechanism, not a styling preference. `BrowserChrome` receives `BrowserState.addressText` for the
+field and independently derives `SecurityPresentation` from the committed `BrowserMode`; an edit
+toward another origin must leave the visible and tagged committed-origin chip unchanged.
+
+The negative control is deliberately a disagreement. A happy-path assertion where address and
+identity both say `example.com` cannot tell a committed-origin implementation from one that copies
+editable text. `BrowserChromeTest` edits the field to `attacker.test` and still requires
+`Secure · example.com`; `BrowserChromeContractTest` separately rejects putting
+`BROWSER_SECURITY_TAG` on the field. Keep both halves: runtime behaviour and source structure fail
+under different regressions.
+
+Regular navigation stays outside `BROWSER_CONTENT_TAG`. That tag is the screenshot harness's page
+measurement rectangle, so moving the dock into it would let browser-owned pixels count as rendered
+website content. The source contract carries an intentionally broken nested example as its negative
+control.
+
+Direction A's sketch used 38% opacity for unselected dock slots. The implementation does not:
+enabled controls use the opaque `onSurfaceVariant` browser role, while only genuinely unavailable
+history commands use disabled state. An opacity convention for enabled navigation would read as
+disabled and could fall below the 3:1 non-text target whatever colour sat underneath it.
+
+The sketch's reload/stop slot remains reload. `BrowserWebViewController` has no stop contract, and a
+stop glyph wired to reload is a false affordance. Adding stop later starts with a real controller
+capability and state transition, not with changing the icon.
+
+`BrowserErrorPage` shares the browser token/icon system and keeps its old recovery contracts:
+bounded registrable-domain text, kind-specific browser copy, retry enabled only with a retry URL,
+and stable retry/home tags. `BrowserStatusRegion` remains a persistent sibling before the content
+rectangle; loading/completion are polite and failure is assertive.
+
 ### The inspector lives in the menus (DEVX-003)
 
 `DEVX-001`'s panel was correct and its **affordance** was not: a floating `SiteSkin inspector` pill
