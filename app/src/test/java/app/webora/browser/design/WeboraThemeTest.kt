@@ -43,6 +43,36 @@ class WeboraThemeTest {
     }
 
     @Test
+    fun `every Material foreground meets its background`() {
+        // Membership is not pairing. The assertion above would accept `onSurface = divider` — a
+        // declared browser colour, and a 1.3:1 hairline under every piece of body text on a surface.
+        // Material's own naming supplies what is missing: for each role `onX` there is a role `x`,
+        // and the two are a foreground and its background by construction.
+        val shortfalls = PROJECTIONS.flatMap { (label, scheme) ->
+            val roles = materialColorScheme(scheme).colorRoles()
+            roles.namedPairs().mapNotNull { (foreground, background) ->
+                val ratio = contrastRatio(requireNotNull(roles[foreground]), requireNotNull(roles[background]))
+                if (ratio >= BODY) null else "%s: %s on %s is %.2f".format(label, foreground, background, ratio)
+            }
+        }
+
+        assertTrue(
+            "a Material foreground carries text on its own background, so the pairing matters as " +
+                "much as the membership:\n" + shortfalls.joinToString("\n"),
+            shortfalls.isEmpty(),
+        )
+    }
+
+    @Test
+    fun `the pairing scan finds the pairs it is meant to`() {
+        // A prefix rule that matched nothing would pass the assertion above forever. The floor is
+        // the guard; a renamed Material role shows up here rather than as silence.
+        val pairs = materialColorScheme(WeboraColors.LIGHT).colorRoles().namedPairs()
+
+        assertTrue("expected Material's on-role pairs; found ${pairs.size}", pairs.size >= ON_PAIRS)
+    }
+
+    @Test
     fun `the Material scheme is fully populated`() {
         // The closure assertion above would pass vacuously if reflection found nothing. It would also
         // pass on a scheme with three roles. Material's own surface is what it is; this pins that the
@@ -117,6 +147,25 @@ class WeboraThemeTest {
         assertTrue("the dark ground must be darker than the light one", dark < light)
     }
 
+    /**
+     * Foreground/background role names, from Material's own naming convention.
+     *
+     * `onX` sits on `x`. Roles whose stripped name has no counterpart — `onPrimaryFixedVariant`,
+     * whose background is `primaryFixed` — are skipped rather than guessed at; each is already
+     * covered by the plain `onX` pair for the same container. `inverseOnSurface` does not follow the
+     * prefix at all and is named explicitly, because dropping it would leave the one pair whose
+     * foreground and background are both inverted unchecked.
+     */
+    private fun Map<String, *>.namedPairs(): List<Pair<String, String>> {
+        val derived = keys
+            .filter { it.startsWith(ON_PREFIX) }
+            .map { it to it.removePrefix(ON_PREFIX).replaceFirstChar(Char::lowercaseChar) }
+            .filter { (_, background) -> background in keys }
+        return derived + listOf(INVERSE_PAIR).filter { (foreground, background) ->
+            foreground in keys && background in keys
+        }
+    }
+
     private fun Typography.textStyles(): Map<String, TextStyle> = readByType(TextStyle::class.java)
 
     private fun Shapes.cornerBasedShapes(): Map<String, CornerBasedShape> =
@@ -151,6 +200,13 @@ class WeboraThemeTest {
         const val MATERIAL_ROLES = 48
         const val TYPE_ROLES = 15
         const val SHAPE_ROLES = 5
+        const val ON_PAIRS = 14
+
+        /** Restated rather than imported, for the reason the palette test restates its own. */
+        const val BODY = 4.5
+
+        const val ON_PREFIX = "on"
+        val INVERSE_PAIR = "inverseOnSurface" to "inverseSurface"
 
         /** Kotlin's JVM-name suffix for an `internal` member: `name$module`. */
         const val INTERNAL_MARKER = '$'
