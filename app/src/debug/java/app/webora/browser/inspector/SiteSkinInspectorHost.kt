@@ -1,24 +1,6 @@
 package app.webora.browser.inspector
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
-import app.webora.browser.R
-import app.webora.browser.browser.WeboraFloatingActionButton
 
 /**
  * The debug-variant inspector.
@@ -27,34 +9,18 @@ import app.webora.browser.browser.WeboraFloatingActionButton
  * derives that flag from the build type's `isDebuggable`, and `debugRelease` sets it — so gating on
  * it would collect trace data in a variant compiled against the release stub, with no panel to show
  * it. A constant that travels with the panel cannot disagree with the panel.
+ *
+ * The host renders the panel and nothing else. It used to also draw a permanent floating affordance
+ * over every screen, which put a developer tool in Webora's own canonical evidence and — because the
+ * overlay's pixels land inside the region `CI-003` measures for drawn page content — let browser
+ * chrome stand in for a page that never painted. `DEVX-003` moved the affordance into the two
+ * browser menus that already exist, one per mode. The affordance is absent from a frame because it
+ * is not composed, never because anything suppressed it for the camera.
  */
 internal const val SITESKIN_INSPECTOR_AVAILABLE: Boolean = true
 
 @Composable
-internal fun SiteSkinInspectorHost(snapshot: InspectorSnapshot?) {
-    if (snapshot == null) return
-    var open by remember { mutableStateOf(false) }
-    // enableEdgeToEdge() means an uninset overlay puts the affordance under the gesture bar, where
-    // it is partly untappable. Every other browser surface goes through the same safeDrawing inset.
-    Box(
-        Modifier
-            .fillMaxSize()
-            .windowInsetsPadding(WindowInsets.safeDrawing),
-    ) {
-        WeboraFloatingActionButton(
-            onClick = { open = true },
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(AFFORDANCE_INSET)
-                .testTag(INSPECTOR_AFFORDANCE_TAG),
-        ) {
-            Text(stringResource(R.string.inspector_open))
-        }
-    }
-    if (open) {
-        SiteSkinInspectorPanel(snapshot, onClose = { open = false })
-    }
+internal fun SiteSkinInspectorHost(snapshot: InspectorSnapshot?, open: Boolean, onClose: () -> Unit) {
+    if (snapshot == null || !open) return
+    SiteSkinInspectorPanel(snapshot, onClose)
 }
-
-internal const val INSPECTOR_AFFORDANCE_TAG = "inspector_affordance"
-private val AFFORDANCE_INSET = 16.dp

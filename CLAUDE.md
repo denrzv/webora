@@ -810,10 +810,19 @@ test rather than passing unnoticed.
 **Measure the page, never the chrome — and this is where it went wrong once.** `SiteSkinQuickActions`
 is composed *inside* the very `Box` tagged `BROWSER_CONTENT_TAG`, so the first version measured
 Webora's own floating button as page content and passed instantly over a blank page. The journey now
-passes chrome bounds from the semantics tree as excluded rects. **The `SiteSkin inspector` overlay is
-still inside that region and still unexcluded** — about 0.84% each, and two such buttons clear 1%
-together. `DEVX-003` removes the overlay from canonical evidence; if that changes, add the exclusion
-to `chromeInsidePageRegion` instead.
+passes chrome bounds from the semantics tree as excluded rects. **One chrome button is inside the
+measured region, not two** — the quick action, at `126×126` against `1080×1757`, or 0.84%.
+
+`CI-003`'s review claimed the `SiteSkin inspector` overlay was in there too, and `DEVX-003` disproved
+it by removing the overlay and changing nothing: runs 11 and 12 report `differing=0.7530481592174976`
+**bit-identically**, with the affordance and without it. It had been sitting below `y=2127`, where the
+region ends and the SiteSkin bottom navigation begins. The claim came from composition structure — a
+full-screen sibling overlay *can* land inside the rectangle — and structure is where the region
+boundary is invisible. Measure the rects; a `rendered-*.txt` from a run that still has the thing in
+it is the cheap way, and the reason to record the fraction on success.
+
+The rule the near-miss leaves behind is unchanged: anything composed into that `Box`, or drawn over
+it, needs excluding or keeping out — the margin here was 42 pixels of luck, not of design.
 
 **Record the measurement on success, not only on failure.** `rendered-<label>.txt` carries the
 winning fraction and elapsed time. A passing check that records nothing cannot be distinguished from
@@ -822,3 +831,45 @@ artifact byte counts the only available signal and useless for the question.
 
 **The threshold was never raised to make a run pass.** The symptom would have gone away; the region
 would still have been measuring chrome.
+
+### The inspector lives in the menus (DEVX-003)
+
+`DEVX-001`'s panel was correct and its **affordance** was not: a floating `SiteSkin inspector` pill
+drawn over every screen in every debug frame, putting a developer tool in the product evidence people
+judge Webora by. That alone was reason enough, and it is the reason that survived.
+
+The second reason did not. `CI-003` handed this ticket a measurement hole — the overlay's pixels
+supposedly landing inside `BROWSER_CONTENT_TAG` and helping a blank page clear the rendered check —
+and removing the overlay proved there was no hole: the differing fraction is bit-identical with the
+affordance and without it. **The ticket's own evidence refuted its second premise, which is the
+outcome to want from evidence.** Do not restate the two-buttons-clear-1% argument; it was arithmetic
+about a rectangle the affordance was never in.
+
+**A screenshot mode was refused, and this is the load-bearing decision.** Hiding the affordance while
+the harness captures is the obvious shortcut, and it is disqualified on exactly the grounds `CI-002`
+refused a dismiss-whatever-is-in-the-way loop: a frame is evidence *because nothing arranged the
+screen for the camera*. A harness that suppresses real UI for the photograph produces a picture of a
+build nobody can run. The affordance is absent from the frames because it is not composed there.
+
+**Two interactions, in both modes, which is what chose the menus.** `Settings` is itself two deep in
+each mode — regular reaches it through `AddressBar`'s dropdown, integrated through `SKIN-003`'s
+closed browser section — so an entry inside `PrivacySettingsScreen` would have cost three, in the
+very mode a site owner debugging a manifest is in. The entry instead joins the menu that already
+exists on each surface.
+
+**One expression, two readers, and the first negative control proved it was needed.**
+`browserMenuCommands()` builds the offered list from `SITESKIN_INSPECTOR_AVAILABLE`, never
+`BuildConfig.DEBUG`, and a release build must not draw an entry whose handler does nothing — filter
+the list, do not no-op the branch. Regular mode renders that same list rather than a hardcoded pair,
+so the two modes cannot drift, and `browserMenuLabel` keeps one command from acquiring two names.
+
+The constant is read *inside* the function, so make availability a **parameter** with the constant as
+its default: AGP 9.1 creates only `testDebugUnitTest`, where the constant is always `true`, so a test
+that cannot pass `false` cannot tell the correct implementation from `BrowserMenuCommand.entries`.
+That is the same thin-wrapper-over-pure-function shape the repository uses for Android-touching code,
+for the same reason.
+
+Release variants stay unreachable by two independent mechanisms: the command is absent from the
+offered list, and the release `SiteSkinInspectorHost` ignores its visibility flag. Neither leans on
+the other, and `assertInspectorAbsentFromReleaseVariants` still checks compiled output for the
+panel's absence **and** the stub's presence.

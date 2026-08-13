@@ -340,14 +340,14 @@ canonical product presentation.
 - Preserve the existing compile-time assertion that inspector implementation is absent from release
   variants.
 - Ensure the mechanism cannot be controlled by a SiteSkin manifest.
-- **Carried in from `CI-003`:** removing the overlay also closes a hole in the rendered-content
-  check. `CI-003` measures the page region for drawn pixels, and the inspector floating action sits
-  *inside* that region without being excluded — roughly 0.84% of it on a Pixel 6, alongside the
-  quick action at a similar size. Two chrome buttons together clear the 1% liveness threshold, so a
-  completely blank page could still satisfy the check on Webora's own UI. Invisible while the page
-  renders at ~75% coverage, and real. `CI-003` deliberately did not add a second exclusion here,
-  because this ticket deletes the overlay from canonical evidence outright; if that plan changes,
-  the exclusion has to be added to `LiveSiteScreenshotTest.chromeInsidePageRegion` instead.
+- **Carried in from `CI-003`, and disproved by doing it.** `CI-003` claimed removing the overlay
+  would also close a hole in the rendered-content check: the inspector floating action supposedly sat
+  *inside* the measured page region unexcluded, at roughly 0.84% of it, so two chrome buttons
+  together could clear the 1% liveness threshold over a blank page. Removal showed otherwise — runs
+  11 and 12 report `differing=0.7530481592174976` bit-identically, with the affordance and without
+  it. The overlay sat below `y=2127`, where the region ends and the SiteSkin bottom navigation
+  begins. One chrome button is in that region, the quick action, and it was already excluded.
+  The presentation argument was the whole case, and it was sufficient.
 
 **Acceptance**
 - The integrated canonical screenshot contains no inspector overlay.

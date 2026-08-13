@@ -77,6 +77,8 @@ import app.webora.browser.siteskin.SiteSkinTopBar
 import app.webora.browser.siteskin.SiteSkinTopBarModel
 import app.webora.browser.siteskin.brandMonogram
 import app.webora.browser.siteskin.BrowserMenuCommand
+import app.webora.browser.siteskin.browserMenuCommands
+import app.webora.browser.siteskin.browserMenuLabel
 import app.webora.browser.inspector.InspectorBrowserState
 import app.webora.browser.inspector.SiteSkinInspectorHost
 import app.webora.browser.inspector.SiteSkinTraceRecorder
@@ -113,6 +115,7 @@ internal fun BrowserScreen(
     var siteMenuExpanded by remember { mutableStateOf(false) }
     var settingsVisible by remember { mutableStateOf(false) }
     var clearConfirmation by remember { mutableStateOf(false) }
+    var inspectorVisible by remember { mutableStateOf(false) }
     var pendingExternal by remember { mutableStateOf<ExternalNavigation?>(null) }
     var pendingExternalUrl by remember { mutableStateOf<String?>(null) }
     val snackbar = remember { SnackbarHostState() }
@@ -206,6 +209,7 @@ internal fun BrowserScreen(
             if (siteSkinEnabled) manifestDiscovery.onPageStarted(url, generation)
         },
         onSettings = { settingsVisible = true },
+        onInspector = { inspectorVisible = true },
         modifier = browserModifier,
     )
     SnackbarHost(snackbar)
@@ -258,7 +262,11 @@ internal fun BrowserScreen(
             },
             onBrowserSelect = { command ->
                 siteMenuExpanded = false
-                if (command == BrowserMenuCommand.SETTINGS) settingsVisible = true
+                when (command) {
+                    BrowserMenuCommand.PAGE_INFORMATION -> Unit
+                    BrowserMenuCommand.SETTINGS -> settingsVisible = true
+                    BrowserMenuCommand.INSPECTOR -> inspectorVisible = true
+                }
             },
         )
     }
@@ -298,6 +306,8 @@ internal fun BrowserScreen(
                 darkTheme = isSystemInDarkTheme(),
             ),
         ),
+        open = inspectorVisible,
+        onClose = { inspectorVisible = false },
     )
     if (clearConfirmation) {
         val clearedMessage = stringResource(R.string.browsing_data_cleared)
@@ -444,7 +454,10 @@ internal fun RegularBrowser(
     brandAsset: BrandAsset?,
     onSiteSelect: (NavigationItem) -> Unit,
     onPageStarted: (String) -> Unit,
-    onSettings: () -> Unit = {},
+    // Neither handler defaults to a no-op. A browser-owned menu command that is offered and does
+    // nothing is the same failure the offered list exists to prevent, one layer down.
+    onSettings: () -> Unit,
+    onInspector: () -> Unit,
     modifier: Modifier,
 ) {
     Column(modifier = modifier) {
@@ -463,6 +476,7 @@ internal fun RegularBrowser(
                 onReload = controller::reload,
                 onHome = onHome,
                 onSettings = onSettings,
+                onInspector = onInspector,
             )
         }
         BrowserStatusRegion(state)
@@ -546,6 +560,7 @@ private fun AddressBar(
     onReload: () -> Unit,
     onHome: () -> Unit,
     onSettings: () -> Unit,
+    onInspector: () -> Unit,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
     val security = securityPresentation(state.mode)
@@ -566,15 +581,22 @@ private fun AddressBar(
             BrowserButton(stringResource(R.string.reload), true, onReload)
             BrowserButton(stringResource(R.string.home), true, onHome)
             WeboraButton(stringResource(R.string.more), { menuExpanded = true })
+            // The same list the integrated menu renders, so the two modes cannot disagree about
+            // which browser-owned commands this variant offers.
             DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.page_information)) },
-                    onClick = { menuExpanded = false },
-                )
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.settings)) },
-                    onClick = { menuExpanded = false; onSettings() },
-                )
+                browserMenuCommands().forEach { command ->
+                    DropdownMenuItem(
+                        text = { Text(browserMenuLabel(command)) },
+                        onClick = {
+                            menuExpanded = false
+                            when (command) {
+                                BrowserMenuCommand.PAGE_INFORMATION -> Unit
+                                BrowserMenuCommand.SETTINGS -> onSettings()
+                                BrowserMenuCommand.INSPECTOR -> onInspector()
+                            }
+                        },
+                    )
+                }
             }
         }
     }

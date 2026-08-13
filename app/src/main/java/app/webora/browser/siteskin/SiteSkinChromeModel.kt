@@ -1,5 +1,6 @@
 package app.webora.browser.siteskin
 
+import app.webora.browser.inspector.SITESKIN_INSPECTOR_AVAILABLE
 import dev.siteskin.core.SiteSkinLimits
 import dev.siteskin.core.model.NavigationItem
 import dev.siteskin.core.model.SiteSkinConfiguration
@@ -21,7 +22,7 @@ internal data class SiteSkinChromeModel(
                     .take(MAX_QUICK_ACTIONS)
                     .map { it.toModel() },
                 siteMenu = configuration.menu.orEmpty().take(MAX_MENU_ITEMS).map { it.toModel() },
-                browserMenu = BROWSER_MENU_COMMANDS,
+                browserMenu = browserMenuCommands(),
             )
         }
     }
@@ -38,6 +39,39 @@ internal data class SiteSkinItemModel(
 internal enum class BrowserMenuCommand {
     PAGE_INFORMATION,
     SETTINGS,
+
+    /** Debug-only. Offered by [browserMenuCommands], never by the enum's own membership. */
+    INSPECTOR,
+}
+
+/**
+ * The browser-owned commands this variant offers, in order.
+ *
+ * `SKIN-003` makes this a **closed** section that manifest entries cannot suppress or replace, and
+ * this function is where that closure is expressed: the list is built explicitly rather than derived
+ * from `BrowserMenuCommand.entries`, so a value added to the enum does not silently reach a menu.
+ *
+ * The debug entry is decided by [SITESKIN_INSPECTOR_AVAILABLE] — a `const val` declared in each
+ * variant's own source set beside its panel — and never by `BuildConfig.DEBUG`, which AGP derives
+ * from `isDebuggable` and `debugRelease` sets true while compiling against the *release* stub. It is
+ * appended rather than filtered in, so a release build cannot draw an item whose handler does
+ * nothing: an offered command the variant cannot service is a promise it cannot keep.
+ *
+ * One expression, read by both menus, so regular and integrated mode cannot drift apart.
+ *
+ * [inspectorAvailable] is a parameter rather than a direct read of the constant so that both answers
+ * are reachable from a test. AGP 9.1 creates only `testDebugUnitTest`, where the constant is always
+ * `true` — with the constant read inline, no unit test could ever observe the release behaviour, and
+ * an implementation returning `BrowserMenuCommand.entries` unconditionally would pass every
+ * assertion. That is not hypothetical: it is what the negative control for this function did before
+ * the parameter existed.
+ */
+internal fun browserMenuCommands(
+    inspectorAvailable: Boolean = SITESKIN_INSPECTOR_AVAILABLE,
+): List<BrowserMenuCommand> = buildList {
+    add(BrowserMenuCommand.PAGE_INFORMATION)
+    add(BrowserMenuCommand.SETTINGS)
+    if (inspectorAvailable) add(BrowserMenuCommand.INSPECTOR)
 }
 
 /**
@@ -59,7 +93,6 @@ private fun NavigationItem.toModel(isActive: Boolean = false) = SiteSkinItemMode
     item = this,
 )
 
-private val BROWSER_MENU_COMMANDS = BrowserMenuCommand.entries.toList()
 private const val MAX_NAVIGATION_ITEMS = 5
 private const val MAX_QUICK_ACTIONS = 5
 private const val MAX_MENU_ITEMS = 20

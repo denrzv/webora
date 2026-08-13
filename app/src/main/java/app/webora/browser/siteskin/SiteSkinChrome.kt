@@ -100,13 +100,24 @@ internal fun SiteSkinMenu(
         }
         MenuHeading(stringResource(R.string.siteskin_browser_menu_heading))
         model.browserMenu.forEach { command ->
-            val label = when (command) {
-                BrowserMenuCommand.PAGE_INFORMATION -> stringResource(R.string.page_information)
-                BrowserMenuCommand.SETTINGS -> stringResource(R.string.settings)
-            }
-            MenuItem(label, null) { onBrowserSelect(command) }
+            MenuItem(browserMenuLabel(command), null) { onBrowserSelect(command) }
         }
     }
+}
+
+/**
+ * The browser-authored label for a browser-owned menu command.
+ *
+ * Shared by the integrated menu and regular mode's own dropdown so the two cannot name the same
+ * command differently — the same reason `browserMenuCommands()` is one expression read twice rather
+ * than one condition written twice. Every label is a string resource: these are browser copy, and no
+ * manifest field, page value or trusted configuration reaches them.
+ */
+@Composable
+internal fun browserMenuLabel(command: BrowserMenuCommand): String = when (command) {
+    BrowserMenuCommand.PAGE_INFORMATION -> stringResource(R.string.page_information)
+    BrowserMenuCommand.SETTINGS -> stringResource(R.string.settings)
+    BrowserMenuCommand.INSPECTOR -> stringResource(R.string.inspector_menu_entry)
 }
 
 @Composable

@@ -9,6 +9,7 @@
     <string name="more">More</string>
     <string name="page_information">Page information</string>
     <string name="settings">Settings</string>
+    <string name="inspector_menu_entry">SiteSkin inspector</string>
     <string name="security_secure">Secure</string>
     <string name="security_not_secure">Not secure</string>
     <string name="security_identity">%1$s · %2$s</string>
