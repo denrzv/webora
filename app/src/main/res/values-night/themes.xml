@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The dark counterpart the light theme never had.
+
+    This is about the window, not about Compose. `isSystemInDarkTheme()` reads Configuration.uiMode
+    and already returns the system setting whatever the platform theme is, so the Compose half works
+    the moment WeboraTheme selects on it. What does not work is the window behind Compose and the
+    frame drawn before the first composition: android:Theme.Material.Light is light in every
+    configuration, so a user on a dark system theme got a light flash and light system-bar regions
+    around dark chrome. C7 in docs/design/AUDIT.md asks for this explicitly.
+-->
+<resources>
+    <style name="Theme.Webora" parent="android:Theme.Material.NoActionBar" />
+</resources>
