@@ -75,6 +75,44 @@ class CandidateVerdictTest {
         assertTrue(accepting.single() is FocusVerdict.OwnedByApp)
     }
 
+    /**
+     * Run 14's order, not run 14's state.
+     *
+     * Research risk 4: feeding one contaminated pair to a pure function proves the function, while
+     * the defect was in *when* the function is called. The observed sequence was three blank polls
+     * and then a region that measured 30% — because a dialog had arrived, not because the page had
+     * painted. No element of it is evidence.
+     */
+    @Test fun `run fourteen's sequence is never accepted`() {
+        val observed = listOf(
+            owned() to blank(),
+            owned() to blank(),
+            owned() to blank(),
+            systemAnr() to rendered(0.3047865285496029),
+        )
+
+        val accepted = observed.filter { (focus, content) ->
+            candidateVerdict(focus, content) == CandidateVerdict.Accept
+        }
+
+        assertTrue("no frame in run 14's sequence was evidence; accepted ${accepted.size}", accepted.isEmpty())
+    }
+
+    /** The companion, so the sequence check cannot pass by rejecting everything. */
+    @Test fun `a sequence that renders while owned accepts exactly one frame`() {
+        val observed = listOf(
+            owned() to blank(),
+            owned() to blank(),
+            owned() to rendered(),
+        )
+
+        val acceptedAt = observed.indexOfFirst { (focus, content) ->
+            candidateVerdict(focus, content) == CandidateVerdict.Accept
+        }
+
+        assertEquals("the first owned-and-rendered frame is the one kept", 2, acceptedAt)
+    }
+
     private companion object {
         const val MINIMUM_RETRIES = 5
 
