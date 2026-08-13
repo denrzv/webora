@@ -53,13 +53,36 @@ class BrowserSurfaceConventionsTest {
         // therefore a 40 dp target every time, which is why the raw component is out of bounds
         // rather than merely discouraged.
         val offenders = composableSources()
-            .filterNot { it.readText().contains(TOUCH_TARGET_WRAPPER_DECLARATION) }
+            .filterNot { TOUCH_TARGET_WRAPPER_DECLARATION.containsMatchIn(it.readText()) }
             .flatMap { source -> source.violations(RAW_BUTTON_IMPORT) { "imports a Material button directly" } }
 
         assertTrue(
             "Browser-owned controls must go through the touch-target wrapper so the 48 dp minimum " +
                 "cannot be forgotten at a call site:\n" + offenders.joinToString("\n"),
             offenders.isEmpty(),
+        )
+    }
+
+    @Test
+    fun `the wrapper exemption needs a declaration, not a mention`() {
+        // The exemption is the one hole in the button rule, so what widens it matters. A file that
+        // merely names the wrapper — in a KDoc explaining this very rule, which is how it was found
+        // — must stay gated; only the file that declares it is exempt.
+        val mention = """
+            /** Allowed only in the file containing `fun WeboraButton(`. */
+            @Composable
+            internal fun WeboraIconButton() = Unit
+        """.trimIndent()
+        val declaration = "internal fun WeboraButton(\n    onClick: () -> Unit,\n) = Unit"
+
+        assertTrue(
+            "a doc comment naming the wrapper must not exempt a file from the button rule",
+            !TOUCH_TARGET_WRAPPER_DECLARATION.containsMatchIn(mention),
+        )
+        assertTrue(
+            "the file that actually declares the wrapper must stay exempt, or the wrapper cannot " +
+                "be written at all",
+            TOUCH_TARGET_WRAPPER_DECLARATION.containsMatchIn(declaration),
         )
     }
 
@@ -128,8 +151,22 @@ class BrowserSurfaceConventionsTest {
         /** A literal bound to an argument whose value is read aloud or displayed as a name. */
         val NAMED_LITERAL = Regex("""\b(label|text|title|description|contentDescription)\s*=\s*"""")
 
-        /** The wrapper's own file is the one place the raw component may be reached. */
-        const val TOUCH_TARGET_WRAPPER_DECLARATION = "fun WeboraButton("
+        /**
+         * The wrapper's own file is the one place the raw component may be reached.
+         *
+         * A **declaration**, not a mention. This was a plain `contains` over the file text until
+         * `UX-002` added a second wrapper and documented it — and the new file's own KDoc, which
+         * explained that the raw import is allowed only in "the one containing `fun WeboraButton(`",
+         * thereby exempted itself from the rule it was describing. The file imported `IconButton`
+         * from outside the permitted file and the gate stayed green.
+         *
+         * Anchoring at the start of a line past optional modifiers is what separates the two: a
+         * top-level declaration is unindented, and a mention inside a doc comment is preceded by
+         * `*` or `//`. Pinned by `the wrapper exemption needs a declaration, not a mention`, which
+         * fails if this ever goes back to a substring test.
+         */
+        val TOUCH_TARGET_WRAPPER_DECLARATION =
+            Regex("""^(internal |private |public )?fun WeboraButton\(""", RegexOption.MULTILINE)
 
         // Any Material button-like type, and any alias for one. The narrower spelling this
         // replaced named only Button and TextButton, so OutlinedButton, IconButton, an aliased

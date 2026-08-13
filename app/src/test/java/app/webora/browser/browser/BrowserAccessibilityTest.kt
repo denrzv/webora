@@ -4,6 +4,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.unit.dp
 import dev.siteskin.core.origin.SiteOrigin
+import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -27,6 +28,24 @@ class BrowserAccessibilityTest {
         assertTrue(
             "expected the wrapper to raise Material's ${ButtonDefaults.MinHeight} button minimum",
             MINIMUM_TOUCH_TARGET > ButtonDefaults.MinHeight,
+        )
+    }
+
+    @Test
+    fun `an icon-only control cannot be nameless`() {
+        // C4 makes a hard-coded accessible name a build failure, so the remaining way to ship a
+        // nameless icon button is to make the name optional or nullable at the wrapper. There is no
+        // composition here to inspect — no Robolectric — so the guarantee is read off the
+        // declaration, which is where it lives.
+        val declaration = wrapperSource().readText()
+            .substringAfter(ICON_BUTTON_DECLARATION)
+            .substringBefore(')')
+
+        assertTrue(
+            "WeboraIconButton must take a non-optional, non-nullable accessible name; a glyph " +
+                "contributes nothing to the semantics tree a screen reader actually reads:\n" +
+                declaration,
+            declaration.contains(REQUIRED_NAME),
         )
     }
 
@@ -77,5 +96,20 @@ class BrowserAccessibilityTest {
         val PLATFORM_MINIMUM = 48.dp
         const val PAGE_URL = "https://example.test/page"
         val FAILURE = BrowserLoadFailure(LoadErrorKind.NETWORK, "example.test", PAGE_URL)
+
+        const val SOURCE_ROOT_PROPERTY = "webora.app.src"
+        const val WRAPPER_PATH = "app/webora/browser/browser/BrowserAccessibility.kt"
+        const val ICON_BUTTON_DECLARATION = "fun WeboraIconButton("
+        const val REQUIRED_NAME = "contentDescription: String,"
+
+        /** The one file `RAW_BUTTON_IMPORT` lets a Material button be reached from. */
+        fun wrapperSource(): File =
+            requireNotNull(System.getProperty(SOURCE_ROOT_PROPERTY)) {
+                "$SOURCE_ROOT_PROPERTY is unset; app/build.gradle.kts must pass the app source roots"
+            }
+                .split(File.pathSeparator)
+                .map { File(it, WRAPPER_PATH) }
+                .firstOrNull(File::isFile)
+                ?: error("no $WRAPPER_PATH under any scanned source root")
     }
 }

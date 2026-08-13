@@ -1,16 +1,22 @@
 package app.webora.browser.browser
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.material3.Button
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import app.webora.browser.design.WeboraChrome
 
 /**
  * Browser-owned accessibility affordances.
@@ -69,6 +75,40 @@ internal fun WeboraFloatingActionButton(
     content: @Composable () -> Unit,
 ) {
     FloatingActionButton(onClick = onClick, modifier = modifier.browserTouchTarget(), content = content)
+}
+
+/**
+ * An icon-only browser control.
+ *
+ * It lives in this file because it has to: `BrowserSurfaceConventionsTest`'s `RAW_BUTTON_IMPORT`
+ * bans `import androidx.compose.material3.\w*Button` in every source declaring a composable except
+ * the one containing `fun WeboraButton(`. A `WeboraIconButton` in a new file turns the build red,
+ * and the failure reads as an unrelated convention test breaking.
+ *
+ * [contentDescription] is **not** optional and **not** nullable. An icon-only control with no
+ * accessible name is invisible to assistive technology — the semantics tree is what a screen reader
+ * reads, and a glyph contributes nothing to it. `C4` already makes a hard-coded name a build
+ * failure, so omission was the only remaining way to get it wrong, and the signature removes that.
+ *
+ * The glyph is sized from the token layer rather than left to Material's 24 dp default, so the whole
+ * icon set sits on one optical grid; the 48 dp target around it comes from [browserTouchTarget] like
+ * every other browser control's.
+ */
+@Composable
+internal fun WeboraIconButton(
+    @DrawableRes icon: Int,
+    contentDescription: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
+    IconButton(onClick = onClick, enabled = enabled, modifier = modifier.browserTouchTarget()) {
+        Icon(
+            painter = painterResource(icon),
+            contentDescription = contentDescription,
+            modifier = Modifier.size(WeboraChrome.ICON_SIZE),
+        )
+    }
 }
 
 /** A labelled button, the shape most browser chrome needs. */

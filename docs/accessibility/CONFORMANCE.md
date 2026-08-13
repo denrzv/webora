@@ -16,9 +16,11 @@ Anything with no test at all is listed in *Known gaps* rather than left implied.
 
 | Guarantee | Code | Test | Enforced by |
 |---|---|---|---|
-| Every browser-owned control is ≥ 48 dp on both axes | `browser/BrowserAccessibility.kt` — `MINIMUM_TOUCH_TARGET`, `Modifier.browserTouchTarget()`, `WeboraButton`, `WeboraTextButton` | `BrowserAccessibilityTest` | Gate |
+| Every browser-owned control is ≥ 48 dp on both axes | `browser/BrowserAccessibility.kt` — `MINIMUM_TOUCH_TARGET`, `Modifier.browserTouchTarget()`, `WeboraButton`, `WeboraTextButton`, `WeboraIconButton` | `BrowserAccessibilityTest` | Gate |
 | The minimum cannot be bypassed at a call site | `BrowserSurfaceConventionsTest` forbids importing Material 3 `Button`/`TextButton` in browser-owned Compose sources | `browser controls use the touch target wrapper` | Gate |
+| The one exemption needs a declaration, not a mention | `TOUCH_TARGET_WRAPPER_DECLARATION` is line-anchored | `the wrapper exemption needs a declaration, not a mention` — **negative control**: the wrapper moved to its own file fails the rule above | Gate |
 | The wrapper actually raises something | Asserted against `ButtonDefaults.MinHeight` (40 dp), so the wrapper fails the day it becomes decoration | `the browser minimum actually raises the Material default` | Gate |
+| The geometry layer declares no second touch target | `design/WeboraDimensions.kt` deliberately has no such token | `the geometry layer declares no touch target of its own` | Gate |
 
 Material 3 gives `Button` a 40 dp minimum height via `defaultMinSize` and — unlike `Switch`,
 `Checkbox`, and `IconButton` — never applies `minimumInteractiveComponentSize()`. That is why the
@@ -54,9 +56,26 @@ description makes it explicit rather than repairing an absence.
 | Body pairs ≥ 4.5:1 and UI pairs ≥ 3:1, in **both** projections | `siteskin/SiteSkinTheme.kt` — `guardContainer` | `adversarial colours meet contrast in both projections` — 10 curated failure modes + a 120-case seeded sweep | Gate |
 | The guard is load-bearing | — | **Negative control**: `guardContainer` returning its input unchanged fails 5 tests | Gate |
 | The system dark theme selects the projection | `SiteSkinTheme.scheme(darkTheme)`, `BrowserScreen` — `isSystemInDarkTheme()` | `the system theme selects the projection and nothing else does` | Gate |
+| **Browser** body pairs ≥ 4.5:1 and UI pairs ≥ 3:1, in both projections | `design/WeboraColorScheme.kt` — compiled values, no runtime guard | `WeboraColorSchemeTest` — 17 pairs in each projection | Gate |
+| No browser colour role escapes measurement | The pair table is hand-written; the completeness assertion reflects over the declared roles | `every declared role is measured or explicitly exempt` — **negative control**: a role with no table entry fails it | Gate |
+| A decorative exemption cannot be silent | `divider` and `scrim` each carry a written reason | `every decorative exemption carries a reason` | Gate |
+| No Material default reaches a browser surface | `design/WeboraTheme.kt` — all 48 roles assigned from the browser palette, and `ColorScheme`'s constructor has no defaults, so omission is a compile error | `every Material colour comes from the browser palette` — **negative control**: one literal fails it in both projections | Gate |
+| The system dark theme selects the **browser** projection | `WeboraColors.scheme(darkTheme)`, `WeboraTheme(darkTheme = isSystemInDarkTheme())`, `res/values-night/themes.xml` for the window behind Compose | `the system theme selects the projection and nothing else does` — **negative control**: a selector ignoring the flag fails it | Gate |
 
 Core normalizes remote colours (`CORE-004`); the app parses only canonical trusted values and runs
 the guard again over every newly formed pair. A manifest cannot influence which projection is used.
+
+The two palettes are guarded differently on purpose. A website's colours arrive from the network and
+can fail, so `SiteSkinTheme` corrects them at runtime. Webora's own cannot change after compilation,
+so they are measured once in a JVM test over every pair that exists — a compiled token below its
+target is a build failure to fix, and correcting it at runtime would let it ship silently repaired.
+
+One sub-threshold pair is **deliberate and asserted as such**: the identity chip separates from its
+ground at 1.27:1 light / 1.29:1 dark. `ADR-013` ruled on it — a chip is a status display rather than
+an interactive control, so §1.4.11 does not require its boundary to carry contrast, and the identity
+is carried by text at 10.49:1 or better plus a lock glyph and the word "Secure". `the identity chip
+separates from its ground below 3 to 1, and that is the decision` pins it, so "fixing" it is a
+deliberate reversal rather than a tidy-up.
 
 ## Name, role, value — WCAG 2.2 §4.1.2 (A)
 
@@ -66,6 +85,7 @@ the guard again over every newly formed pair. A manifest cannot influence which 
 | The privacy `Switch` has a name | `PrivacySettingsScreen` — `contentDescription` | `PrivacySettingsScreenTest` | Evidence |
 | Reset actions are distinguishable per origin | `PrivacySettingsScreen` — the origin is in the button's visible label | `PrivacySettingsScreenTest` | Evidence |
 | Decorative icons carry no accessible presence | `SiteSkinChrome.SiteSkinIcon`, `SiteSkinTopBar.BrandLogo` — `clearAndSetSemantics { }` | `SiteSkinTopBarTest`, `SiteSkinChromeTest` | Evidence |
+| An icon-only control cannot be nameless | `WeboraIconButton` takes a non-optional, non-nullable `contentDescription` | `an icon-only control cannot be nameless` — **negative control**: making it `String? = null` fails it | Gate |
 | The error page title is a heading | `BrowserScreen.BrowserErrorPage` — `semantics { heading() }` | — | *Known gap* |
 
 The origin is in the reset button's **visible label** rather than a `contentDescription` override

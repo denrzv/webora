@@ -224,6 +224,14 @@ tasks.withType<Test>().configureEach {
         "webora.app.src",
         composeSourceRoots.joinToString(File.pathSeparator) { it.asFile.absolutePath },
     )
+
+    // UX-002's icon contract is checked by reading the drawables, for the same reason the Compose
+    // conventions are checked by reading the sources: the bound C6 puts on the icon set is a budget,
+    // and a budget nothing counts is a suggestion. Declared as an input so adding a drawable reruns
+    // the scan rather than hitting an up-to-date check.
+    val resourceRoot = layout.projectDirectory.dir("src/main/res")
+    inputs.dir(resourceRoot).withPropertyName("appResources")
+    systemProperty("webora.app.res", resourceRoot.asFile.absolutePath)
 }
 
 /**

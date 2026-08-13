@@ -832,6 +832,83 @@ artifact byte counts the only available signal and useless for the question.
 **The threshold was never raised to make a run pass.** The symptom would have gone away; the region
 would still have been measuring chrome.
 
+### Browser-owned design tokens (UX-002)
+
+`SiteSkinTheme` gave *websites* six colour roles, a dark projection and a WCAG guard;
+`MainActivity.kt:38` gave Webora `MaterialTheme {}` and Material's baseline purple. `ADR-013` chose
+Direction A and this builds it. The two layers are now mirror images, and the asymmetry between them
+is the whole design:
+
+| | `SiteSkinColorScheme` | `WeboraColorScheme` |
+|---|---|---|
+| Input | a trusted `SiteSkinConfiguration` | **nothing** |
+| Guard | runtime, over every pair it forms | a JVM test, over every pair that exists |
+| Who changes a value | the website, within the guard | a commit |
+
+**The browser palette has no runtime guard, and that is the stronger position.** `SiteSkinTheme`
+corrects a website's colours because they arrive from the network and can fail. A compiled token
+below its target is a bug to fix; correcting it at runtime would let it ship silently repaired with
+nothing red anywhere. Do not add `guardContainer` to the browser side.
+
+**`C2` — no manifest value reaches a browser token — is tested from both sides, and the negative
+controls proved both are needed.** A runtime sweep projects real manifests and asserts no browser
+token moved (plus that the SiteSkin scheme *did*, so a sweep that stopped exercising anything fails).
+A source scan asserts nothing under `design/` imports or names the website side. A reference to
+`SiteSkinTheme` from the palette file fails only the scans; a `var` token written from
+`SiteSkinTheme.from` with no reference in `design/` at all fails only the sweep. The sharpest version
+of this leak is not a wrong background — it is a manifest-derived colour on the identity chip, which
+is `HARDEN-002`'s impersonation surface arriving through colour instead of text.
+
+**"No Material default" is a closure assertion, not a promise to pass 48 arguments.** Every colour in
+the derived `ColorScheme` must be a value `WeboraColorScheme` declares; same for `Typography` sizes
+and `Shapes` corners. `ColorScheme`'s primary constructor turns out to have **no default values**, so
+`ColorScheme(...)` is used rather than `lightColorScheme(...)` and omitting a role is a compile
+error — but the test is what catches the likelier mistake, a literal, which is a colour nothing has
+measured. Two Material `Shapes` roles are `internal` and unsettable by any public API; they are
+excluded structurally (Kotlin mangles `internal` JVM names with `$module`), never by adding 32 and
+48 dp to `WeboraRadius` to make a test pass.
+
+**Completeness is reflected, not listed.** Every declared colour role must appear in the contrast
+table or in a named decorative exemption **with a written reason**. A hand-listed table is correct the
+day it is written; this one covers roles that do not exist yet. `divider` and `scrim` are the only
+exemptions.
+
+**The identity chip's 1.27:1 / 1.29:1 separation from ground is asserted as a decision, not a
+defect.** `ADR-013` ruled it correct — a status display is not an interactive control under WCAG
+1.4.11, and identity is carried by text at 10.49:1 plus a glyph and a word. The test pins it so
+"fixing" it is a deliberate reversal.
+
+**Icons are ten bundled vectors, and the budget is a separate assertion from the inventory.** The set
+is what Direction A draws, not `C6`'s pre-selection list of eight — that named `stop`, which A does
+not draw, and omitted `search`, `more` and `warning`, which it does. Stroke-only and one colour each,
+because `Icon` tints the whole painter: a mixed fill/stroke icon tints to one colour and loses the
+distinction it was drawn with. `UX-005` raises the budget deliberately when the SiteSkin semantic
+icons replace `SiteSkinChrome.kt:135`'s Unicode glyphs; a second ad-hoc icon mechanism is the thing
+`DEVELOPER_PLAN.md` sequences that ticket behind this one to prevent. No Gradle dependency was added,
+and a website cannot add a file to `res/drawable`.
+
+**`values-night/themes.xml` is about the window, not about Compose.** `isSystemInDarkTheme()` already
+returned the system setting; `android:Theme.Material.Light` is light in every configuration, so the
+first frame and the system-bar regions disagreed with the palette.
+
+**A gate hole this ticket walked into, now closed.** `BrowserSurfaceConventionsTest`'s wrapper
+exemption was a plain `contains("fun WeboraButton(")` over the file text. `WeboraIconButton`'s KDoc
+explains that the raw Material import is allowed only in the file containing that declaration — and
+thereby exempted its own file from the rule it was describing, letting an `IconButton` import outside
+the permitted file pass a green build. The exemption is now a line-anchored declaration match, with a
+test pinning both directions. The only way to trip it was to add a second wrapper, which nothing had
+done since `A11Y-001` wrote the rule.
+
+`WeboraChrome` deliberately declares **no** touch-target token. `MINIMUM_TOUCH_TARGET` has one name
+and one owner; a second name would sit exactly where someone would reach to shrink a target so a
+design fits.
+
+Surface structure is untouched: `UX-003` rebuilds the chrome and `UX-004` Home, onboarding and
+settings, both consuming this layer rather than re-deciding it. One handoff is recorded in
+`docs/plan/UX-002.md`: Direction A draws unselected dock slots at 38% opacity, which reads as
+disabled and can fall below 3:1 whatever token is underneath — `UX-003` should treat unselected
+navigation state as a colour role, not an alpha multiplier.
+
 ### The inspector lives in the menus (DEVX-003)
 
 `DEVX-001`'s panel was correct and its **affordance** was not: a floating `SiteSkin inspector` pill

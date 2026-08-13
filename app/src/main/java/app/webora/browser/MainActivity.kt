@@ -6,7 +6,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -17,6 +16,7 @@ import app.webora.browser.browser.LaunchDestination
 import app.webora.browser.browser.OnboardingScreen
 import app.webora.browser.browser.OnboardingStore
 import app.webora.browser.browser.launchDestination
+import app.webora.browser.design.WeboraTheme
 import app.webora.browser.web.enqueueDownload
 import app.webora.browser.web.launchExternal
 import app.webora.browser.web.launchExternalUrl
@@ -35,7 +35,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContent {
-            MaterialTheme {
+            WeboraTheme {
                 val store = remember { OnboardingStore(applicationContext) }
                 var destination by remember {
                     mutableStateOf(launchDestination(store.isCompleted()))

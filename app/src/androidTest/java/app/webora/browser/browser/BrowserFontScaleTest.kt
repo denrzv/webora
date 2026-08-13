@@ -1,6 +1,6 @@
 package app.webora.browser.browser
 
-import androidx.compose.material3.MaterialTheme
+import app.webora.browser.design.WeboraTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalDensity
@@ -79,7 +79,7 @@ class BrowserFontScaleTest {
         CompositionLocalProvider(
             LocalDensity provides Density(density = density.density, fontScale = DOUBLE_FONT_SCALE),
         ) {
-            MaterialTheme { content() }
+            WeboraTheme { content() }
         }
     }
 
