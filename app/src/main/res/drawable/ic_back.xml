@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Browser-owned icon, transcribed from Direction A's own drawing at
+    docs/design/directions/index.html:611-620. Same 24-unit viewport, same 1.9 stroke, same round
+    caps and joins; <rect> and <circle> became path data, which is all <vector> accepts.
+
+    The declared colour never reaches the screen. Compose's Icon applies ColorFilter.tint over the
+    whole painter, so the call site's token decides the colour and this value only decides what an
+    untinted use would look like. Tinting is the token layer's job, not the asset's.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M15 5l-7 7 7 7"
+        android:strokeColor="#FF000000"
+        android:strokeWidth="1.9"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

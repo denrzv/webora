@@ -1,0 +1,130 @@
+package app.webora.browser.design
+
+import java.io.File
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+/**
+ * The browser-owned icon set, checked by reading the drawables.
+ *
+ * `C6` in `docs/design/AUDIT.md` bounds the set deliberately: "an icon a direction needs is an icon
+ * someone has to draw and check at 200% font scale." A bound nothing counts is a suggestion, so the
+ * budget is asserted — an eleventh icon is a decision to raise it, which is what `UX-005` will do
+ * when the SiteSkin chrome's semantic icons replace `SiteSkinChrome.kt`'s Unicode glyphs.
+ *
+ * The set is the ten Direction A actually draws across its four surfaces, not the eight `C6` listed
+ * before a direction was chosen — that list named `stop`, which Direction A does not draw, and
+ * omitted `search`, `more` and `warning`, which it does. Deriving the set from the selected
+ * direction rather than the pre-selection estimate is the point of having selected one.
+ *
+ * Every icon is stroke-only and declares one colour. That is what makes the token layer responsible
+ * for colour: Compose's `Icon` applies `ColorFilter.tint` over the whole painter, so a drawable that
+ * mixed strokes with fills, or declared two colours, would still render in one tint — and would have
+ * lost the distinction it was drawn with rather than kept it.
+ */
+class BrowserIconContractTest {
+
+    @Test
+    fun `the icon set is exactly the one Direction A draws`() {
+        assertEquals(EXPECTED, drawables().map { it.nameWithoutExtension }.toSet())
+    }
+
+    @Test
+    fun `the set stays inside its budget`() {
+        // Separate from the assertion above on purpose. That one pins the current set; this one is
+        // the rule a later ticket has to reckon with, and it should be the thing that fails first
+        // when an icon is added casually.
+        assertTrue("the browser icon budget is $BUDGET; found ${drawables().size}", drawables().size <= BUDGET)
+    }
+
+    @Test
+    fun `every icon is drawn at the viewport the direction used`() {
+        val offenders = drawables().filterNot { icon ->
+            val text = icon.readText()
+            VIEWPORT.all { text.contains(it) }
+        }
+
+        assertTrue(
+            "an icon drawn at another viewport does not sit on the same optical grid as the rest, " +
+                "and no call site can correct for it: ${offenders.map(File::getName)}",
+            offenders.isEmpty(),
+        )
+    }
+
+    @Test
+    fun `every icon is stroked at the weight the direction specifies`() {
+        val offenders = drawables().filterNot { it.readText().contains(STROKE_WIDTH) }
+
+        assertTrue("icons not stroked at 1.9: ${offenders.map(File::getName)}", offenders.isEmpty())
+    }
+
+    @Test
+    fun `no icon carries a fill`() {
+        // A filled path and a stroked path tint to the same colour, so a mixed icon loses the
+        // distinction it was drawn with. It would look right in review and wrong on the screen.
+        val offenders = drawables().filter { it.readText().contains(FILL_ATTRIBUTE) }
+
+        assertTrue("icons mixing fill with stroke: ${offenders.map(File::getName)}", offenders.isEmpty())
+    }
+
+    @Test
+    fun `every icon declares exactly one colour`() {
+        val offenders = drawables().mapNotNull { icon ->
+            val colors = COLOR_VALUE.findAll(icon.readText()).map { it.value }.toSet()
+            if (colors.size == 1) null else "${icon.name} declares $colors"
+        }
+
+        assertTrue(
+            "an icon with two colours cannot survive a single tint:\n" + offenders.joinToString("\n"),
+            offenders.isEmpty(),
+        )
+    }
+
+    @Test
+    fun `every icon has some geometry`() {
+        // The cheapest way to have a green scan and an invisible icon.
+        val offenders = drawables().filterNot { it.readText().contains(PATH_DATA) }
+
+        assertTrue("icons with no path data: ${offenders.map(File::getName)}", offenders.isEmpty())
+    }
+
+    private companion object {
+        const val RESOURCE_ROOT_PROPERTY = "webora.app.res"
+        const val BUDGET = 10
+        const val STROKE_WIDTH = """android:strokeWidth="1.9""""
+        const val FILL_ATTRIBUTE = "android:fillColor"
+        const val PATH_DATA = "android:pathData"
+
+        val VIEWPORT = listOf(
+            """android:width="24dp"""",
+            """android:height="24dp"""",
+            """android:viewportWidth="24"""",
+            """android:viewportHeight="24"""",
+        )
+
+        val COLOR_VALUE = Regex("""#[0-9A-Fa-f]{6,8}""")
+
+        val EXPECTED = setOf(
+            "ic_back",
+            "ic_forward",
+            "ic_reload",
+            "ic_home",
+            "ic_menu",
+            "ic_more",
+            "ic_lock",
+            "ic_close",
+            "ic_search",
+            "ic_warning",
+        )
+
+        fun drawables(): List<File> {
+            val root = requireNotNull(System.getProperty(RESOURCE_ROOT_PROPERTY)) {
+                "$RESOURCE_ROOT_PROPERTY is unset; app/build.gradle.kts must pass the app resource root"
+            }
+            val directory = File(root, "drawable")
+            require(directory.isDirectory) { "no drawable directory at $directory" }
+            return directory.listFiles().orEmpty().filter { it.extension == "xml" }.sortedBy(File::getName)
+        }
+    }
+}
