@@ -7,12 +7,15 @@ Status: RESOLVED
 Removes the permanent `SiteSkin inspector` floating affordance from composition and puts the
 inspector behind an entry in the two browser menus that already exist, one per mode.
 
-Two problems wearing one shape, and the ticket separates them correctly. The affordance was in every
-canonical frame, so Webora's own product evidence read as an internal build; and because it was a
-full-screen sibling overlay, its pixels landed inside the rectangle `CI-003` measures for drawn page
-content, giving that check a second piece of Webora's chrome to count as page. `CI-003` deferred here
-rather than adding a second exclusion, and the bet paid: **removal closed the hole without touching
-`chromeInsidePageRegion`.**
+Two problems wearing one shape — and after the fact, only one of them was real. The affordance was in
+every canonical frame, so Webora's own product evidence read as an internal build: true, sufficient,
+and fixed. `CI-003` also believed the overlay's pixels landed inside the rectangle it measures for
+drawn page content, giving that check a second piece of Webora's chrome to count as page.
+
+**Removal disproved that.** Runs 11 and 12 report `differing=0.7530481592174976` bit-identically,
+with the affordance and without it. The overlay sat below `y=2127`, where the measured region ends
+and the SiteSkin bottom navigation begins. `chromeInsidePageRegion` was already complete. See the
+correction filed against `reports/review/CI-003.md`'s `FINDING-1`.
 
 Verified on hosted run **12** (`31617251038`, `140d206e`): `test_status=0`, `png_count=3`,
 `composed tiles=3 against png_count=3`. That run is itself the interesting evidence — see Security.
@@ -43,7 +46,7 @@ See `FINDING`-adjacent note under Test coverage.
 | `BuildConfig.DEBUG` | Not used, correctly. AGP derives it from `isDebuggable` and `debugRelease` sets it true while compiling against the release stub. |
 | Panel's inputs | Unchanged. `inspectorValue`'s `MAX_SUBTITLE_LENGTH` bound on untrusted text is not reopened. |
 | Evidence integrity | The mechanism refused is the load-bearing decision: **no screenshot mode.** Suppressing the affordance while the harness captures would make the photograph differ from the running build, which is the same failure `CI-002` refused when it declined a dismiss-whatever-is-in-the-way loop. |
-| Run 12 as evidence | A green run *is* the finding here. `captureWhenRendered` fails when the page region never clears `MINIMUM_DIFFERING_FRACTION`, and the overlay's pixels are no longer in that region to help it. If the overlay had been load-bearing for that check, this is the run that would have gone red. |
+| Run 12 as evidence | The run answers the question `CI-003` could not: the fraction is unchanged to sixteen digits, so the overlay contributed nothing to it and never had. A red run would have meant the overlay was load-bearing; an identical one means it was never in the rectangle. Either result was informative, which is what made removal the right experiment as well as the right fix. |
 
 ## Findings
 
@@ -148,5 +151,11 @@ Both fixed after this review, each in its own commit. `TASK-FIX-2` carries a neg
 instrumented test's previous call now fails compilation on both missing parameters, so the compiler
 enforces what the convention used to.
 
-The ticket's premise held end to end: the overlay was the problem, removal was the fix, and
+**The ticket's second premise did not survive its own evidence, and that is a good outcome.** The
+presentation argument carried the change on its own; the measurement argument inherited from
+`CI-003` was structural reasoning that nobody had checked against the recorded rects. Corrected in
+`CLAUDE.md`, `docs/BACKLOG.md`, `docs/ROADMAP.md` and against the finding that made the claim,
+rather than quietly dropped.
+
+The ticket's first premise held end to end: the overlay was the problem, removal was the fix, and
 `CI-003`'s residual hole closed with no second exclusion list to maintain.

@@ -1,5 +1,5 @@
 # QA Report: DEVX-003
-Status: DRAFT
+Status: QA_PASSED
 
 ## Scope
 
@@ -34,9 +34,11 @@ What this ticket is answerable for, in QA terms:
 | 11 | Negative control: a `RegularBrowser` caller that omits a command's handler | Restored the pre-fix call in `BrowserSiteSkinLayoutTest` | FAILS to compile — `No value passed for parameter 'onSettings'` / `'onInspector'`. Restored |
 | 12 | The debug resource set has no dangling reference after deleting `inspector_open` | `./gradlew :app:assembleDebug` | BUILD SUCCESSFUL |
 | 13 | The full journey captures three frames on a device | Hosted run **12** (`31617251038`, `140d206e`) | PASS — `test_status=0`, `png_count=3`, `composed tiles=3 against png_count=3` |
-| 14 | Frame 03 clears `CI-003`'s rendered check with the overlay gone | Same run; `captureWhenRendered` fails the run when the page region never clears `MINIMUM_DIFFERING_FRACTION` | PASS by construction of the green run — the inspector's pixels are no longer in the measured region to help it |
-| 15 | No inspector affordance is visible in any canonical frame | `preview.png` in `webora-screenshots-140d206e…` | **Pending owner confirmation** — this session cannot download artifacts (`403 GitHub access is not enabled for this session`) |
-| 16 | Whole gate | `bash scripts/pre-commit-check.sh` after every task and both fixes | `[checks] OK` each time |
+| 14 | Frame 03 clears `CI-003`'s rendered check with the overlay gone | `rendered-03-siteskin-integrated.txt`, run 12 | PASS — `PASSED differing=0.7530481592174976 after 1699ms`, 75× the 1% bar |
+| 15 | No inspector affordance is visible in any canonical frame | `preview.png` from `webora-screenshots-140d206e…`, opened by the owner | PASS — all three frames clean. Frame 03's only floating control is the quick action at top-left, which is site-driven product UI |
+| 16 | Nothing new needed excluding from the measured region | Same file: `excluded=[Rect(0, 370 - 126, 496)]` | PASS — one rect, `126×126`, the quick action. `chromeInsidePageRegion` is untouched and complete |
+| 17 | The overlay's removal changed the measurement | Run 11 (with affordance) vs run 12 (without): `0.7530481592174976` both | **No change, bit-identical** — which refutes `CI-003`'s `FINDING-1` rather than confirming it. See Notes |
+| 18 | Whole gate | `bash scripts/pre-commit-check.sh` after every task and both fixes | `[checks] OK` each time |
 
 ## Edge cases
 
@@ -75,13 +77,26 @@ creates only `testDebugUnitTest`, where `SITESKIN_INSPECTOR_AVAILABLE` is always
 default made both answers reachable. Any future variant-gated decision has the same trap: if the only
 unit-test variant fixes the flag, read it through a parameter or the test is decoration.
 
-**Scenario 15 is deliberately not marked PASS.** It is the one criterion this session cannot verify,
-and it is instrumented evidence in `A11Y-001`'s sense — recorded when the owner opens `preview.png`,
-never promoted to a gate claim. Check the artifact's SHA (`140d206e…`) against the commit being
-judged before reading it; `DEVX-002` added that naming after three contaminated frames from run #5
-were read as current evidence.
+**Scenario 15 is owner-confirmed instrumented evidence, not a gate claim.** This session cannot
+download artifacts (`403`); the owner opened `preview.png` from
+`webora-screenshots-140d206ebc51761eb4a3efe43dbb5b2706320af5` and confirmed all three frames. The
+SHA matches the commit being judged, which `DEVX-002`'s naming exists to make checkable after three
+contaminated frames from run #5 were once read as current.
 
-**What a green run 12 does and does not prove.** It proves frame 03's page region cleared the 1%
-liveness bar without the overlay's pixels available to help — the substantive claim. It does not, by
-itself, prove the affordance is absent from the *pictures*, because `CI-003`'s check measures
-liveness, not composition. That is scenario 15's job, and the two are deliberately not conflated.
+**Scenario 17 is the one that changes a documented claim.** `CI-003`'s `FINDING-1` held that the
+inspector overlay sat inside the measured page region unexcluded, so two ~0.84% chrome buttons could
+clear the 1% bar over a blank page. Removing the overlay moved the fraction by **nothing**:
+`0.7530481592174976` in run 11 with it, `0.7530481592174976` in run 12 without. A rect that
+contributes differing pixels cannot be deleted with no effect on the count, so it was never in the
+rectangle — it sat below `y=2127`, where the region ends and the SiteSkin bottom navigation begins.
+The claim was structural inference (a full-screen sibling's pixels *can* land inside the region) that
+nobody checked against the rects, which were recorded in a `rendered-*.txt` at the time it was
+written. Corrected in `CLAUDE.md`, `docs/BACKLOG.md`, `docs/ROADMAP.md`, both review reports and this
+report; the PRD, plan and research keep the belief they were written under.
+
+The margin was 42 pixels, so the *rule* survives its wrong instance intact: anything composed into
+`BROWSER_CONTENT_TAG` or drawn over it must be excluded or kept out.
+
+**Elapsed time is not a regression.** 1699 ms here against 696 ms in run 11 — both far inside the
+20 s deadline, and both records exist only because `CI-003` writes the measurement on success as well
+as on failure. Without that habit this scenario could not have been checked at all.

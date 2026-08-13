@@ -810,10 +810,19 @@ test rather than passing unnoticed.
 **Measure the page, never the chrome — and this is where it went wrong once.** `SiteSkinQuickActions`
 is composed *inside* the very `Box` tagged `BROWSER_CONTENT_TAG`, so the first version measured
 Webora's own floating button as page content and passed instantly over a blank page. The journey now
-passes chrome bounds from the semantics tree as excluded rects. The `SiteSkin inspector` overlay was
-inside that region and unexcluded too — about 0.84% each, and two such buttons clear 1% together;
-`DEVX-003` closed that by removing the overlay rather than by adding a second exclusion. Anything new
-composed into that `Box` needs the same treatment: exclude it, or keep it out.
+passes chrome bounds from the semantics tree as excluded rects. **One chrome button is inside the
+measured region, not two** — the quick action, at `126×126` against `1080×1757`, or 0.84%.
+
+`CI-003`'s review claimed the `SiteSkin inspector` overlay was in there too, and `DEVX-003` disproved
+it by removing the overlay and changing nothing: runs 11 and 12 report `differing=0.7530481592174976`
+**bit-identically**, with the affordance and without it. It had been sitting below `y=2127`, where the
+region ends and the SiteSkin bottom navigation begins. The claim came from composition structure — a
+full-screen sibling overlay *can* land inside the rectangle — and structure is where the region
+boundary is invisible. Measure the rects; a `rendered-*.txt` from a run that still has the thing in
+it is the cheap way, and the reason to record the fraction on success.
+
+The rule the near-miss leaves behind is unchanged: anything composed into that `Box`, or drawn over
+it, needs excluding or keeping out — the margin here was 42 pixels of luck, not of design.
 
 **Record the measurement on success, not only on failure.** `rendered-<label>.txt` carries the
 winning fraction and elapsed time. A passing check that records nothing cannot be distinguished from
@@ -826,10 +835,15 @@ would still have been measuring chrome.
 ### The inspector lives in the menus (DEVX-003)
 
 `DEVX-001`'s panel was correct and its **affordance** was not: a floating `SiteSkin inspector` pill
-drawn over every screen in every debug frame. That is two different problems wearing one shape. It
-put a developer tool in the product evidence people judge Webora by, and — because the overlay was a
-full-screen sibling whose pixels land inside `BROWSER_CONTENT_TAG` — it gave `CI-003`'s rendered
-check a second piece of Webora's own chrome to count as page content.
+drawn over every screen in every debug frame, putting a developer tool in the product evidence people
+judge Webora by. That alone was reason enough, and it is the reason that survived.
+
+The second reason did not. `CI-003` handed this ticket a measurement hole — the overlay's pixels
+supposedly landing inside `BROWSER_CONTENT_TAG` and helping a blank page clear the rendered check —
+and removing the overlay proved there was no hole: the differing fraction is bit-identical with the
+affordance and without it. **The ticket's own evidence refuted its second premise, which is the
+outcome to want from evidence.** Do not restate the two-buttons-clear-1% argument; it was arithmetic
+about a rectangle the affordance was never in.
 
 **A screenshot mode was refused, and this is the load-bearing decision.** Hiding the affordance while
 the harness captures is the obvious shortcut, and it is disqualified on exactly the grounds `CI-002`

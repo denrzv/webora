@@ -215,3 +215,33 @@ References:
   - `onSettings`'s default predated this ticket and was removed with `onInspector`'s. A half-defaulted
     pair would have been arbitrary: both are browser-owned commands the menu offers unconditionally.
   - Gate: `bash scripts/pre-commit-check.sh` plus `./gradlew :app:compileDebugAndroidTestKotlin`
+
+- [x] TASK-FIX-3: Correct the measurement claim this ticket inherited and disproved
+  - Modified: `CLAUDE.md`, `docs/BACKLOG.md`, `docs/ROADMAP.md`, `reports/review/CI-003.md`,
+    `reports/review/DEVX-003.md`, `reports/qa/DEVX-003.md`
+  - Trigger: the owner supplied run 12's `rendered-03-siteskin-integrated.txt` and `preview.png`.
+    The frames are clean, and the numbers say something nobody asked for:
+    `PASSED differing=0.7530481592174976 after 1699ms`, `excluded=[Rect(0, 370 - 126, 496)]`.
+    **Run 11 reported `differing=0.7530481592174976` too** — the same sixteen digits, with the
+    affordance still composed.
+  - A rect that contributes differing pixels cannot be deleted with no effect on the count. So the
+    overlay was never inside the measured region: it was bottom-aligned in a `safeDrawing`-inset
+    full-screen `Box`, which put it below `y=2127`, where the region ends and the SiteSkin bottom
+    navigation begins. `CI-003`'s `FINDING-1` — two ~0.84% chrome buttons clearing the 1% bar over a
+    blank page — was wrong; there is one such button, the quick action, and it was already excluded.
+  - The claim was structural inference ("a full-screen sibling's pixels land inside the rectangle")
+    that was never checked against the rects, which were sitting in a `rendered-*.txt` at the time it
+    was written. Recording the fraction on success is what made the refutation possible a ticket
+    later; a check that only writes on failure could not have been compared against.
+  - Corrected where the claim is *load-bearing* — `CLAUDE.md`'s `CI-003` and `DEVX-003` sections, the
+    backlog entry, the roadmap tick, both review reports and the QA report. The PRD, plan and research
+    keep the belief they were written under; they are the record of what was believed, and rewriting
+    them would erase the fact that the ticket proceeded on a premise that turned out false.
+  - **The ticket does not lose its justification.** The presentation argument — a developer overlay in
+    the product evidence people judge Webora by — carried the change on its own and is untouched. What
+    changed is that `DEVX-003` no longer claims to have closed a hole in `CI-003`; it claims to have
+    shown there was none.
+  - The rule survives its wrong instance: anything composed into `BROWSER_CONTENT_TAG` or drawn over
+    it must be excluded or kept out. The margin here was 42 pixels of luck.
+  - No source, test, resource or build file changes in this task.
+  - Gate: `bash scripts/pre-commit-check.sh`

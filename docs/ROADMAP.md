@@ -86,9 +86,10 @@ Evidence/DX track — can proceed without waiting for all M6 surfaces:
   labelled contact-sheet preview
 - [x] `CI-003` Capture must wait for rendered content — pixel check on the page region, not semantics
 - [x] `DEVX-003` Inspector isolation and canonical evidence mode — the affordance moved into the two
-  browser menus, one per mode, and left canonical composition. `CI-003`'s residual hole is closed:
-  `SiteSkinQuickActions` is now the only non-page chrome inside the measured region, and it was
-  already excluded
+  browser menus, one per mode, and left canonical composition. It also **disproved** `CI-003`'s
+  claimed residual hole: the rendered fraction is bit-identical with the overlay and without it, so
+  `SiteSkinQuickActions` was always the only non-page chrome inside the measured region, and it was
+  always excluded
 
 Product-polish track:
 
