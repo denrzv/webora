@@ -163,7 +163,9 @@ internal fun BrowserScreen(
         }
         if (configuration != null) {
             val loaded = assetLoader.load(configuration)
-            if ((state.mode as? BrowserMode.Integrated)?.configuration === configuration) brandAsset = loaded
+            if ((state.mode as? BrowserMode.Integrated)?.configuration === configuration) {
+                brandAsset = loaded.asset
+            }
         }
     }
 
