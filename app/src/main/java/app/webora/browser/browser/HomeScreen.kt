@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Card
@@ -45,7 +46,10 @@ internal fun HomeScreen(onNavigate: (String) -> Unit, modifier: Modifier = Modif
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
                 keyboardActions = KeyboardActions(onGo = { resolveAddressInput(address)?.let(onNavigate) }),
-                shape = MaterialTheme.shapes.extraLarge,
+                // `ADR-013` draws the address field as a pill, so it says so. It used to inherit
+                // one from `shapes.extraLarge`, which is also what every `AlertDialog` reads —
+                // `UX-009` is what that shared default did to the consent dialog.
+                shape = RoundedCornerShape(WeboraRadius.PILL),
                 modifier = Modifier.fillMaxWidth(),
             )
         }
@@ -99,7 +103,7 @@ private fun SuggestedSiteCard(site: SuggestedSite, onNavigate: (String) -> Unit)
 private fun EmptyHomeSection(titleRes: Int, messageRes: Int) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(WeboraRadius.LARGE),
+        shape = RoundedCornerShape(WeboraRadius.LARGE),
         color = MaterialTheme.colorScheme.surfaceVariant,
     ) {
         Column(

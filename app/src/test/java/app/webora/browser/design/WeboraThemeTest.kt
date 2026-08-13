@@ -4,8 +4,10 @@ import androidx.compose.foundation.shape.CornerBasedShape
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -113,6 +115,49 @@ class WeboraThemeTest {
     }
 
     @Test
+    fun `a container role never rounds a dialog into a stadium`() {
+        // `every shape corner comes from the compiled radii` constrains a corner's *provenance* and
+        // is satisfied by any declared token, including one meant for a control. This constrains its
+        // *fitness*, which is a different question and the one UX-009 was decided by: a Material
+        // shape role is a container role — `AlertDialog` resolves its container to `extraLarge` —
+        // and `CornerBasedShape` does not reject an over-large corner, it scales adjacent pairs down
+        // to fit the shorter side. So a 999 dp pill on a dialog is not ignored; it becomes half the
+        // width, the sides round away entirely, and `Surface` clips the heading out of the frame.
+        //
+        // The measurement therefore runs through the real `createOutline` rather than reading the
+        // token, because the clamp is where a good number turns into a bad shape.
+        val strays = WEBORA_SHAPES.cornerBasedShapes().flatMap { (role, shape) ->
+            shape.resolvedCorners(DIALOG_SIZE)
+                .filter { it > DIALOG_CORNER_CEILING }
+                .map { "$role resolves to a ${it}px corner on a ${DIALOG_SIZE.width}px-wide dialog" }
+        }
+
+        assertTrue(
+            "a corner above a quarter of the dialog's width is a container rounding its own " +
+                "content away; the ceiling sits inside the degenerate half-width case on purpose:\n" +
+                strays.joinToString("\n"),
+            strays.isEmpty(),
+        )
+    }
+
+    @Test
+    fun `the pill is a control value and no shape role carries it`() {
+        // The assertion above catches the consequence. This one names the cause, so a future pill in
+        // a Material role fails as itself rather than as a number that happens to be too big. The
+        // pill is not retired — `BrowserChrome` names it directly for the address field, the
+        // identity chip and the dock — it is barred from the roles Material resolves containers to.
+        val carriers = WEBORA_SHAPES.cornerBasedShapes()
+            .filterValues { shape -> shape.corners().any { it == WeboraRadius.PILL.value } }
+            .keys
+
+        assertTrue(
+            "a Material shape role holding ${WeboraRadius.PILL} rounds every dialog that defaults " +
+                "to it into a stadium: $carriers",
+            carriers.isEmpty(),
+        )
+    }
+
+    @Test
     fun `the shape scale covers every role the public API can set`() {
         // Material 3 declares two further roles — `extraLargeIncreased` at 32 dp and
         // `extraExtraLarge` at 48 dp — which are `internal` to the library and absent from the
@@ -190,11 +235,50 @@ class WeboraThemeTest {
     private fun CornerBasedShape.corners(): List<Float> = listOf(topStart, topEnd, bottomStart, bottomEnd)
         .map { it.toPx(SHAPE_SIZE, DENSITY) }
 
+    /**
+     * The corner radii Compose actually draws at [size], after its own clamp.
+     *
+     * [corners] reads the requested value; this reads the resolved one, and the two differ by
+     * exactly the behaviour UX-009 turned on. A shape whose corners are all zero is an
+     * [Outline.Rectangle] with no radii to read, which is a rectangle and therefore passes.
+     */
+    private fun CornerBasedShape.resolvedCorners(size: Size): List<Float> =
+        when (val outline = createOutline(size, LayoutDirection.Ltr, DENSITY)) {
+            is Outline.Rectangle -> emptyList()
+            is Outline.Rounded -> with(outline.roundRect) {
+                listOf(topLeftCornerRadius, topRightCornerRadius, bottomLeftCornerRadius, bottomRightCornerRadius)
+            }.flatMap { listOf(it.x, it.y) }
+            // `RoundedCornerShape` never produces one, and reading a `Path` would need a framework
+            // type this source set does not have. Failing loudly beats a silently empty list.
+            is Outline.Generic -> error("a rounded-corner shape produced a generic outline")
+        }
+
     private companion object {
         val PROJECTIONS = listOf("light" to WeboraColors.LIGHT, "dark" to WeboraColors.DARK)
         val BLACK = androidx.compose.ui.graphics.Color.Black
         val DENSITY = Density(density = 1f)
         val SHAPE_SIZE = Size(width = 1000f, height = 1000f)
+
+        /**
+         * The narrowest and widest box Material lays an `AlertDialog` out in.
+         *
+         * `DialogMinWidth = 280.dp` and `DialogMaxWidth = 560.dp` are `internal` to material3, so
+         * the numbers are transcribed rather than imported — which this repository distrusts on
+         * principle. It is safe in this one direction: the corners here are absolute, and the clamp
+         * only ever shrinks them, so a shape that clears the ceiling at the narrowest width clears
+         * it at every width a dialog can reach. A Compose release that *narrows* the minimum would
+         * make this assertion lenient, never wrong.
+         */
+        val DIALOG_SIZE = Size(width = 280f, height = 560f)
+
+        /**
+         * A quarter of the dialog's width.
+         *
+         * Half is the degenerate value — at half the width the side is fully round — so the ceiling
+         * has to sit strictly inside it. A quarter leaves the 28 dp container radius (a tenth)
+         * clearing comfortably while the 999 dp pill, clamped to 140, fails by a factor of two.
+         */
+        const val DIALOG_CORNER_CEILING = 70f
 
         /** Material 3's role counts, restated so a shrinking derivation fails. */
         const val MATERIAL_ROLES = 48
