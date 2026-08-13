@@ -1083,3 +1083,68 @@ navigation boundary. Onboarding remains a saveable three-page scrollable flow. P
 one toggleable row for global SiteSkin state and renders each complete `SiteOrigin.canonical` as
 wrapping text beside a compact reset action whose accessible description includes that same origin.
 Manifest text, colours, icons, and actions have no path into these surfaces.
+
+### One glyph stood for five failures (NET-004)
+
+`NET-003` makes a browser-generated monogram the correct output of every non-cancellation
+brand-asset failure, and for the user it is: an unreachable logo must never break browsing. The cost
+only became visible on the reference integration, where a declared, correctly served `512 × 512` PNG
+rendered as a `B` in hosted runs 11 and 15. One glyph stood for "no logo declared", "the CDN answered
+404", "the bytes are not the type the header claimed", "the image is over the cap", "the decoder gave
+up" and "it has not arrived yet" — six different things to fix behind one symptom.
+
+**The tool built for this could not answer it, and finding that out was the first result.**
+`DEVX-001`'s inspector reported `Brand asset: MONOGRAM` and stopped; `BrandAssetFetchResult.Rejected`
+was a bare object while the manifest path had carried `FetchRejection` since that same ticket. So
+`BrandAssetRejection` (eight transport reasons) and `BrandAssetStage` (nine pipeline stages) exist to
+close the asymmetry, and `BrandAssetLoaderTest`'s matrix is the proof: before this ticket every one
+of its seven refusals asserted the same `Monogram("B")` and no test could tell any two apart.
+
+**The measurement is the ticket.** Hosted run 16 (`31725858080`, `f982f1a4`) recorded
+`stage=TRANSPORT_UNAVAILABLE` in 891 ms with no rejection and no status — a decision, not a race, and
+none of the four causes the backlog had listed. The logcat named it to the second: the emulator's
+Wi-Fi left `CONNECTED` at `17:41:33.893`, in the same second Allow was clicked, while the manifest
+fetch ten seconds earlier had gone out over a working network.
+
+**The refusal was correct; its permanence was not.** `BrowserScreen` keys the load on the trusted
+configuration instance, and `BrowserState.forObservedOrigin` deliberately returns the *same*
+`Integrated` instance for every same-origin page start — so the key never changes, the effect never
+re-runs, and nothing asks again. The network returned 6.4 s later and that origin showed a monogram
+for the rest of the visit with the logo one request away. That is what a site owner's users get on
+any connection that blinks at the wrong moment.
+
+So `TRANSPORT_UNAVAILABLE` is retried — three attempts, 1 s then 2 s apart — and **nothing else is**.
+The exclusions carry the argument and each has a test: a rejection means the server answered and the
+browser declined, so retrying hammers a site whose logo legitimately 404s and changes nothing; the
+same bytes decode the same way; an undeclared logo has nothing to request. `NET-003`'s caps,
+allow-list, same-origin recheck and monogram fallback are untouched, and its tests pass unedited —
+this changes how many times the browser asks, never what it will accept. Runs 17 and 18 (`ea57ef5d`) then
+recorded `stage=DECODED httpStatus=200 pixels=512x512 attempts=1`, and run 18's frame shows the
+reference integration's flower in the 40 dp slot beside `Secure · denrzv.github.io`. `attempts=1` in
+both: neither run's network blinked, so the retry is justified by run 16's recorded failure and
+pinned by unit tests — not by a hosted run that never exercised it.
+
+**The recorder is process-scoped now, which is what its own KDoc always claimed.** It was built
+inside a `remember`, so a configuration change discarded whatever a developer was mid-way through
+reading — and, more to the point here, instrumentation could not see what the running browser had
+decided. The screenshot journey reads *that* recorder rather than running a second loader of its own;
+a second copy is a second thing that can disagree.
+
+**The reason vocabulary is closed, and a `BrandAssetTrace` can hold only numbers and closed enums.**
+A reflective test enforces it, so a field added later is covered without anyone remembering. A website
+can cause a stage to be *selected*; it can neither supply nor phrase one. The 40 dp slot stays
+decorative in the semantics tree — the outcome must never become an accessibility-visible property of
+it, which is why the harness reads the recorder instead.
+
+`BrandAssetCoordinator` is gone. It had a test and no callers while `BrowserScreen` reimplemented it
+inline, so `NET-003`'s superseded-work guard ran where the gate cannot reach it and the tested class
+ran nowhere. `publishesBrandAsset` is that guard as a pure function; the trace is recorded whether or
+not it publishes, because a load dropped for being superseded is exactly what a developer needs to
+see and the guard is what would hide it. Note that `===` and `==` are the same comparison there today
+— `SiteSkinConfiguration` has no `equals` — so the operator's negative control is deleting the guard,
+not relaxing it. Both facts are written down where someone will hit them.
+
+**The journey waits for the pipeline to decide, and asserts after the capture, not before.** Waiting
+for a state the app reaches on its own is not staging it — `DEVX-003`'s refusal of a screenshot mode
+still stands, and this can only make the run refuse more, per `CI-005`. Asserting after the frame is
+saved means a failing run still publishes the picture of what went wrong.

@@ -17,33 +17,56 @@ package app.webora.browser.inspector
  */
 internal class SiteSkinTraceRecorder(
     private val maxOrigins: Int = MAX_TRACED_ORIGINS,
-) : SiteSkinTraceSink {
+) : SiteSkinTraceSink, BrandAssetTraceSink {
 
     private var records: Map<String, ManifestTraceRecord> = emptyMap()
+
+    /**
+     * Brand-asset traces, in their own map rather than a field on [ManifestTraceRecord].
+     *
+     * The asset load runs *after* activation, on an origin whose manifest record already exists. A
+     * field would mean merging into a record written by a different pipeline at a different time, and
+     * a merge that silently no-ops when the record is absent loses exactly the case worth reading.
+     * Two maps, one eviction rule.
+     */
+    private var brandAssets: Map<String, BrandAssetTrace> = emptyMap()
 
     /** Incremented on every write so a Compose caller can key recomposition on it. */
     var version: Int = 0
         private set
 
     override fun record(record: ManifestTraceRecord) {
-        val next = LinkedHashMap(records)
-        next.remove(record.origin)
-        next[record.origin] = record
-        while (next.size > maxOrigins) {
-            next.remove(next.keys.first())
-        }
-        records = next
+        records = records.put(record.origin, record)
+        version += 1
+    }
+
+    override fun record(origin: String, trace: BrandAssetTrace) {
+        brandAssets = brandAssets.put(origin, trace)
         version += 1
     }
 
     fun latest(origin: String): ManifestTraceRecord? = records[origin]
+
+    fun latestBrandAsset(origin: String): BrandAssetTrace? = brandAssets[origin]
 
     /** Traced origins, least recently recorded first. */
     fun origins(): List<String> = records.keys.toList()
 
     fun clear() {
         records = emptyMap()
+        brandAssets = emptyMap()
         version += 1
+    }
+
+    /** Most-recently-recorded last, evicted from the front once [maxOrigins] is exceeded. */
+    private fun <T> Map<String, T>.put(origin: String, value: T): Map<String, T> {
+        val next = LinkedHashMap(this)
+        next.remove(origin)
+        next[origin] = value
+        while (next.size > maxOrigins) {
+            next.remove(next.keys.first())
+        }
+        return next
     }
 
     private companion object {

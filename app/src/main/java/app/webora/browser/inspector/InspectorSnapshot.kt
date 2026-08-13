@@ -31,6 +31,7 @@ internal data class InspectorSnapshot(
     val consent: SiteConsentDecision?,
     val siteSkinEnabled: Boolean,
     val brandAsset: InspectorBrandAsset,
+    val brandAssetTrace: BrandAssetTrace?,
     val record: ManifestTraceRecord?,
     val applied: InspectorAppliedChrome?,
 )
@@ -92,6 +93,14 @@ internal enum class InspectorColorRoleName {
     ON_BACKGROUND,
 }
 
+/**
+ * What the 40 dp slot is showing.
+ *
+ * Deliberately kept beside [BrandAssetTrace] rather than replaced by it: this is read from live
+ * browser state and the trace is read from the recorder, so a disagreement between them is itself
+ * worth seeing. `MONOGRAM` with a `DECODED` stage would mean the asset decoded and the publication
+ * guard dropped it.
+ */
 internal enum class InspectorBrandAsset { NONE, DECODED_BITMAP, MONOGRAM }
 
 /** Where this origin stands with respect to SiteSkin activation. */
@@ -126,6 +135,7 @@ internal enum class InspectorActivation {
 internal fun inspectorSnapshot(
     state: InspectorBrowserState,
     record: ManifestTraceRecord?,
+    brandAssetTrace: BrandAssetTrace? = null,
 ): InspectorSnapshot = InspectorSnapshot(
     origin = state.origin?.canonical,
     activation = activation(state, record),
@@ -136,6 +146,7 @@ internal fun inspectorSnapshot(
         is BrandAsset.Monogram -> InspectorBrandAsset.MONOGRAM
         null -> InspectorBrandAsset.NONE
     },
+    brandAssetTrace = brandAssetTrace,
     record = record,
     applied = state.configuration?.let { appliedChrome(it, state.pageUrl, state.darkTheme) },
 )

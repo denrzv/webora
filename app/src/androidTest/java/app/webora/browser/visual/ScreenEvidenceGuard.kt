@@ -283,6 +283,15 @@ class ScreenEvidenceGuard(
         )
     }
 
+    /**
+     * Writes one diagnostic file beside the guard's own records.
+     *
+     * Exposed so a journey can record something the guard has no opinion about — `NET-004`'s
+     * brand-asset outcome — without a second copy of the directory name. The guard still owns where
+     * diagnostics go; it just no longer owns what may be put there.
+     */
+    fun recordDiagnostic(name: String, content: String) = record(name, content)
+
     private fun record(name: String, content: String) {
         storage.openOutputFile("$DIAGNOSTICS_DIRECTORY/$name").use { output ->
             output.write(content.toByteArray())
