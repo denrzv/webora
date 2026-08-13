@@ -535,3 +535,82 @@ inside the app.
 indicator, and `HARDEN-002`'s controls, were justified partly by Play's Deceptive Behavior policy —
 but they are load-bearing security regardless of how the app is distributed, and an APK handed to
 friends does not relax them.
+
+---
+
+### `UX-009` — Consent dialog renders as a circle and clips its own heading
+
+**Priority:** P1  
+**Depends on:** `UX-002`, `UX-007`  
+**Goal:** the first-use consent sheet is a dialog, not an ellipse.
+
+**Found by:** hosted screenshot run **14** (`31706775744`, `d830cac8`), frame
+`02-siteskin-consent.png`.
+
+**The observation.** The consent surface draws as a large circle/stadium rather than a rounded
+rectangle. Its content overflows the shape: the browser-authored heading
+`Allow https://denrzv.github.io to customise Webora?` is clipped on the left to `ow`, so the first
+word of Webora's own identity statement is missing from the frame.
+
+`UX-007`'s action hierarchy underneath is **correct** — filled *Allow*, outlined *Not now*, text
+*Never for this site*, full width, vertically stacked. This is a shape token applied to the dialog
+container, not a layout regression.
+
+**Why it is P1 rather than cosmetic.** `HARDEN-002` requires the complete canonical origin to be
+displayed so the visible grant matches the `SiteOrigin` persistence key, and `ADR-011` makes this
+dialog the enforcement point for the whole trust boundary. A clipped heading is a security-relevant
+surface losing text, and this is the screen a user reads before granting a site control of the
+chrome.
+
+**Scope**
+- Find the radius applied to the dialog container and give it a value from `WeboraRadius` that
+  produces a dialog.
+- The heading must render in full at 360 dp, and a test should fail if it cannot.
+- Check the same token is not producing the effect elsewhere; a circle this large suggests a value
+  intended for a different component.
+
+**Acceptance**
+- The consent dialog is a rounded rectangle and no browser-authored text is clipped.
+- The complete canonical origin remains readable per `HARDEN-002`.
+- `UX-007`'s action order, emphasis and full-width stack are unchanged.
+- `bash scripts/pre-commit-check.sh` passes.
+
+---
+
+### `UX-010` — Integrated mode shows no SiteSkin top bar in hosted evidence
+
+**Priority:** P1  
+**Depends on:** `SKIN-002`, `UX-005`  
+**Goal:** find out why the branded bar is absent from the integrated frame, and fix it.
+
+**Found by:** hosted screenshot run **14** (`31706775744`, `d830cac8`), frame
+`03-siteskin-integrated.png`.
+
+**The observation.** SiteSkin is clearly active — the bottom navigation renders `Home / Catalog /
+Cart / Profile` with `UX-005`'s vector icons, and the quick action is composed. But the region above
+the page is empty: no logo, no title, no subtitle, and **no registrable domain or TLS state**.
+Run 12's frame at `140d206e` showed all of it.
+
+**Why it is P1.** `ADR-006` and `HARDEN-002` make the domain and TLS indicator non-suppressible in
+SiteSkin mode — that is the sharpest security property in the design. A frame where site navigation
+renders and browser identity does not is exactly the shape those rules exist to forbid, whatever the
+cause turns out to be.
+
+**What is not yet known.** The frame was captured while the page had not painted (see `CI-005`), and
+the whole screen is dimmed by a system dialog's `DIM_BEHIND`. So this may be a paint-timing artefact
+rather than a composition defect. `CI-003`'s `rendered-*.txt` cannot answer it: the measured region
+starts at `y=349`, and the top bar sits above that, outside `BROWSER_CONTENT_TAG`.
+
+**Scope**
+- Reproduce with a frame captured after the page has painted — which needs `CI-005` first, or a run
+  that does not meet an ANR.
+- If the bar is genuinely not composed, find which of activation, brand asset, or theme projection
+  fails and fix it.
+- If it is paint timing, the finding belongs to the harness and this ticket closes as not-a-defect
+  with the evidence recorded.
+
+**Acceptance**
+- A hosted integrated frame shows the branded bar including registrable domain and TLS state.
+- The outcome is recorded either way; "could not reproduce" closes it only with a clean frame
+  attached.
+- `bash scripts/pre-commit-check.sh` passes.
