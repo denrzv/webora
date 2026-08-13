@@ -15,7 +15,7 @@ import org.junit.Test
 class BrandAssetLoaderTest {
     @Test fun `missing logo returns monogram without transport`() = runTest {
         var fetched = false
-        val loader = loader(source = BrandAssetSource { _, _ -> fetched = true; BrandAssetFetchResult.Rejected })
+        val loader = loader(source = BrandAssetSource { _, _ -> fetched = true; rejected() })
 
         assertEquals(BrandAsset.Monogram("B"), loader.load(configuration(logo = null)))
         assertTrue(!fetched)
@@ -50,7 +50,7 @@ class BrandAssetLoaderTest {
     }
 
     @Test fun `transport decode and unexpected failures use fallback`() = runTest {
-        val rejected = loader(source = BrandAssetSource { _, _ -> BrandAssetFetchResult.Rejected })
+        val rejected = loader(source = BrandAssetSource { _, _ -> rejected() })
         assertEquals(BrandAsset.Monogram("B"), rejected.load(configuration()))
 
         val nullDecode = loader(decoder = FakeDecoder(BrandImageBounds(10, 10, BrandImageFormat.PNG), null))
@@ -108,5 +108,7 @@ class BrandAssetLoaderTest {
     private companion object {
         val PNG = byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A)
         fun fetched(bytes: ByteArray, format: BrandImageFormat) = BrandAssetFetchResult.Fetched(bytes, format)
+        fun rejected(reason: BrandAssetRejection = BrandAssetRejection.HTTP_ERROR) =
+            BrandAssetFetchResult.Rejected(reason)
     }
 }

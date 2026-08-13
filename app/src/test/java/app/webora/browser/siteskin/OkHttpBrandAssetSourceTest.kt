@@ -31,6 +31,8 @@ class OkHttpBrandAssetSourceTest {
         result as BrandAssetFetchResult.Fetched
         assertArrayEquals(PNG, result.bytes)
         assertEquals(BrandImageFormat.PNG, result.format)
+        assertEquals(HTTP_OK, result.httpStatus)
+        assertEquals(0, result.redirects)
         assertEquals("/logo.png", server.takeRequest().path)
     }
 
@@ -40,12 +42,14 @@ class OkHttpBrandAssetSourceTest {
             enqueue(redirect(assetUrl(this, "/two")))
             enqueue(image(PNG, "image/png"))
         }
-        assertTrue(source().fetch(origin(success), assetUrl(success, "/start")) is BrandAssetFetchResult.Fetched)
+        val followed = source().fetch(origin(success), assetUrl(success, "/start"))
+        assertTrue(followed is BrandAssetFetchResult.Fetched)
+        assertEquals(2, (followed as BrandAssetFetchResult.Fetched).redirects)
 
         val crossOrigin = server()
         val rejected = server().apply { enqueue(redirect(assetUrl(crossOrigin, "/logo"))) }
-        assertSame(
-            BrandAssetFetchResult.Rejected,
+        assertRejected(
+            BrandAssetRejection.CROSS_ORIGIN_REDIRECT,
             source().fetch(origin(rejected), assetUrl(rejected, "/start")),
         )
         assertEquals(0, crossOrigin.requestCount)
@@ -53,14 +57,27 @@ class OkHttpBrandAssetSourceTest {
         val subdomain = server().apply {
             enqueue(redirect(assetUrl(this, "/logo").replace("example.test", "cdn.example.test")))
         }
-        assertSame(BrandAssetFetchResult.Rejected, source().fetch(origin(subdomain), assetUrl(subdomain, "/start")))
+        assertRejected(
+            BrandAssetRejection.CROSS_ORIGIN_REDIRECT,
+            source().fetch(origin(subdomain), assetUrl(subdomain, "/start")),
+        )
     }
 
     @Test fun `refuses a third redirect`() = runTest {
         val server = server().apply { repeat(3) { enqueue(redirect(assetUrl(this, "/next$it"))) } }
 
-        assertSame(BrandAssetFetchResult.Rejected, source().fetch(origin(server), assetUrl(server, "/start")))
+        val result = source().fetch(origin(server), assetUrl(server, "/start"))
+
+        assertRejected(BrandAssetRejection.REDIRECT_LIMIT, result)
+        assertEquals(2, (result as BrandAssetFetchResult.Rejected).redirects)
         assertEquals(3, server.requestCount)
+    }
+
+    /** A redirect with nothing to redirect to is malformed, not an origin change. */
+    @Test fun `refuses a redirect carrying no location`() = runTest {
+        val server = server().apply { enqueue(MockResponse().setResponseCode(302)) }
+
+        assertRejected(BrandAssetRejection.MALFORMED_URL, source().fetch(origin(server), assetUrl(server, "/start")))
     }
 
     @Test fun `rejects absent unsupported and spoofed media declarations`() = runTest {
@@ -71,7 +88,10 @@ class OkHttpBrandAssetSourceTest {
         }
 
         repeat(2) {
-            assertSame(BrandAssetFetchResult.Rejected, source().fetch(origin(server), assetUrl(server, "/logo")))
+            assertRejected(
+                BrandAssetRejection.UNSUPPORTED_MEDIA_TYPE,
+                source().fetch(origin(server), assetUrl(server, "/logo")),
+            )
         }
         val spoofed = source().fetch(origin(server), assetUrl(server, "/logo")) as BrandAssetFetchResult.Fetched
         assertEquals(BrandImageFormat.PNG, spoofed.format)
@@ -87,11 +107,39 @@ class OkHttpBrandAssetSourceTest {
             enqueue(image(PNG, "image/png").setHeadersDelay(1, TimeUnit.SECONDS))
         }
         val source = source(readTimeoutMillis = 50)
+        val expected = listOf(
+            BrandAssetRejection.OVERSIZED,
+            BrandAssetRejection.OVERSIZED,
+            BrandAssetRejection.HTTP_ERROR,
+        )
 
-        repeat(3) {
-            assertSame(BrandAssetFetchResult.Rejected, source.fetch(origin(server), assetUrl(server, "/logo")))
+        expected.forEach { reason ->
+            assertRejected(reason, source.fetch(origin(server), assetUrl(server, "/logo")))
         }
+        // Unavailable stays a bare object: no answer arrived, so there is no status to report.
         assertSame(BrandAssetFetchResult.Unavailable, source.fetch(origin(server), assetUrl(server, "/logo")))
+    }
+
+    /** The HTTP status travels with the refusal — it is the difference between a 404 and a 503. */
+    @Test fun `an HTTP failure reports the status the server sent`() = runTest {
+        val server = server().apply { enqueue(MockResponse().setResponseCode(404)) }
+
+        val result = source().fetch(origin(server), assetUrl(server, "/logo")) as BrandAssetFetchResult.Rejected
+
+        assertEquals(BrandAssetRejection.HTTP_ERROR, result.reason)
+        assertEquals(404, result.httpStatus)
+    }
+
+    @Test fun `refuses a non-HTTPS origin and an unusable logo URL before any request`() = runTest {
+        val server = server()
+
+        assertRejected(BrandAssetRejection.NOT_HTTPS, source().fetch("http://example.test", "https://example.test/l"))
+        assertRejected(BrandAssetRejection.MALFORMED_URL, source().fetch("https://example.test", "/logo.png"))
+        assertRejected(
+            BrandAssetRejection.CROSS_ORIGIN,
+            source().fetch("https://example.test", "https://cdn.example.test/logo.png"),
+        )
+        assertEquals(0, server.requestCount)
     }
 
     @Test fun `cancelling fetch cancels underlying call`() = runTest {
@@ -117,6 +165,18 @@ class OkHttpBrandAssetSourceTest {
     }
 
     private fun assertNullSignature(bytes: ByteArray) = assertEquals(null, brandImageFormat(bytes))
+
+    /**
+     * The assertion this ticket exists to make possible.
+     *
+     * Before `NET-004` every one of these cases produced the same `Rejected` object, so no test could
+     * tell an origin change from an oversized body from a 503 — which is exactly what a site owner
+     * could not tell either. Give two refusals the same reason and these calls start failing.
+     */
+    private fun assertRejected(expected: BrandAssetRejection, result: BrandAssetFetchResult) {
+        assertTrue("expected a rejection, got $result", result is BrandAssetFetchResult.Rejected)
+        assertEquals(expected, (result as BrandAssetFetchResult.Rejected).reason)
+    }
 
     private fun source(readTimeoutMillis: Long = 5_000) = OkHttpBrandAssetSource(
         OkHttpClient.Builder()
