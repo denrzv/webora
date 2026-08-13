@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -22,8 +23,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import app.webora.browser.R
+import app.webora.browser.design.WeboraSpacing
 
 private val onboardingPages = listOf(
     OnboardingPage(R.string.onboarding_browsing_title, R.string.onboarding_browsing_body),
@@ -39,27 +40,54 @@ internal fun OnboardingScreen(onComplete: () -> Unit, modifier: Modifier = Modif
     val page = onboardingPages[pageIndex]
     val lastPage = pageIndex == onboardingPages.lastIndex
     Column(
-        modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
+        modifier = modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(WeboraSpacing.GUTTER),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
         Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineLarge)
-        Spacer(Modifier.height(40.dp))
-        Text(stringResource(page.title), style = MaterialTheme.typography.headlineMedium, textAlign = TextAlign.Center)
-        Spacer(Modifier.height(12.dp))
-        Text(
-            stringResource(page.description),
-            style = MaterialTheme.typography.bodyLarge,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(Modifier.height(32.dp))
-        Text(stringResource(R.string.onboarding_step, pageIndex + 1, onboardingPages.size))
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(WeboraSpacing.LARGE))
+        OnboardingPageCard(page = page, pageIndex = pageIndex)
+        Spacer(Modifier.height(WeboraSpacing.LARGE))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             WeboraTextButton(onClick = onComplete) { Text(stringResource(R.string.onboarding_skip)) }
             WeboraButton(onClick = { if (lastPage) onComplete() else pageIndex += 1 }) {
                 Text(stringResource(if (lastPage) R.string.onboarding_start else R.string.onboarding_next))
             }
+        }
+    }
+}
+
+@Composable
+private fun OnboardingPageCard(page: OnboardingPage, pageIndex: Int) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceVariant,
+    ) {
+        Column(
+            modifier = Modifier.padding(WeboraSpacing.GUTTER),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(WeboraSpacing.MEDIUM),
+        ) {
+            Text(
+                stringResource(R.string.onboarding_step, pageIndex + 1, onboardingPages.size),
+                color = MaterialTheme.colorScheme.primary,
+                style = MaterialTheme.typography.labelLarge,
+            )
+            Text(
+                stringResource(page.title),
+                style = MaterialTheme.typography.headlineMedium,
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                stringResource(page.description),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyLarge,
+                textAlign = TextAlign.Center,
+            )
         }
     }
 }

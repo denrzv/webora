@@ -32,7 +32,7 @@ raw component is out of bounds in browser-owned UI rather than merely discourage
 |---|---|---|---|
 | The regular-chrome control row wraps instead of clipping | `BrowserScreen.AddressBar` — `FlowRow` | `BrowserFontScaleTest` | Evidence |
 | The three consent choices stay reachable | `BrowserScreen.SiteSkinConsentDialog` — `FlowRow` | `consentChoicesStayReachableAtDoubleFontScale` | Evidence |
-| Onboarding and privacy settings scroll | `OnboardingScreen`, `PrivacySettingsScreen` — `verticalScroll` | `BrowserFontScaleTest` | Evidence |
+| Home, onboarding and privacy settings scroll rather than clipping content | `HomeScreen` — `LazyColumn`; `OnboardingScreen`, `PrivacySettingsScreen` — `verticalScroll` | `HomeScreenTest`, `OnboardingScreenTest`, `PrivacySettingsScreenTest`; 200% runtime coverage remains a release evidence item | Evidence |
 | SiteSkin labels truncate without overlapping | `SiteSkinChrome.BoundedLabel`, `SiteSkinTopBar` minimum (not fixed) height | `SKIN-002` / `SKIN-003` instrumented tests | Evidence |
 
 Wrapping, not horizontal scrolling: a scrollable control row hides controls behind a gesture, which
@@ -82,15 +82,23 @@ deliberate reversal rather than a tidy-up.
 | Guarantee | Code | Test | Enforced by |
 |---|---|---|---|
 | No user-visible or accessible string is authored inline | `BrowserSurfaceConventionsTest` literal and named-argument rules; `SuggestedSite` and `OnboardingPage` hold `@StringRes` ids so a literal is a compile error | `browser copy resolves from resources`, `accessible names resolve from resources` | Gate |
-| The privacy `Switch` has a name | `PrivacySettingsScreen` — `contentDescription` | `PrivacySettingsScreenTest` | Evidence |
-| Reset actions are distinguishable per origin | `PrivacySettingsScreen` — the origin is in the button's visible label | `PrivacySettingsScreenTest` | Evidence |
+| The privacy setting row is one named switch with an explicit state | `PrivacySettingsScreen.GlobalSiteSkinRow` — row `toggleable`, `contentDescription`, and `stateDescription`; the nested visual `Switch` delegates its action | `globalToggleIsOneNamedControlWithExplicitState` | Evidence |
+| Reset actions are distinguishable per origin and the complete origin remains visible | `PrivacySettingsScreen.PermissionRow` — visible `origin.canonical`; compact reset action description includes the same canonical value | `canonicalOriginStaysVisibleAndNamesItsResetAction` | Evidence |
 | Decorative icons carry no accessible presence | `SiteSkinChrome.SiteSkinIcon`, `SiteSkinTopBar.BrandLogo` — `clearAndSetSemantics { }` | `SiteSkinTopBarTest`, `SiteSkinChromeTest` | Evidence |
 | An icon-only control cannot be nameless | `WeboraIconButton` takes a non-optional, non-nullable `contentDescription` | `an icon-only control cannot be nameless` — **negative control**: making it `String? = null` fails it | Gate |
 | The error page title is a heading | `BrowserScreen.BrowserErrorPage` — `semantics { heading() }` | — | *Known gap* |
 
-The origin is in the reset button's **visible label** rather than a `contentDescription` override
-because Compose merges a parent description with its child text instead of replacing it; the
-override would have produced a doubled announcement.
+The canonical origin is visible as the row's wrapping primary text. The compact reset action uses
+that same value in its accessible description, so control navigation remains unambiguous without
+turning the complete origin into a full-width filled button.
+
+## Refreshed browser-owned surfaces — UX-004
+
+| Surface | Preserved accessibility contract | Evidence |
+|---|---|---|
+| Home | Resource-backed search label and suggested-site actions; empty sections remain named; the list scrolls | `HomeScreenTest` |
+| Onboarding | All three step labels and Skip/Next/Start actions remain reachable in a vertical scroll container | `OnboardingScreenTest` |
+| Privacy settings | One named/stateful global toggle, visible canonical origins, origin-specific reset actions, explicit clear-data confirmation and Close action | `PrivacySettingsScreenTest` |
 
 ## Status messages — WCAG 2.2 §4.1.3 (AA)
 
