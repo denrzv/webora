@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -53,6 +54,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import app.webora.browser.R
+import app.webora.browser.design.WeboraSpacing
 import app.webora.browser.siteskin.ManifestDiscoveryCoordinator
 import app.webora.browser.siteskin.ManifestDiscoveryOutcome
 import app.webora.browser.siteskin.OkHttpManifestSource
@@ -467,16 +469,10 @@ internal fun RegularBrowser(
             val colors = SiteSkinTheme.from(integrated.configuration).scheme(isSystemInDarkTheme())
             SiteSkinTopBar(SiteSkinTopBarModel.from(integrated.configuration, brandAsset, security), colors)
         } else {
-            AddressBar(
+            BrowserChrome(
                 state = state,
                 onAddressChanged = { onObservation(BrowserObservation.AddressEdited(it)) },
                 onSubmit = { resolveAddressInput(state.addressText)?.let(controller::navigate) },
-                onBack = controller::goBack,
-                onForward = controller::goForward,
-                onReload = controller::reload,
-                onHome = onHome,
-                onSettings = onSettings,
-                onInspector = onInspector,
             )
         }
         BrowserStatusRegion(state)
@@ -509,6 +505,20 @@ internal fun RegularBrowser(
         if (integrated != null) {
             val chrome = SiteSkinChromeModel.from(integrated.configuration, state.displayedUrl)
             SiteSkinBottomNavigation(chrome.bottomNavigation, onSiteSelect)
+        } else {
+            BrowserNavigationDock(
+                canGoBack = state.canGoBack,
+                canGoForward = state.canGoForward,
+                onBack = controller::goBack,
+                onForward = controller::goForward,
+                onReload = controller::reload,
+                onHome = onHome,
+                onSettings = onSettings,
+                onInspector = onInspector,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = WeboraSpacing.GUTTER, vertical = WeboraSpacing.SMALL),
+            )
         }
     }
 }
@@ -549,120 +559,6 @@ private fun BrowserBackHandler(enabled: Boolean, controller: BrowserWebViewContr
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun AddressBar(
-    state: BrowserState,
-    onAddressChanged: (String) -> Unit,
-    onSubmit: () -> Unit,
-    onBack: () -> Unit,
-    onForward: () -> Unit,
-    onReload: () -> Unit,
-    onHome: () -> Unit,
-    onSettings: () -> Unit,
-    onInspector: () -> Unit,
-) {
-    var menuExpanded by remember { mutableStateOf(false) }
-    val security = securityPresentation(state.mode)
-    Column {
-        OutlinedTextField(
-            value = state.addressText,
-            onValueChange = onAddressChanged,
-            label = { Text(stringResource(R.string.address_label)) },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
-            keyboardActions = KeyboardActions(onGo = { onSubmit() }),
-            modifier = Modifier.fillMaxWidth(),
-        )
-        security?.let { BrowserSecurityIdentity(it) }
-        FlowRow {
-            BrowserButton(stringResource(R.string.back), state.canGoBack, onBack)
-            BrowserButton(stringResource(R.string.forward), state.canGoForward, onForward)
-            BrowserButton(stringResource(R.string.reload), true, onReload)
-            BrowserButton(stringResource(R.string.home), true, onHome)
-            WeboraButton(stringResource(R.string.more), { menuExpanded = true })
-            // The same list the integrated menu renders, so the two modes cannot disagree about
-            // which browser-owned commands this variant offers.
-            DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
-                browserMenuCommands().forEach { command ->
-                    DropdownMenuItem(
-                        text = { Text(browserMenuLabel(command)) },
-                        onClick = {
-                            menuExpanded = false
-                            when (command) {
-                                BrowserMenuCommand.PAGE_INFORMATION -> Unit
-                                BrowserMenuCommand.SETTINGS -> onSettings()
-                                BrowserMenuCommand.INSPECTOR -> onInspector()
-                            }
-                        },
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun BrowserErrorPage(
-    failure: BrowserLoadFailure,
-    onRetry: () -> Unit,
-    onHome: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Surface(modifier) {
-        Column {
-            Text(stringResource(R.string.error_title), modifier = Modifier.semantics { heading() })
-            failure.registrableDomain?.let { Text(it) }
-            Text(
-                stringResource(
-                    when (failure.kind) {
-                        LoadErrorKind.CONNECTION -> R.string.error_connection
-                        LoadErrorKind.NETWORK -> R.string.error_network
-                        LoadErrorKind.TLS -> R.string.error_tls
-                        LoadErrorKind.UNKNOWN -> R.string.error_unknown
-                    },
-                ),
-            )
-            WeboraButton(
-                label = stringResource(R.string.retry),
-                onClick = onRetry,
-                enabled = failure.retryUrl != null,
-                modifier = Modifier.testTag(BROWSER_ERROR_RETRY_TAG),
-            )
-            WeboraButton(
-                label = stringResource(R.string.home),
-                onClick = onHome,
-                modifier = Modifier.testTag(BROWSER_ERROR_HOME_TAG),
-            )
-        }
-    }
-}
-
-/**
- * The browser's identity claim, in regular mode.
- *
- * `ADR-006` says the registrable domain and TLS state are never suppressible. Assistive technology
- * reads the semantics tree rather than the pixels, so "visible" is only half of that guarantee —
- * this node is the other half, and it is the same one `SiteSkinTopBar` publishes in integrated
- * mode. Its inputs are the committed `SiteOrigin` only: never the editable address text, never
- * anything the page or a manifest supplied.
- */
-@Composable
-private fun BrowserSecurityIdentity(security: SecurityPresentation) {
-    val transport = if (security.transportSecurity == TransportSecurity.SECURE) {
-        stringResource(R.string.security_secure)
-    } else {
-        stringResource(R.string.security_not_secure)
-    }
-    val description = stringResource(R.string.security_description, transport, security.registrableDomain)
-    Row(
-        modifier = Modifier
-            .semantics { contentDescription = description }
-            .testTag(BROWSER_SECURITY_TAG),
-    ) {
-        Text(stringResource(R.string.security_identity, transport, security.registrableDomain))
-    }
-}
 
 /**
  * A persistent region that announces load progress and failure.

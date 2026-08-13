@@ -7,8 +7,10 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.unit.Density
 import app.webora.browser.siteskin.SiteSkinConsentModel
+import dev.siteskin.core.origin.SiteOrigin
 import org.junit.Rule
 import org.junit.Test
 
@@ -71,6 +73,33 @@ class BrowserFontScaleTest {
         compose.onNodeWithText("Allow").assertIsDisplayed()
         compose.onNodeWithText("Not now").assertIsDisplayed()
         compose.onNodeWithText("Never for this site").assertIsDisplayed()
+    }
+
+    @Test fun regularChromeStaysReachableAtDoubleFontScale() {
+        compose.setContent {
+            AtDoubleFontScale {
+                BrowserChrome(
+                    state = BrowserState(
+                        mode = BrowserMode.Regular(
+                            requireNotNull(SiteOrigin.parse("https://example.com")),
+                        ),
+                        displayedUrl = "https://example.com",
+                        addressText = "https://example.com",
+                        canGoBack = true,
+                    ),
+                    onAddressChanged = {}, onSubmit = {},
+                )
+                BrowserNavigationDock(
+                    canGoBack = true, canGoForward = false, onBack = {}, onForward = {},
+                    onReload = {}, onHome = {}, onSettings = {}, onInspector = {},
+                )
+            }
+        }
+
+        compose.onNodeWithContentDescription("Search or enter address").assertIsDisplayed()
+        compose.onNodeWithText("Secure · example.com").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Back").assertIsDisplayed()
+        compose.onNodeWithContentDescription("More").assertIsDisplayed()
     }
 
     @Composable
