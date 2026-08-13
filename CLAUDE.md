@@ -1148,3 +1148,48 @@ not relaxing it. Both facts are written down where someone will hit them.
 for a state the app reaches on its own is not staging it — `DEVX-003`'s refusal of a screenshot mode
 still stands, and this can only make the run refuse more, per `CI-005`. Asserting after the frame is
 saved means a failing run still publishes the picture of what went wrong.
+
+### The pill was a control value sitting on a container role (UX-009)
+
+Hosted runs **14** and **15** photographed the first-use consent dialog as a vertical stadium with
+`Allow https://denrzv.github.io to customise Webora?` clipped to `ow`. `ADR-011`'s enforcement point
+and `HARDEN-002`'s canonical origin, losing characters, on the screen a user reads before granting a
+website control of the chrome.
+
+**It took four facts, and no single one of them looks like a bug:**
+
+1. `WeboraRadius.PILL` is `999 dp` — correct, and `UX-002` says why.
+2. `WEBORA_SHAPES` put it on Material's `extraLarge` role.
+3. `DialogTokens.ContainerShape` is `CornerExtraLarge`, so **every** `AlertDialog` reads that role.
+4. `CornerBasedShape.createOutline` does not *reject* an over-large corner. It scales each adjacent
+   pair by `minDimension / sum`, so 999 dp on a 280 dp dialog resolves to exactly 140 — half the
+   width, the largest radius the box admits, which is the one that rounds its sides away entirely.
+
+Then `Surface` clips its content to that shape, and the heading is not overlapped but *removed*.
+
+**The old assertion could not have caught it, and the reason generalises.** `every shape corner comes
+from the compiled radii` asks where a value came from; `999 dp` is a declared token, so the defect
+satisfied it. Fitness is a different question from provenance, and the answer changes with the box:
+999 dp is a good number until something 280 dp wide reads it. The new assertion therefore runs the
+real `createOutline` at Material's `DialogMinWidth` and bounds the *resolved* radius at a quarter of
+the width — inside the degenerate half, since at half a side is already fully round. A second,
+structural assertion names the cause directly, so a returning pill fails as itself rather than as a
+number that happens to be too big.
+
+`EXTRA_LARGE` is `28 dp` and deliberately not an alias of `LARGE`'s 20: a scale whose top two roles
+are the same number invites the next reader to collapse them, and the collapse lands back on the role
+`AlertDialog` has to read. **A control that wants a pill names `WeboraRadius.PILL` itself** — the
+address field on Home now does, as `BrowserChrome` already did.
+
+**The instrumented suite was green throughout and is not the gate.** Clipping happens in the parent's
+draw while the semantics tree keeps the node's full text and unclipped bounds, so
+`assertIsDisplayed()` passes over a heading that is not there — `CI-003`'s "semantics precede pixels"
+arriving one layer up, in a suite rather than a harness. `SiteSkinConsentDialogTest`'s new case
+documents `HARDEN-002`'s requirement and says in its own comment that it cannot detect the
+regression. It also does not force 360 dp: an `AlertDialog` occupies a separate window that a
+composition size override does not size, and the screenshot journey's emulator is that width anyway.
+
+The blast radius was every dialog in the app — consent, external-URL, external-navigation,
+clear-browsing-data and the debug inspector — because a default reaches everything that does not
+override it. Fixing the role fixed all five; a `shape =` argument on the consent dialog would have
+fixed the frame and left the collision live.
