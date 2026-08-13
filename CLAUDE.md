@@ -1118,8 +1118,11 @@ The exclusions carry the argument and each has a test: a rejection means the ser
 browser declined, so retrying hammers a site whose logo legitimately 404s and changes nothing; the
 same bytes decode the same way; an undeclared logo has nothing to request. `NET-003`'s caps,
 allow-list, same-origin recheck and monogram fallback are untouched, and its tests pass unedited —
-this changes how many times the browser asks, never what it will accept. Run 17 (`ea57ef5d`) then
-recorded `stage=DECODED httpStatus=200 pixels=512x512 attempts=1`.
+this changes how many times the browser asks, never what it will accept. Runs 17 and 18 (`ea57ef5d`) then
+recorded `stage=DECODED httpStatus=200 pixels=512x512 attempts=1`, and run 18's frame shows the
+reference integration's flower in the 40 dp slot beside `Secure · denrzv.github.io`. `attempts=1` in
+both: neither run's network blinked, so the retry is justified by run 16's recorded failure and
+pinned by unit tests — not by a hosted run that never exercised it.
 
 **The recorder is process-scoped now, which is what its own KDoc always claimed.** It was built
 inside a `remember`, so a configuration change discarded whatever a developer was mid-way through

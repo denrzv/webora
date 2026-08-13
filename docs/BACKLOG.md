@@ -656,8 +656,10 @@ start, so the network came back 6.4 s later and nothing ever asked again.
 
 **Fixed** by retrying `TRANSPORT_UNAVAILABLE` and only that — three attempts, 1 s then 2 s apart.
 A rejection is not retried (the server answered), a decode failure is not (the same bytes decode the
-same way), an undeclared logo is not (nothing to request). Run **17** (`ea57ef5d`) then recorded
-`stage=DECODED httpStatus=200 pixels=512x512 attempts=1`.
+same way), an undeclared logo is not (nothing to request). Runs **17** and **18** (`ea57ef5d`) then recorded
+`stage=DECODED httpStatus=200 pixels=512x512 attempts=1`, and run **18**'s
+`03-siteskin-integrated.png` shows the flower in the 40 dp slot beside
+`Secure · denrzv.github.io`.
 
 **Also shipped, and the reason the question was answerable at all:** `BrandAssetRejection` and
 `BrandAssetStage`, a brand-asset section in the debug inspector, and the outcome written into the
@@ -695,8 +697,8 @@ a device-wide stall rather than the cause.
 
 **What makes it worth a ticket rather than a re-run:** it is now four runs out of nine, it costs
 twelve minutes each time, and the journey is the only evidence path for tickets whose acceptance is a
-frame. `NET-004` shipped its fix with the pipeline proven by the diagnostics artifact
-(`stage=DECODED httpStatus=200 pixels=512x512`) and its acceptance frame outstanding.
+frame. `NET-004` needed three runs to land one clean frame; runs 16 and 17 were both refused, and run 18
+passed on the first capture attempt at 478 ms — so the difference is the device, not the harness.
 
 **Scope**
 - Establish what the emulator is doing between boot-ready and frame 03 — GMS package churn and dexopt
