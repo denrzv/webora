@@ -540,7 +540,10 @@ friends does not relax them.
 
 ### `UX-009` — Consent dialog renders as a circle and clips its own heading
 
-**Status:** CLOSED — fixed.
+**Status:** CLOSED — fixed. **The confirming hosted frame is still outstanding**: run **19**
+(`31733873897`, `8ee78cc`) overran its own 40-minute timeout inside the journey step and uploaded
+nothing at all. The cause is proven and measured on the JVM; the picture has not been taken. See
+`reports/qa/UX-009.md`.
 
 **The mechanism, and none of its four steps looks like a bug on its own.** `WEBORA_SHAPES` put
 `WeboraRadius.PILL` (999 dp) on Material's `extraLarge` role; `DialogTokens.ContainerShape` is
