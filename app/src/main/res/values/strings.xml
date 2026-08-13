@@ -90,7 +90,6 @@
     <string name="onboarding_start">Start browsing</string>
     <!-- Decorative glyphs. Kept in resources so the literal rule has no exemption to erode, and
          marked untranslatable because they are iconography rather than copy. -->
-    <string name="siteskin_quick_actions_glyph" translatable="false">+</string>
     <string name="siteskin_security_separator" translatable="false">" \u00B7 "</string>
     <string name="browser_loading">Loading page</string>
     <string name="browser_loaded">Page loaded</string>

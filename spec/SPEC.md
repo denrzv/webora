@@ -382,11 +382,16 @@ rejecting the manifest.
 `menu` is an OPTIONAL array with the same item shape as `bottomNavigation`. It is surfaced through
 the `open_menu` action rather than rendered directly, and carries its own limit ([§8](#8-limits)).
 
-`icon` names are drawn from a browser-provided set and MUST match `^[a-z][a-z0-9_]{0,31}$`. The
-pattern is the security requirement — it structurally prevents an icon field from carrying a URL or
-any other resource reference. An icon name the browser does not recognise MUST fall back to a
-generic glyph with `SS-W-ICON-UNKNOWN`; it MUST NOT reject the manifest, for the same reason an
-unknown action type does not (see [§7](#7-actions)).
+`icon` names are drawn from a browser-provided set and MUST match `^[a-z][a-z0-9_]{0,31}$`. The v1
+semantic vocabulary is `home`, `catalog`, `flower`, `grid_view`, `shopping_cart`, `person`, `call`,
+`share`, `menu`, and `search`. `grid_view` is the compatibility spelling for a general catalogue;
+new integrations SHOULD use `catalog`, or `flower` when that domain-specific cue is accurate. These
+names select bundled browser artwork — they are not Android resource names.
+
+The pattern is the security requirement: it structurally prevents an icon field from carrying a URL
+or any other resource reference. An icon name the browser does not recognise MUST fall back to a
+generic browser-owned icon with `SS-W-ICON-UNKNOWN`; it MUST NOT reject the manifest, for the same
+reason an unknown action type does not (see [§7](#7-actions)).
 
 ## 6. There is no `showDomain`
 

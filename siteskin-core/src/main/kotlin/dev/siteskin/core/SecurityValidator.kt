@@ -210,4 +210,6 @@ private const val GENERIC_ICON = "generic"
 private val ACTION_TYPES = setOf(
     "internal_url", "external_url", "phone", "email", "map", "share", "home", "refresh", "open_menu",
 )
-private val ICONS = setOf("home", "grid_view", "shopping_cart", "person", "call", "share", "menu")
+private val ICONS = setOf(
+    "home", "catalog", "flower", "grid_view", "shopping_cart", "person", "call", "share", "menu", "search",
+)

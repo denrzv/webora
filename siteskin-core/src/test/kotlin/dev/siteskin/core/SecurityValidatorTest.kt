@@ -42,6 +42,23 @@ class SecurityValidatorTest {
         )
     }
 
+    @Test fun `semantic icon vocabulary passes while resource-like input falls back`() {
+        val icons = listOf(
+            "home", "catalog", "flower", "grid_view", "shopping_cart", "person", "call", "share", "menu", "search",
+            "ic_launcher",
+        )
+        val items = icons.mapIndexed { index, icon ->
+            """{"id":"item-$index","label":"Item $index","icon":"$icon","action":{"type":"refresh"}}"""
+        }.joinToString(",")
+
+        val result = validate(
+            """{"schemaVersion":"1.0","site":{"id":"shop","name":"Shop"},"menu":[$items]}""",
+        )
+
+        assertEquals(icons.dropLast(1) + "generic", result.configuration!!.menu!!.map { it.icon })
+        assertEquals(listOf(DiagnosticCode.ICON_UNKNOWN), result.diagnostics.map { it.code })
+    }
+
     @Test fun `diagnostics follow normalization stages across one manifest`() {
         val items = (1..8).joinToString(",") { index ->
             val id = if (index == 3) "item-2" else "item-$index"

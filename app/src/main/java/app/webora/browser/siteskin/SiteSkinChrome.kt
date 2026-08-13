@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -17,6 +18,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -62,12 +64,11 @@ internal fun SiteSkinQuickActions(
     if (items.isEmpty()) return
     var expanded by remember { mutableStateOf(false) }
     val description = stringResource(R.string.siteskin_quick_actions)
-    val glyph = stringResource(R.string.siteskin_quick_actions_glyph)
     Column(modifier.testTag(SITESKIN_QUICK_ACTIONS_TAG)) {
         WeboraFloatingActionButton(
             onClick = { expanded = true },
             modifier = Modifier.semantics { contentDescription = description },
-        ) { Text(glyph) }
+        ) { SiteSkinIcon(items.first().icon) }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             items.take(MAX_VISIBLE_QUICK_ACTIONS).forEach { item ->
                 DropdownMenuItem(
@@ -144,16 +145,28 @@ private fun BoundedLabel(label: String) {
 
 @Composable
 private fun SiteSkinIcon(name: String?) {
-    val glyph = when (name) {
-        "home" -> "⌂"
-        "grid_view" -> "▦"
-        "shopping_cart" -> "▣"
-        "person" -> "●"
-        "call" -> "☎"
-        else -> "•"
-    }
-    Text(glyph, modifier = Modifier.clearAndSetSemantics { })
+    Icon(
+        painter = painterResource(siteSkinIconResource(name)),
+        contentDescription = null,
+        modifier = Modifier.clearAndSetSemantics { },
+    )
 }
+
+private fun siteSkinIconResource(name: String?): Int =
+    SITE_SKIN_ICON_RESOURCES[name] ?: R.drawable.ic_siteskin_generic
+
+private val SITE_SKIN_ICON_RESOURCES = mapOf(
+    "home" to R.drawable.ic_home,
+    "catalog" to R.drawable.ic_siteskin_catalog,
+    "grid_view" to R.drawable.ic_siteskin_catalog,
+    "flower" to R.drawable.ic_siteskin_flower,
+    "shopping_cart" to R.drawable.ic_siteskin_shopping_cart,
+    "person" to R.drawable.ic_siteskin_person,
+    "call" to R.drawable.ic_siteskin_call,
+    "share" to R.drawable.ic_siteskin_share,
+    "menu" to R.drawable.ic_menu,
+    "search" to R.drawable.ic_search,
+)
 
 internal const val SITESKIN_BOTTOM_NAV_TAG = "siteskin_bottom_navigation"
 internal const val SITESKIN_QUICK_ACTIONS_TAG = "siteskin_quick_actions"
