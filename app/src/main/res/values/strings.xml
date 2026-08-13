@@ -58,9 +58,11 @@
     <string name="siteskin_never">Never for this site</string>
     <string name="privacy_settings_title">Privacy settings</string>
     <string name="siteskin_global_toggle">Allow SiteSkin customisation</string>
+    <string name="siteskin_global_summary">Supported sites can offer native-style navigation after you approve them.</string>
     <string name="site_permissions">Site permissions</string>
     <string name="no_site_permissions">No saved SiteSkin decisions</string>
     <string name="reset_site_permission">Reset decision for %1$s</string>
+    <string name="reset">Reset</string>
     <string name="clear_browsing_data">Clear browsing data</string>
     <string name="clear_browsing_data_message">Clear cookies, site storage, caches, form data, history, and saved SiteSkin decisions? Webora settings stay unchanged.</string>
     <string name="clear_data">Clear data</string>
@@ -68,6 +70,7 @@
     <string name="browsing_data_cleared">Browsing data cleared</string>
     <string name="browsing_data_clear_incomplete">Some browsing data could not be cleared</string>
     <string name="home_recent_title">Recent sites</string>
+    <string name="home_welcome_message">Your browser, ready for the whole web.</string>
     <string name="home_recent_empty">Sites you visit will appear here.</string>
     <string name="home_favourites_title">Favourites</string>
     <string name="home_favourites_empty">Your saved sites will appear here.</string>

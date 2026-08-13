@@ -11,8 +11,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -22,18 +24,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.unit.dp
 import app.webora.browser.R
+import app.webora.browser.design.WeboraRadius
+import app.webora.browser.design.WeboraSpacing
 
 @Composable
 internal fun HomeScreen(onNavigate: (String) -> Unit, modifier: Modifier = Modifier) {
     var address by rememberSaveable { mutableStateOf("") }
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        contentPadding = PaddingValues(WeboraSpacing.GUTTER),
+        verticalArrangement = Arrangement.spacedBy(WeboraSpacing.LARGE),
     ) {
-        item { Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineLarge) }
+        item { HomeHeader() }
         item {
             OutlinedTextField(
                 value = address,
@@ -42,6 +45,7 @@ internal fun HomeScreen(onNavigate: (String) -> Unit, modifier: Modifier = Modif
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
                 keyboardActions = KeyboardActions(onGo = { resolveAddressInput(address)?.let(onNavigate) }),
+                shape = MaterialTheme.shapes.extraLarge,
                 modifier = Modifier.fillMaxWidth(),
             )
         }
@@ -49,16 +53,43 @@ internal fun HomeScreen(onNavigate: (String) -> Unit, modifier: Modifier = Modif
         item { EmptyHomeSection(R.string.home_favourites_title, R.string.home_favourites_empty) }
         item { Text(stringResource(R.string.home_suggested_title), style = MaterialTheme.typography.titleLarge) }
         items(defaultSuggestedSites, key = SuggestedSite::url) { site ->
-            val name = stringResource(site.nameRes)
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(name, style = MaterialTheme.typography.titleMedium)
-                    Text(stringResource(site.descriptionRes))
-                    WeboraButton(
-                        label = stringResource(R.string.home_open_site, name),
-                        onClick = { resolveAddressInput(site.url)?.let(onNavigate) },
-                    )
-                }
+            SuggestedSiteCard(site = site, onNavigate = onNavigate)
+        }
+    }
+}
+
+@Composable
+private fun HomeHeader() {
+    Column(verticalArrangement = Arrangement.spacedBy(WeboraSpacing.BASE)) {
+        Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineLarge)
+        Text(
+            stringResource(R.string.home_welcome_message),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodyMedium,
+        )
+    }
+}
+
+@Composable
+private fun SuggestedSiteCard(site: SuggestedSite, onNavigate: (String) -> Unit) {
+    val name = stringResource(site.nameRes)
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+    ) {
+        Column(
+            Modifier.padding(WeboraSpacing.LARGE),
+            verticalArrangement = Arrangement.spacedBy(WeboraSpacing.SMALL),
+        ) {
+            Text(name, style = MaterialTheme.typography.titleMedium)
+            Text(
+                stringResource(site.descriptionRes),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            WeboraTextButton(onClick = { resolveAddressInput(site.url)?.let(onNavigate) }) {
+                Text(stringResource(R.string.home_open_site, name))
             }
         }
     }
@@ -66,8 +97,21 @@ internal fun HomeScreen(onNavigate: (String) -> Unit, modifier: Modifier = Modif
 
 @Composable
 private fun EmptyHomeSection(titleRes: Int, messageRes: Int) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(stringResource(titleRes), style = MaterialTheme.typography.titleLarge)
-        Text(stringResource(messageRes), style = MaterialTheme.typography.bodyMedium)
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(WeboraRadius.LARGE),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+    ) {
+        Column(
+            modifier = Modifier.padding(WeboraSpacing.LARGE),
+            verticalArrangement = Arrangement.spacedBy(WeboraSpacing.BASE),
+        ) {
+            Text(stringResource(titleRes), style = MaterialTheme.typography.titleMedium)
+            Text(
+                stringResource(messageRes),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
     }
 }

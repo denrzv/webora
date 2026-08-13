@@ -984,3 +984,12 @@ Release variants stay unreachable by two independent mechanisms: the command is 
 offered list, and the release `SiteSkinInspectorHost` ignores its visibility flag. Neither leans on
 the other, and `assertInspectorAbsentFromReleaseVariants` still checks compiled output for the
 panel's absence **and** the stub's presence.
+
+### Refreshed home, onboarding, and settings (UX-004)
+
+The remaining browser-owned entry and settings surfaces consume `WeboraTheme` while preserving their
+existing state/callback seams. Home still resolves typed and compiled suggestion destinations at the
+navigation boundary. Onboarding remains a saveable three-page scrollable flow. Privacy settings uses
+one toggleable row for global SiteSkin state and renders each complete `SiteOrigin.canonical` as
+wrapping text beside a compact reset action whose accessible description includes that same origin.
+Manifest text, colours, icons, and actions have no path into these surfaces.
