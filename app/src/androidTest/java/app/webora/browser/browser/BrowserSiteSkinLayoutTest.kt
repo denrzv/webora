@@ -1,7 +1,7 @@
 package app.webora.browser.browser
 
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
+import app.webora.browser.design.WeboraTheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -32,7 +32,7 @@ class BrowserSiteSkinLayoutTest {
         )
 
         composeRule.setContent {
-            MaterialTheme {
+            WeboraTheme {
                 RegularBrowser(
                     state = state,
                     controller = BrowserWebViewController(),
