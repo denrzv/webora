@@ -69,6 +69,39 @@ private fun InspectorOriginSection(snapshot: InspectorSnapshot) {
     InspectorRow(stringResource(R.string.inspector_global_preference), snapshot.siteSkinEnabled.toString())
     InspectorRow(stringResource(R.string.inspector_consent), snapshot.consent?.name.orAbsent())
     InspectorRow(stringResource(R.string.inspector_brand_asset), snapshot.brandAsset.name)
+    InspectorBrandAssetRows(snapshot.brandAssetTrace)
+}
+
+/**
+ * Why the slot is showing what it is showing.
+ *
+ * `NET-003` makes a monogram the correct output of every failure, so the row above cannot tell a site
+ * owner whether their logo was refused, never arrived, or has not finished arriving. These rows are
+ * the answer, and every value in them is a closed browser-owned enum or a number — a header value, a
+ * server message or a URL has no path into this section.
+ */
+@Composable
+private fun InspectorBrandAssetRows(trace: BrandAssetTrace?) {
+    InspectorRow(
+        stringResource(R.string.inspector_brand_asset_stage),
+        trace?.stage?.name ?: stringResource(R.string.inspector_brand_asset_pending),
+    )
+    trace ?: return
+    InspectorRow(stringResource(R.string.inspector_brand_asset_rejection), trace.rejection?.name.orAbsent())
+    InspectorRow(stringResource(R.string.inspector_http_status), trace.httpStatus?.toString().orAbsent())
+    InspectorRow(stringResource(R.string.inspector_redirects), trace.redirects.toString())
+    InspectorRow(
+        stringResource(R.string.inspector_brand_asset_pixels),
+        if (trace.width == null || trace.height == null) {
+            stringResource(R.string.inspector_absent)
+        } else {
+            stringResource(R.string.inspector_brand_asset_pixels_value, trace.width, trace.height)
+        },
+    )
+    InspectorRow(
+        stringResource(R.string.inspector_brand_asset_elapsed),
+        stringResource(R.string.inspector_brand_asset_elapsed_value, trace.elapsedMillis),
+    )
 }
 
 @Composable

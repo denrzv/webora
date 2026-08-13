@@ -64,6 +64,7 @@ import app.webora.browser.siteskin.candidateDisposition
 import app.webora.browser.siteskin.isCurrent
 import app.webora.browser.siteskin.BrandAsset
 import app.webora.browser.siteskin.BrandAssetLoader
+import app.webora.browser.siteskin.publishesBrandAsset
 import app.webora.browser.siteskin.BitmapBrandAssetDecoder
 import app.webora.browser.siteskin.OkHttpBrandAssetSource
 import app.webora.browser.siteskin.SiteSkinBottomNavigation
@@ -82,6 +83,7 @@ import app.webora.browser.siteskin.browserMenuLabel
 import app.webora.browser.inspector.InspectorBrowserState
 import app.webora.browser.inspector.SiteSkinInspectorHost
 import app.webora.browser.inspector.SiteSkinTraceRecorder
+import app.webora.browser.inspector.BrandAssetTraceSink
 import app.webora.browser.inspector.SiteSkinTraceSink
 import app.webora.browser.inspector.inspectorRecorder
 import app.webora.browser.inspector.rememberInspectorSnapshot
@@ -139,6 +141,14 @@ internal fun BrowserScreen(
             }
         } ?: SiteSkinTraceSink.None
     }
+    val brandAssetSink = remember(traceRecorder) {
+        traceRecorder?.let { recorder ->
+            BrandAssetTraceSink { origin, trace ->
+                recorder.record(origin, trace)
+                traceVersion += 1
+            }
+        } ?: BrandAssetTraceSink.None
+    }
     val manifestDiscovery = rememberManifestDiscovery(scope, traceSink) { outcome ->
         val origin = when (val mode = state.mode) {
             BrowserMode.Home -> null
@@ -163,9 +173,10 @@ internal fun BrowserScreen(
         }
         if (configuration != null) {
             val loaded = assetLoader.load(configuration)
-            if ((state.mode as? BrowserMode.Integrated)?.configuration === configuration) {
-                brandAsset = loaded.asset
-            }
+            // Recorded whether or not it publishes: a load dropped for being superseded is one of
+            // the things a developer needs to be able to see, and the guard is what would hide it.
+            brandAssetSink.record(configuration.origin, loaded.trace)
+            if (publishesBrandAsset(state.mode, configuration)) brandAsset = loaded.asset
         }
     }
 

@@ -1,6 +1,7 @@
 package app.webora.browser.inspector
 
 import app.webora.browser.siteskin.BrandAsset
+import app.webora.browser.siteskin.BrandAssetRejection
 import app.webora.browser.siteskin.SiteConsentDecision
 import dev.siteskin.core.SiteSkinValidationOutcome
 import dev.siteskin.core.SiteSkinValidator
@@ -128,6 +129,30 @@ class InspectorSnapshotTest {
         )
     }
 
+    /**
+     * The row the ticket exists for. A monogram is `NET-003`'s correct output for every failure, so
+     * the kind above says nothing about which one occurred; the stage and its rejection do.
+     */
+    @Test fun `the brand asset stage and its rejection reach the snapshot`() {
+        val trace = BrandAssetTrace(
+            stage = BrandAssetStage.TRANSPORT_REJECTED,
+            rejection = BrandAssetRejection.CROSS_ORIGIN_REDIRECT,
+            httpStatus = 302,
+            redirects = 1,
+        )
+
+        val snapshot = snapshot(null, brandAssetTrace = trace)
+
+        assertEquals(BrandAssetStage.TRANSPORT_REJECTED, snapshot.brandAssetTrace?.stage)
+        assertEquals(BrandAssetRejection.CROSS_ORIGIN_REDIRECT, snapshot.brandAssetTrace?.rejection)
+        assertEquals(302, snapshot.brandAssetTrace?.httpStatus)
+    }
+
+    /** A load that has not finished is absent, not a stage that claims something happened. */
+    @Test fun `an untraced brand asset load has no stage at all`() {
+        assertNull(snapshot(null, brandAssetTrace = null).brandAssetTrace)
+    }
+
     @Test fun `the origin is reported in the canonical form the browser keys decisions under`() {
         assertEquals("https://shop.example", snapshot(null).origin)
     }
@@ -140,6 +165,7 @@ class InspectorSnapshotTest {
         consent: SiteConsentDecision? = SiteConsentDecision.ALLOW,
         brandAsset: BrandAsset? = BrandAsset.Monogram("S"),
         record: ManifestTraceRecord? = record(TraceValidationResult.ACCEPTED),
+        brandAssetTrace: BrandAssetTrace? = null,
     ): InspectorSnapshot = inspectorSnapshot(
         InspectorBrowserState(
             origin = SiteOrigin.parse(pageUrl),
@@ -151,6 +177,7 @@ class InspectorSnapshotTest {
             darkTheme = darkTheme,
         ),
         record,
+        brandAssetTrace,
     )
 
     private fun record(result: TraceValidationResult) = ManifestTraceRecord(

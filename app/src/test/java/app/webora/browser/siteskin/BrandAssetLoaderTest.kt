@@ -1,6 +1,7 @@
 package app.webora.browser.siteskin
 
 import android.graphics.Bitmap
+import app.webora.browser.inspector.BrandAssetStage
 import dev.siteskin.core.SiteSkinValidationOutcome
 import dev.siteskin.core.SiteSkinValidator
 import io.mockk.mockk

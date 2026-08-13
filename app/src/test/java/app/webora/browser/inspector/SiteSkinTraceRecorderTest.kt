@@ -49,12 +49,60 @@ class SiteSkinTraceRecorderTest {
     fun `clearing drops every trace`() {
         val recorder = SiteSkinTraceRecorder()
         recorder.record(record(ORIGIN))
+        recorder.record(ORIGIN, brandAsset())
 
         recorder.clear()
 
         assertNull(recorder.latest(ORIGIN))
+        assertNull(recorder.latestBrandAsset(ORIGIN))
         assertTrue(recorder.origins().isEmpty())
     }
+
+    @Test
+    fun `brand asset traces are kept per origin and replaced by the latest`() {
+        val recorder = SiteSkinTraceRecorder()
+
+        recorder.record(ORIGIN, brandAsset(BrandAssetStage.TRANSPORT_UNAVAILABLE))
+        recorder.record(ORIGIN, brandAsset(BrandAssetStage.DECODED))
+        recorder.record("https://other.example", brandAsset(BrandAssetStage.NOT_DECLARED))
+
+        assertEquals(BrandAssetStage.DECODED, recorder.latestBrandAsset(ORIGIN)?.stage)
+        assertEquals(BrandAssetStage.NOT_DECLARED, recorder.latestBrandAsset("https://other.example")?.stage)
+        assertNull(recorder.latestBrandAsset("https://third.example"))
+    }
+
+    /**
+     * The two maps share one eviction rule, so a developer who traced nine origins keeps the same
+     * eight of each rather than eight of one and nine of the other.
+     */
+    @Test
+    fun `brand asset retention is bounded by the same limit`() {
+        val recorder = SiteSkinTraceRecorder(maxOrigins = 2)
+
+        listOf("a", "b", "c").forEach { recorder.record("https://$it.example", brandAsset()) }
+
+        assertNull(recorder.latestBrandAsset("https://a.example"))
+        assertEquals(BrandAssetStage.DECODED, recorder.latestBrandAsset("https://c.example")?.stage)
+    }
+
+    @Test
+    fun `a brand asset trace advances the version too`() {
+        val recorder = SiteSkinTraceRecorder()
+        val initial = recorder.version
+
+        recorder.record(ORIGIN, brandAsset())
+
+        assertTrue(recorder.version > initial)
+    }
+
+    @Test
+    fun `the discarding brand asset sink keeps nothing`() {
+        BrandAssetTraceSink.None.record(ORIGIN, brandAsset())
+
+        assertTrue(BrandAssetTraceSink.None::class.java.declaredFields.none { !it.isSynthetic })
+    }
+
+    private fun brandAsset(stage: BrandAssetStage = BrandAssetStage.DECODED) = BrandAssetTrace(stage)
 
     @Test
     fun `every write advances the version so a caller can observe it`() {
@@ -80,6 +128,22 @@ class SiteSkinTraceRecorderTest {
             ).filter { it.type.isArray }
 
         assertTrue("trace records must not retain arrays of manifest bytes: $offenders", offenders.isEmpty())
+    }
+
+    /**
+     * The brand-asset trace is displayed by the panel and written into the screenshot job's
+     * diagnostics artifact, so anything it can hold is something a website can put in front of a
+     * developer. Numbers and closed enums only — reflected rather than listed, so a field added later
+     * is covered without anyone remembering to come back here.
+     */
+    @Test
+    fun `a brand asset trace can carry no remote text`() {
+        val offenders = BrandAssetTrace::class.java.declaredFields
+            .filterNot { it.isSynthetic }
+            .filterNot { it.type.isPrimitive || it.type.isEnum }
+            .filterNot { it.type == Integer::class.java || it.type == java.lang.Long::class.java }
+
+        assertTrue("brand asset traces must hold numbers and closed enums only: $offenders", offenders.isEmpty())
     }
 
     @Test

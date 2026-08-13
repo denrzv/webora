@@ -21,6 +21,11 @@
     <string name="inspector_global_preference">SiteSkin preference</string>
     <string name="inspector_consent">Stored decision</string>
     <string name="inspector_brand_asset">Brand asset</string>
+    <string name="inspector_brand_asset_stage">Brand asset stage</string>
+    <string name="inspector_brand_asset_rejection">Logo refused because</string>
+    <string name="inspector_brand_asset_pixels">Decoded size</string>
+    <string name="inspector_brand_asset_elapsed">Load took</string>
+    <string name="inspector_brand_asset_pending">Still loading</string>
 
     <string name="inspector_manifest_url">Manifest URL</string>
     <string name="inspector_transport_outcome">Outcome</string>
@@ -48,4 +53,6 @@
     <string name="inspector_no_match">No match</string>
     <string name="inspector_count_value">%1$d of %2$d</string>
     <string name="inspector_color_value">%1$s applied, %2$s trusted</string>
+    <string name="inspector_brand_asset_pixels_value">%1$d × %2$d</string>
+    <string name="inspector_brand_asset_elapsed_value">%1$d ms</string>
 </resources>
