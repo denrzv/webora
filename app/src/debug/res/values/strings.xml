@@ -14,15 +14,19 @@
     <string name="inspector_section_origin">Origin</string>
     <string name="inspector_section_transport">Transport</string>
     <string name="inspector_section_validation">Validation</string>
+    <string name="inspector_section_brand_asset">Brand asset</string>
     <string name="inspector_section_applied">Applied chrome</string>
 
     <string name="inspector_origin">Canonical origin</string>
     <string name="inspector_activation">Activation</string>
     <string name="inspector_global_preference">SiteSkin preference</string>
     <string name="inspector_consent">Stored decision</string>
-    <string name="inspector_brand_asset">Brand asset</string>
-    <string name="inspector_brand_asset_stage">Brand asset stage</string>
-    <string name="inspector_brand_asset_rejection">Logo refused because</string>
+
+    <string name="inspector_brand_asset">Slot shows</string>
+    <string name="inspector_brand_asset_stage">Produced by</string>
+    <string name="inspector_brand_asset_rejection">Refused because</string>
+    <string name="inspector_brand_asset_status">HTTP status</string>
+    <string name="inspector_brand_asset_redirects">Redirects followed</string>
     <string name="inspector_brand_asset_pixels">Decoded size</string>
     <string name="inspector_brand_asset_elapsed">Load took</string>
     <string name="inspector_brand_asset_pending">Still loading</string>

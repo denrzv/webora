@@ -53,6 +53,7 @@ private fun InspectorBody(snapshot: InspectorSnapshot) {
     ) {
         Text(stringResource(R.string.inspector_read_only))
         InspectorOriginSection(snapshot)
+        InspectorBrandAssetSection(snapshot)
         snapshot.record?.let { record ->
             InspectorTransportSection(record.transport)
             InspectorValidationSection(record.validation)
@@ -68,28 +69,34 @@ private fun InspectorOriginSection(snapshot: InspectorSnapshot) {
     InspectorRow(stringResource(R.string.inspector_activation), snapshot.activation.name)
     InspectorRow(stringResource(R.string.inspector_global_preference), snapshot.siteSkinEnabled.toString())
     InspectorRow(stringResource(R.string.inspector_consent), snapshot.consent?.name.orAbsent())
-    InspectorRow(stringResource(R.string.inspector_brand_asset), snapshot.brandAsset.name)
-    InspectorBrandAssetRows(snapshot.brandAssetTrace)
 }
 
 /**
- * Why the slot is showing what it is showing.
+ * Why the 40 dp slot is showing what it is showing.
  *
- * `NET-003` makes a monogram the correct output of every failure, so the row above cannot tell a site
- * owner whether their logo was refused, never arrived, or has not finished arriving. These rows are
- * the answer, and every value in them is a closed browser-owned enum or a number — a header value, a
+ * Its own section rather than rows appended to the origin's, because `HTTP status` and
+ * `Redirects followed` already appear under `Transport` and mean the *manifest's* there. Two
+ * identically labelled numbers about two different requests, in one scrolling panel, is a way to
+ * misdiagnose rather than a way to diagnose.
+ *
+ * `NET-003` makes a monogram the correct output of every failure, so the kind alone cannot tell a
+ * site owner whether their logo was refused, never arrived, or has not finished arriving. The stage
+ * is the answer, and every value here is a closed browser-owned enum or a number — a header value, a
  * server message or a URL has no path into this section.
  */
 @Composable
-private fun InspectorBrandAssetRows(trace: BrandAssetTrace?) {
+private fun InspectorBrandAssetSection(snapshot: InspectorSnapshot) {
+    InspectorHeading(stringResource(R.string.inspector_section_brand_asset))
+    InspectorRow(stringResource(R.string.inspector_brand_asset), snapshot.brandAsset.name)
+    val trace = snapshot.brandAssetTrace
     InspectorRow(
         stringResource(R.string.inspector_brand_asset_stage),
         trace?.stage?.name ?: stringResource(R.string.inspector_brand_asset_pending),
     )
     trace ?: return
     InspectorRow(stringResource(R.string.inspector_brand_asset_rejection), trace.rejection?.name.orAbsent())
-    InspectorRow(stringResource(R.string.inspector_http_status), trace.httpStatus?.toString().orAbsent())
-    InspectorRow(stringResource(R.string.inspector_redirects), trace.redirects.toString())
+    InspectorRow(stringResource(R.string.inspector_brand_asset_status), trace.httpStatus?.toString().orAbsent())
+    InspectorRow(stringResource(R.string.inspector_brand_asset_redirects), trace.redirects.toString())
     InspectorRow(
         stringResource(R.string.inspector_brand_asset_pixels),
         if (trace.width == null || trace.height == null) {
