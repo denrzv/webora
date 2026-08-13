@@ -97,7 +97,7 @@ Product-polish track:
   browser-owned vector icons, including a meaningful quick-action preview
 - [x] `UX-008` Browser navigation controls in integrated mode — integrated chrome now keeps a visible
   browser-owned Back control independent of manifest styling
-- [ ] `UX-007` Adaptive SiteSkin consent action hierarchy — clear primary/secondary/persistent-deny
+- [x] `UX-007` Adaptive SiteSkin consent action hierarchy — clear primary/secondary/persistent-deny
   actions across narrow widths and large font scales
 - [ ] `DEMO-003` Bloom Flowers visual fidelity & protocol showcase — exercise the polished icon and
   action vocabulary in the live reference integration

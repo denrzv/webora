@@ -188,6 +188,15 @@ change it to a SiteSkin colour merely to blend the row—the visual boundary is 
 At the history root it remains visible and disabled, matching regular chrome and avoiding a shifting
 identity layout. The tagged domain/TLS row remains after title/subtitle in the same identity column.
 
+### SiteSkin consent actions are one browser-owned hierarchy (UX-007)
+
+The first-use consent dialog renders all three decisions in one full-width vertical action block:
+filled **Allow**, outlined **Not now**, then text **Never for this site**. This is deliberate policy,
+not incidental `AlertDialog` slot placement. The stack keeps long labels and 200% font scale from
+creating a split row, while the existing browser wrappers preserve 48 dp targets. Manifest data may
+influence only the separately attributed bounded preview; it has no path into action labels, order,
+emphasis, styling, enabled state, layout, or callbacks. Outside dismissal remains Not now.
+
 ### SiteSkin semantic icons (UX-005)
 
 Manifest icon values are semantic tokens, not resource names. Core's closed allow-list normalizes
