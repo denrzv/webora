@@ -630,50 +630,87 @@ starts at `y=349`, and the top bar sits above that, outside `BROWSER_CONTENT_TAG
 
 ### `NET-004` — The reference integration's logo never reaches the top bar
 
-**Priority:** P1  
-**Depends on:** `NET-003`, `SKIN-002`  
+**Status:** CLOSED — fixed. **Priority:** P1
+**Depends on:** `NET-003`, `SKIN-002`
 **Goal:** render the manifest's declared logo, or find out why the pipeline refuses it.
 
 **Found by:** hosted screenshot run **15** (`31714792338`, `f1e81640`), frame
-`03-siteskin-integrated.png` — the top bar shows the browser-generated `B` monogram.
+`03-siteskin-integrated.png` — the top bar showed the browser-generated `B` monogram, as run **11**
+had too.
 
-**The observation.** `spec/fixtures/valid/bloom-flowers.json` declares
-`branding.logoUrl: "/assets/siteskin/logo.png"`, and the origin serves it:
+**Answered by:** hosted run **16** (`31725858080`, `f982f1a4`), from
+`diagnostics/brand-asset-03-siteskin-integrated.txt`:
 
 ```
-HTTP 200  content-type: image/png  5702 bytes
-PNG signature valid, 512 x 512 = 262,144 px
+stage=TRANSPORT_UNAVAILABLE   rejection=null   httpStatus=null   elapsedMillis=891
 ```
 
-Every `NET-003` bound is satisfied with room to spare — 512 ≤ 1024 per axis, 262,144 ≤ 1,048,576
-total, 5.7 KiB ≤ 512 KiB, declared type matches the byte signature, and it is PNG rather than SVG. So
-the monogram is not the pipeline's documented refusal behaviour for an oversized, mistyped or
-malformed asset. Something else is producing it.
+No answer arrived — a decision in 891 ms, not a race, and none of the four candidates the entry had
+listed. The logcat named the cause to the second: the emulator's Wi-Fi left `CONNECTED` at
+`17:41:33.893`, in the same second Allow was clicked, while the manifest fetch ten seconds earlier
+had gone out over a working network.
 
-**Why P1.** `NET-003` says a non-cancellation failure yields a deterministic monogram, which means
-the monogram is *correct* behaviour for a failure and tells the user nothing about which. The
-reference integration is the artifact site owners copy: if a valid, correctly served logo silently
-becomes a monogram, every site owner who follows the guide will see the same and have no way to tell
-whether their asset was rejected or their manifest was wrong. That is the same class of blindness
-`DEVX-001` built the inspector for.
+**The refusal was correct. Its permanence was the defect.** The load is keyed on the trusted
+configuration instance, which `BrowserState.forObservedOrigin` keeps across every same-origin page
+start, so the network came back 6.4 s later and nothing ever asked again.
 
-**Candidate causes, none yet checked.**
-- The load is superseded by a later generation and the result is dropped, never republished.
-- Composition reads the asset once before it arrives and does not recompose when it does.
-- The exact-origin recheck against the logo URL fails for a reason the bounds do not cover.
-- Decode succeeds and the top bar's 40 dp slot receives the monogram anyway.
+**Fixed** by retrying `TRANSPORT_UNAVAILABLE` and only that — three attempts, 1 s then 2 s apart.
+A rejection is not retried (the server answered), a decode failure is not (the same bytes decode the
+same way), an undeclared logo is not (nothing to request). Run **17** (`ea57ef5d`) then recorded
+`stage=DECODED httpStatus=200 pixels=512x512 attempts=1`.
 
-**Where to look first.** The debug inspector already reports `Brand asset` for the active origin
-(`DEVX-001`), and `DEVX-003` put it two interactions away in both modes. Read that before reading
-code — it is the tool built for this question, and using it is also a test of whether it answers.
+**Also shipped, and the reason the question was answerable at all:** `BrandAssetRejection` and
+`BrandAssetStage`, a brand-asset section in the debug inspector, and the outcome written into the
+screenshot job's diagnostics artifact. Before this, `Brand asset: MONOGRAM` was the whole story a site
+owner could get.
+
+`NET-003`'s caps, allow-list, same-origin recheck and monogram fallback are unchanged, proven by its
+tests passing unedited.
+
+---
+
+### `CI-006` — The emulator ANRs its way out of frame 03
+
+**Priority:** P1  
+**Depends on:** `CI-005`  
+**Goal:** get the hosted journey a device quiet enough to photograph, or bound the failure so a green
+run still means something.
+
+**Found by:** `NET-004`'s runs **16** (`31725858080`) and **17** (`31727597681`), both ending
+`RENDERED BUT CONTESTED` on `03-siteskin-integrated` with every capture attempt rejected as
+`Application Not Responding: com.android.systemui owned the screen when the frame was taken`. Run
+**13** hit the same thing, which is what opened `CI-004`.
+
+**`CI-005`'s guard is working — that is the point.** The page had rendered and Webora did not own the
+screen, so the frame was refused rather than saved with a dialog over it. Nothing here argues for
+weakening it; a run that cannot photograph a clean screen must fail.
+
+**The device is starving, not just System UI.** Run 17's logcat shows five processes ANR in sixteen
+seconds — `com.android.systemui` at `17:58:17.548`, `com.android.phone` at `17:58:18.289`,
+`LatinIME` at `17:58:20.477`, `com.google.android.as` at `17:58:22.161`,
+`googlequicksearchbox:interactor` at `17:58:33.729` — each preceded by
+`Timeout executing service`. `CI-004`'s observation that System UI's own
+`SystemUIAuxiliaryDumpService` times out first still holds (`17:57:54.483`), but it is one symptom of
+a device-wide stall rather than the cause.
+
+**What makes it worth a ticket rather than a re-run:** it is now four runs out of nine, it costs
+twelve minutes each time, and the journey is the only evidence path for tickets whose acceptance is a
+frame. `NET-004` shipped its fix with the pipeline proven by the diagnostics artifact
+(`stage=DECODED httpStatus=200 pixels=512x512`) and its acceptance frame outstanding.
 
 **Scope**
-- Determine which of the candidates holds, from the inspector and the trace rather than by guessing.
-- Fix it, or record why the refusal is correct and make the reason visible to a site owner.
-- Do not widen `NET-003`'s bounds or its MIME/signature allow-list to make one asset pass.
+- Establish what the emulator is doing between boot-ready and frame 03 — GMS package churn and dexopt
+  are both visible in the window, and `scripts/android-emulator-ready.sh` declares ready well before
+  either settles.
+- Consider whether readiness should require the device to be *quiet*, not merely focused: no pending
+  `Timeout executing service`, dexopt finished, package churn over.
+- Do not lengthen the capture deadline as the fix. Twenty seconds of a contested screen is already
+  twenty pieces of evidence that the device is not photographable.
+- Do not dismiss the dialog from the capture loop. `CI-005` decided that, and this changes nothing
+  about it.
 
 **Acceptance**
-- A hosted integrated frame shows the manifest's logo in the 40 dp slot.
-- If the asset is legitimately refused, the inspector says so in one line and the reason is recorded.
-- `NET-003`'s caps, allow-list and monogram fallback are unchanged.
+- Two consecutive hosted runs produce three canonical frames with no contested capture.
+- The readiness artifact records whatever new condition is added, sample by sample, as it already
+  does for the existing four.
 - `bash scripts/pre-commit-check.sh` passes.
