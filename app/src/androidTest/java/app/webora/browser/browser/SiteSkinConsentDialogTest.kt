@@ -3,7 +3,6 @@ package app.webora.browser.browser
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.graphics.Color
@@ -18,6 +17,19 @@ import org.junit.Test
 class SiteSkinConsentDialogTest {
     @get:Rule val compose = createComposeRule()
 
+    /**
+     * `HARDEN-002`'s requirement, pinned where it is read: the complete canonical origin — scheme,
+     * host and a non-default port — is what the dialog asks about, so the visible grant matches the
+     * `SiteOrigin` persistence key.
+     *
+     * **It is not the gate against that text disappearing, which is worth stating because it looks
+     * like one.** `UX-009` was a container shape clipping this very heading down to `ow`, and this
+     * assertion stayed green across both hosted runs that photographed it: clipping happens in the
+     * parent's draw, while the semantics tree keeps the node's full text and its unclipped bounds
+     * either way — `CI-003`'s "semantics precede pixels", one layer up and in a suite rather than a
+     * harness. The assertion that fails on that defect is `WeboraThemeTest.a container role never
+     * rounds a dialog into a stadium`, which measures the resolved corner radius instead.
+     */
     @Test fun consentDialogNamesExactOriginAndBrowserOwnedBoundary() {
         val origin = requireNotNull(SiteOrigin.parse("https://checkout.shop.example:8443/cart"))
         compose.setContent {
@@ -36,47 +48,6 @@ class SiteSkinConsentDialogTest {
             "The site can customise navigation and appearance. " +
                 "The address and security indicator stay under Webora control.",
         ).assertIsDisplayed()
-    }
-
-    /**
-     * `HARDEN-002`'s requirement, pinned where it is read: the complete canonical origin — scheme,
-     * host and a non-default port — reaches the frame, and the heading sits inside the window.
-     *
-     * **This case documents the requirement and is not the regression gate, which is worth stating
-     * because it looks like one.** `UX-009` was a container shape clipping this very heading down to
-     * `ow`, and every assertion in this file stayed green throughout: clipping happens in the
-     * parent's draw, while the semantics tree carries the node's full text and its unclipped bounds
-     * either way. That is `CI-003`'s "semantics precede pixels" one layer up. The assertion that
-     * fails on that defect is `WeboraThemeTest.a container role never rounds a dialog into a
-     * stadium`, which measures the resolved corner radius instead.
-     *
-     * The width is the device's own. An `AlertDialog` occupies a separate window that a composition
-     * size override does not size, so forcing 360 dp here would be a claim this test cannot keep;
-     * the screenshot journey's emulator is 360 dp wide and is where that width is actually observed.
-     */
-    @Test fun consentDialogRendersTheCompleteHeadingWithinTheWindow() {
-        val origin = requireNotNull(SiteOrigin.parse("https://checkout.shop.example:8443/cart"))
-        compose.setContent {
-            SiteSkinConsentDialog(
-                origin = origin.canonical,
-                model = consentModel(),
-                onAllow = {},
-                onNotNow = {},
-                onNever = {},
-            )
-        }
-
-        val heading = compose.onNodeWithText("Allow ${origin.canonical} to customise Webora?")
-            .assertIsDisplayed()
-            .fetchSemanticsNode()
-            .boundsInRoot
-        val window = compose.onRoot().fetchSemanticsNode().boundsInRoot
-
-        assertTrue("the heading is empty", heading.width > 0f && heading.height > 0f)
-        assertTrue(
-            "the heading is laid out outside the window: $heading against $window",
-            heading.left >= window.left && heading.right <= window.right,
-        )
     }
 
     @Test fun consentDialogExposesThreeBrowserOwnedDecisions() {

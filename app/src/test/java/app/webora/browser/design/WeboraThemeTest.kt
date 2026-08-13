@@ -260,14 +260,17 @@ class WeboraThemeTest {
         val SHAPE_SIZE = Size(width = 1000f, height = 1000f)
 
         /**
-         * The narrowest and widest box Material lays an `AlertDialog` out in.
+         * The narrowest box Material lays an `AlertDialog` out in, by a taller-than-wide height.
          *
-         * `DialogMinWidth = 280.dp` and `DialogMaxWidth = 560.dp` are `internal` to material3, so
-         * the numbers are transcribed rather than imported — which this repository distrusts on
-         * principle. It is safe in this one direction: the corners here are absolute, and the clamp
-         * only ever shrinks them, so a shape that clears the ceiling at the narrowest width clears
-         * it at every width a dialog can reach. A Compose release that *narrows* the minimum would
-         * make this assertion lenient, never wrong.
+         * Only the **shorter** side drives `CornerBasedShape`'s clamp, so the width is the number
+         * that matters and the height merely has to exceed it; the consent dialog is by far the
+         * tallest in the app and is nowhere near square.
+         *
+         * `DialogMinWidth = 280.dp` is `internal` to material3, so it is transcribed rather than
+         * imported — which this repository distrusts on principle. It is safe in this one direction:
+         * the corners here are absolute and the clamp only ever shrinks them, so a shape that clears
+         * the ceiling at the narrowest width clears it at every width a dialog can reach. A Compose
+         * release that *narrows* the minimum would make this assertion lenient, never wrong.
          */
         val DIALOG_SIZE = Size(width = 280f, height = 560f)
 
