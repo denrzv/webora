@@ -865,6 +865,63 @@ artifact byte counts the only available signal and useless for the question.
 **The threshold was never raised to make a run pass.** The symptom would have gone away; the region
 would still have been measuring chrome.
 
+### The frame saved must be the frame validated (CI-005)
+
+`CI-002` refuses to photograph a screen Webora does not own. `CI-003` refuses to photograph a page
+that has not drawn. Hosted run 14 satisfied both checks and shipped
+`03-siteskin-integrated.png` **with `System UI isn't responding` over a blank page**, on a green job.
+
+**The obstruction was not a contaminant of the measurement — it was the measurement.**
+
+```
+attempt=1 elapsed=1013ms differing=0.0023084800967043298 modal=#ffffffff samples=119126
+attempt=2 elapsed=1943ms differing=0.0023084800967043298 modal=#ffffffff
+attempt=3 elapsed=2961ms differing=0.0023084800967043298 modal=#ffffffff
+PASSED differing=0.3047865285496029 after 4143ms
+```
+
+Three seconds of a 99.77% uniform white region, then 30% the moment the dialog arrived. The dialog's
+window is `1024×514` = 27.4% of the `1080×1778` region; a genuinely rendered page had measured
+`0.7530`. `RenderedContentPolicy` asks *is this region non-uniform*, which is the right question for
+liveness, and a dialog is gloriously non-uniform. The policy was not wrong; it was being asked about
+a region something else owned.
+
+**Ownership was a point check in front of a polling capture.** `focus-03-siteskin-integrated.txt`
+records `mCurrentFocus=…MainActivity` — clean — because `requireAppOwnsScreen` ran *before*
+`captureWhenRendered` began re-screenshotting for 4.1 seconds. `CI-003` wrote "ownership first,
+content second" and got the order right; it did not notice that **the frame validated and the frame
+saved are different frames**.
+
+`candidateVerdict(focus, content)` composes the two existing policies and accepts only
+`OwnedByApp` + `Rendered`. `ContentVerdict.Rendered` appears in exactly one accepting row, and it is
+the row where Webora also owns the screen — the defect expressed as data. Two cases, `Accept` and
+`Retry`: the capture deadline already owns the decision to give up, and a `Reject` would be a second
+place to end the run.
+
+**A dismissable ANR is a `Retry` here and never a dismissal.** Clearing obstructions belongs to
+`requireAppOwnsScreen`, with its own budget and its own `interference-*` records. A capture loop that
+pressed buttons would be a second, unbudgeted dismissal path running while the harness is supposed to
+be observing.
+
+**The dump is read only when content passes.** The loop runs up to forty times; `CI-004` found run
+13's System UI ANR was raised by `SystemUIAuxiliaryDumpService` — System UI's own dump service — so a
+harness that polls dumps harder may provoke what it is detecting. Blank polls `continue` before the
+dump, and the run pays one extra dump per captured frame.
+
+**Ownership is read from the OS and never inferred from pixels.** Detecting a dialog by how it looks
+is the heuristic `CI-002` refused; pixels cannot separate a System UI ANR from a Webora crash dialog
+from a page rendering a grey rounded card, and a website controls the third.
+
+**The constraint to check any future diff against: this may only ever make the harness refuse more.**
+If a change here could make a frame acceptable that is rejected today, it is the wrong change. That
+is also why `MINIMUM_DIFFERING_FRACTION` was not touched — the blank page measured `0.0023` and the
+obstruction `0.3048`, so no threshold separates them.
+
+The record closes the gap that made this expensive to diagnose: `owner=` on the accepted frame,
+`REJECTED <reason>` per discarded candidate, and `RENDERED BUT CONTESTED` as an ending distinct from
+`NEVER RENDERED`. Run 14's file recorded four attempts and could not say the frame it kept had a
+dialog over it.
+
 ### Browser-owned design tokens (UX-002)
 
 `SiteSkinTheme` gave *websites* six colour roles, a dark projection and a WCAG guard;
