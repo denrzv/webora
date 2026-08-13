@@ -25,6 +25,8 @@ class SiteSkinChromeTest {
         compose.onNodeWithTag(SITESKIN_BOTTOM_NAV_TAG).assertIsDisplayed()
         compose.onAllNodesWithText("Label 5").assertCountEquals(0)
         compose.onAllNodesWithText("⌂").assertCountEquals(0)
+        compose.onAllNodesWithText("▦").assertCountEquals(0)
+        compose.onAllNodesWithText("+").assertCountEquals(0)
         compose.onNodeWithContentDescription("Label 1").assertIsSelected()
     }
 

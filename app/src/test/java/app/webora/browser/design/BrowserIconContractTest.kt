@@ -43,6 +43,17 @@ class BrowserIconContractTest {
     }
 
     @Test
+    fun `SiteSkin icon selection cannot dynamically address resources or glyphs`() {
+        val source = siteSkinChromeSource().readText()
+
+        assertTrue("SiteSkin icons must use a closed resource mapping", "siteSkinIconResource" in source)
+        FORBIDDEN_ICON_LOOKUPS.forEach { forbidden ->
+            assertTrue("SiteSkin icon selection contains forbidden '$forbidden'", forbidden !in source)
+        }
+        assertTrue("prototype SiteSkin glyphs remain in the renderer", PROTOTYPE_GLYPHS.none { it in source })
+    }
+
+    @Test
     fun `every icon is drawn at the viewport the direction used`() {
         val offenders = drawables().filterNot { icon ->
             val text = icon.readText()
@@ -95,7 +106,7 @@ class BrowserIconContractTest {
 
     private companion object {
         const val RESOURCE_ROOT_PROPERTY = "webora.app.res"
-        const val BUDGET = 10
+        const val BUDGET = 17
         const val STROKE_WIDTH = """android:strokeWidth="1.9""""
         const val FILL_ATTRIBUTE = "android:fillColor"
         const val PATH_DATA = "android:pathData"
@@ -121,10 +132,26 @@ class BrowserIconContractTest {
             "ic_close",
             "ic_search",
             "ic_warning",
+            "ic_siteskin_catalog",
+            "ic_siteskin_flower",
+            "ic_siteskin_shopping_cart",
+            "ic_siteskin_person",
+            "ic_siteskin_call",
+            "ic_siteskin_share",
+            "ic_siteskin_generic",
         )
+
+        val FORBIDDEN_ICON_LOOKUPS = listOf("getIdentifier(", "Uri.parse(", "File(", "URL(")
+        val PROTOTYPE_GLYPHS = listOf("⌂", "▦", "▣", "●", "☎", "•")
 
         /** Distinct icons, so one icon drawn for two configurations still counts once. */
         fun iconNames(): Set<String> = drawables().map { it.nameWithoutExtension }.toSet()
+
+        fun siteSkinChromeSource(): File {
+            val resources = File(requireNotNull(System.getProperty(RESOURCE_ROOT_PROPERTY)))
+            val mainSource = requireNotNull(resources.parentFile) { "resource root has no parent: $resources" }
+            return mainSource.resolve("java/app/webora/browser/siteskin/SiteSkinChrome.kt")
+        }
 
         /**
          * Every drawable directory, not just the unqualified one.

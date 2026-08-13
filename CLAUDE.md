@@ -173,6 +173,15 @@ These components deliberately are not wired into `BrowserScreen`. `SKIN-004` own
 origin-bound activation and connects typed selections to `ActionResolver` and browser-owned effect
 dispatch.
 
+### SiteSkin semantic icons (UX-005)
+
+Manifest icon values are semantic tokens, not resource names. Core's closed allow-list normalizes
+unknown values to `generic` with `SS-W-ICON-UNKNOWN`; only then can the app's closed mapping select
+a bundled `R.drawable`. Never replace that mapping with `Resources.getIdentifier`, URI/file lookup,
+a remote asset, or a font glyph. The vectors are decorative: the bounded item label and selected
+state remain the accessibility contract. The quick-action launcher previews the first trusted,
+bounded action's icon while its browser-authored plural label and expanded action list remain intact.
+
 ### Total validation and `siteskin-lint` (SPEC-003)
 
 `SiteSkinValidator` is the shared activation seam for browser and tooling. It consumes one

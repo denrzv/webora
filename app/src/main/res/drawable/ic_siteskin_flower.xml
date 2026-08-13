@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Browser-owned SiteSkin semantic icon; 24-unit viewport and UX-002's 1.9 stroke system. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M12 12C7 11 7 6 12 7C13 2 18 3 17 8C22 9 21 14 16 14C16 19 11 20 10 15C5 17 3 12 7 10M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"
+        android:strokeColor="#FF000000"
+        android:strokeWidth="1.9"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>
