@@ -93,8 +93,8 @@ Evidence/DX track — can proceed without waiting for all M6 surfaces:
 
 Product-polish track:
 
-- [ ] `UX-005` SiteSkin integrated chrome & semantic icon set — **revived** after live evidence;
-  replace placeholder glyphs with browser-owned vector icons and meaningful quick actions
+- [x] `UX-005` SiteSkin integrated chrome & semantic icon set — trusted semantic tokens now map to
+  browser-owned vector icons, including a meaningful quick-action preview
 - [x] `UX-008` Browser navigation controls in integrated mode — integrated chrome now keeps a visible
   browser-owned Back control independent of manifest styling
 - [ ] `UX-007` Adaptive SiteSkin consent action hierarchy — clear primary/secondary/persistent-deny
