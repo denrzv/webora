@@ -545,7 +545,8 @@ friends does not relax them.
 **Goal:** the first-use consent sheet is a dialog, not an ellipse.
 
 **Found by:** hosted screenshot run **14** (`31706775744`, `d830cac8`), frame
-`02-siteskin-consent.png`.
+`02-siteskin-consent.png`. **Reproduced on run 15** (`31714792338`, `f1e81640`) over a page that had
+fully rendered, so it is not a paint-timing artefact — unlike `UX-010`, which was.
 
 **The observation.** The consent surface draws as a large circle/stadium rather than a rounded
 rectangle. Its content overflows the shape: the browser-authored heading
@@ -578,6 +579,15 @@ chrome.
 ---
 
 ### `UX-010` — Integrated mode shows no SiteSkin top bar in hosted evidence
+
+**Status: CLOSED, not a defect.** Hosted run **15** (`31714792338`, `f1e81640`) renders the complete
+bar — back control, monogram, `Bloom Flowers`, `Fresh flowers delivered today`, and
+`Secure · denrzv.github.io`. The run-14 frame was captured before the surface had painted, over a
+page that had not drawn either, under a dialog dimming everything. The ticket's own "what is not yet
+known" section allowed for exactly this and asked for a frame captured after paint; that frame now
+exists and the bar is in it. `ADR-006`'s non-suppressible domain and TLS state are visible, and
+`UX-008`'s browser-owned Back control is beside them. Kept rather than deleted, because "we looked
+and it was fine" is worth as much as a fix to the next reader.
 
 **Priority:** P1  
 **Depends on:** `SKIN-002`, `UX-005`  
@@ -613,4 +623,57 @@ starts at `y=349`, and the top bar sits above that, outside `BROWSER_CONTENT_TAG
 - A hosted integrated frame shows the branded bar including registrable domain and TLS state.
 - The outcome is recorded either way; "could not reproduce" closes it only with a clean frame
   attached.
+- `bash scripts/pre-commit-check.sh` passes.
+
+
+---
+
+### `NET-004` — The reference integration's logo never reaches the top bar
+
+**Priority:** P1  
+**Depends on:** `NET-003`, `SKIN-002`  
+**Goal:** render the manifest's declared logo, or find out why the pipeline refuses it.
+
+**Found by:** hosted screenshot run **15** (`31714792338`, `f1e81640`), frame
+`03-siteskin-integrated.png` — the top bar shows the browser-generated `B` monogram.
+
+**The observation.** `spec/fixtures/valid/bloom-flowers.json` declares
+`branding.logoUrl: "/assets/siteskin/logo.png"`, and the origin serves it:
+
+```
+HTTP 200  content-type: image/png  5702 bytes
+PNG signature valid, 512 x 512 = 262,144 px
+```
+
+Every `NET-003` bound is satisfied with room to spare — 512 ≤ 1024 per axis, 262,144 ≤ 1,048,576
+total, 5.7 KiB ≤ 512 KiB, declared type matches the byte signature, and it is PNG rather than SVG. So
+the monogram is not the pipeline's documented refusal behaviour for an oversized, mistyped or
+malformed asset. Something else is producing it.
+
+**Why P1.** `NET-003` says a non-cancellation failure yields a deterministic monogram, which means
+the monogram is *correct* behaviour for a failure and tells the user nothing about which. The
+reference integration is the artifact site owners copy: if a valid, correctly served logo silently
+becomes a monogram, every site owner who follows the guide will see the same and have no way to tell
+whether their asset was rejected or their manifest was wrong. That is the same class of blindness
+`DEVX-001` built the inspector for.
+
+**Candidate causes, none yet checked.**
+- The load is superseded by a later generation and the result is dropped, never republished.
+- Composition reads the asset once before it arrives and does not recompose when it does.
+- The exact-origin recheck against the logo URL fails for a reason the bounds do not cover.
+- Decode succeeds and the top bar's 40 dp slot receives the monogram anyway.
+
+**Where to look first.** The debug inspector already reports `Brand asset` for the active origin
+(`DEVX-001`), and `DEVX-003` put it two interactions away in both modes. Read that before reading
+code — it is the tool built for this question, and using it is also a test of whether it answers.
+
+**Scope**
+- Determine which of the candidates holds, from the inspector and the trace rather than by guessing.
+- Fix it, or record why the refusal is correct and make the reason visible to a site owner.
+- Do not widen `NET-003`'s bounds or its MIME/signature allow-list to make one asset pass.
+
+**Acceptance**
+- A hosted integrated frame shows the manifest's logo in the 40 dp slot.
+- If the asset is legitimately refused, the inspector says so in one line and the reason is recorded.
+- `NET-003`'s caps, allow-list and monogram fallback are unchanged.
 - `bash scripts/pre-commit-check.sh` passes.
