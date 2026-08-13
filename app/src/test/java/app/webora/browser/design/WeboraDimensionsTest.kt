@@ -46,15 +46,35 @@ class WeboraDimensionsTest {
     }
 
     @Test
-    fun `the touch target is the accessibility constant, not a copy of it`() {
-        // Identity rather than equality of value. A second 48 dp literal would satisfy an equality
-        // assertion and then drift the first time a design felt cramped — and the geometry layer is
-        // precisely where someone would reach to make one fit.
-        assertEquals(MINIMUM_TOUCH_TARGET, WeboraChrome.TOUCH_TARGET)
-        assertTrue(
-            "the slot a control sits in must not be smaller than the target it must present",
-            WeboraChrome.TOUCH_TARGET >= WeboraChrome.SLOT_SIZE,
+    fun `the geometry layer declares no touch target of its own`() {
+        // `MINIMUM_TOUCH_TARGET` has one name and one owner. A second one here would sit exactly
+        // where somebody would reach to shrink a target so a design fits, which is the change
+        // `A11Y-001` exists to make impossible to do quietly — so the assertion is against the
+        // numbers this layer *does* declare, not against a re-export it deliberately lacks.
+        val chrome = listOf(
+            WeboraChrome.ADDRESS_HEIGHT,
+            WeboraChrome.DOCK_HEIGHT,
+            WeboraChrome.SLOT_SIZE,
+            WeboraChrome.ICON_SIZE,
         )
+        val declared = WeboraSpacing.ALL + WeboraRadius.ALL + chrome
+
+        assertTrue(
+            "a 48 dp geometry token would be a second name for the accessibility minimum",
+            declared.none { it == MINIMUM_TOUCH_TARGET },
+        )
+    }
+
+    @Test
+    fun `a control's visual slot fits inside the target it must present`() {
+        // The dock draws 40 dp circles. The control is 48 dp; the circle is what you see. If the
+        // drawn slot ever exceeded the target, the visible affordance would be making a promise the
+        // touchable area does not keep.
+        assertTrue(
+            "the drawn slot must not exceed the touch target around it",
+            WeboraChrome.SLOT_SIZE <= MINIMUM_TOUCH_TARGET,
+        )
+        assertTrue("the glyph must sit inside its slot", WeboraChrome.ICON_SIZE < WeboraChrome.SLOT_SIZE)
     }
 
     private companion object {

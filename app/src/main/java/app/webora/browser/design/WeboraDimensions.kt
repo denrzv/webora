@@ -2,7 +2,6 @@ package app.webora.browser.design
 
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import app.webora.browser.browser.MINIMUM_TOUCH_TARGET
 
 /**
  * Spacing, on Direction A's stated 4 dp base with its 20 dp gutter.
@@ -28,6 +27,11 @@ internal object WeboraSpacing {
  *
  * `UX-003` consumes these; nothing reads them yet. They live here rather than in that ticket because
  * a measurement recorded in an ADR and re-typed at a call site is a measurement with two sources.
+ *
+ * There is deliberately **no** touch-target token here. `MINIMUM_TOUCH_TARGET` in
+ * `BrowserAccessibility.kt` is the one name for that number; re-exporting it under a second name in
+ * the geometry layer would put it exactly where someone would reach to shrink a target so a design
+ * fits, which is the change `A11Y-001` exists to make impossible to do quietly.
  */
 internal object WeboraChrome {
     /** The address pill. */
@@ -41,13 +45,4 @@ internal object WeboraChrome {
 
     /** Icon size. `ADR-013`: "8, at 20 dp, stroke 1.9". */
     val ICON_SIZE: Dp = 20.dp
-
-    /**
-     * The accessibility minimum, re-exported rather than restated.
-     *
-     * `A11Y-001` owns this number and `BrowserAccessibilityTest` asserts it against Material's own
-     * 40 dp button minimum. A second `48.dp` here would be a second place for it to change, and the
-     * geometry layer is exactly where someone would change it to make a design fit.
-     */
-    val TOUCH_TARGET: Dp = MINIMUM_TOUCH_TARGET
 }
