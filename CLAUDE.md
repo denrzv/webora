@@ -173,6 +173,21 @@ These components deliberately are not wired into `BrowserScreen`. `SKIN-004` own
 origin-bound activation and connects typed selections to `ActionResolver` and browser-owned effect
 dispatch.
 
+### Integrated mode keeps browser Back visible (UX-008)
+
+SiteSkin replaces both regular chrome surfaces, but it does not replace the browser's history
+contract. Integrated top chrome therefore always carries a leading Back affordance before site
+branding. Its enabled state comes only from browser-observed WebView history and its callback is the
+existing controller operation; a manifest has no field or model seam through which it can suppress,
+relabel, reorder, restyle, or dispatch it.
+
+The placement is intentionally asymmetric: SiteSkin navigation remains the only bottom bar and is
+still primary, while the browser control occupies a fixed slot beside branding. The slot uses the
+Webora Material scheme even though its surrounding bar uses the validated SiteSkin scheme. Do not
+change it to a SiteSkin colour merely to blend the row—the visual boundary is the ownership boundary.
+At the history root it remains visible and disabled, matching regular chrome and avoiding a shifting
+identity layout. The tagged domain/TLS row remains after title/subtitle in the same identity column.
+
 ### SiteSkin semantic icons (UX-005)
 
 Manifest icon values are semantic tokens, not resource names. Core's closed allow-list normalizes
