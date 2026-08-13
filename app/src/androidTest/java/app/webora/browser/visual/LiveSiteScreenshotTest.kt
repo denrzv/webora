@@ -112,6 +112,7 @@ class LiveSiteScreenshotTest {
             appendLine("redirects=${trace.redirects}")
             appendLine("pixels=${trace.width}x${trace.height}")
             appendLine("elapsedMillis=${trace.elapsedMillis}")
+            appendLine("attempts=${trace.attempts}")
         }
     }
 

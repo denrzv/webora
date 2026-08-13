@@ -6,6 +6,8 @@ import dev.siteskin.core.SiteSkinValidationOutcome
 import dev.siteskin.core.SiteSkinValidator
 import io.mockk.mockk
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -131,6 +133,93 @@ class BrandAssetLoaderTest {
         }
     }
 
+    /**
+     * The `NET-004` fix, and the reason it exists.
+     *
+     * Hosted run 16 lost the logo to a Wi-Fi drop in the same second the user allowed SiteSkin. The
+     * refusal was correct and permanent: `BrowserScreen` keys the load on the trusted configuration
+     * instance, which survives every same-origin page start, so the network came back 6.4 seconds
+     * later and nothing asked again.
+     */
+    @Test fun `a transport that answers on the second attempt still publishes the logo`() = runTest {
+        val bitmap = mockk<Bitmap>()
+        var calls = 0
+        val source = BrandAssetSource { _, _ ->
+            calls += 1
+            if (calls == 1) BrandAssetFetchResult.Unavailable else fetched(PNG, BrandImageFormat.PNG)
+        }
+
+        val outcome = loader(source, FakeDecoder(BrandImageBounds(10, 10, BrandImageFormat.PNG), bitmap))
+            .load(configuration())
+
+        assertSame(bitmap, (outcome.asset as BrandAsset.BitmapAsset).bitmap)
+        assertEquals(BrandAssetStage.DECODED, outcome.trace.stage)
+        assertEquals(2, outcome.trace.attempts)
+    }
+
+    @Test fun `an unreachable logo is retried a bounded number of times`() = runTest {
+        var calls = 0
+        val source = BrandAssetSource { _, _ -> calls += 1; BrandAssetFetchResult.Unavailable }
+
+        val outcome = loader(source).load(configuration())
+
+        assertEquals(MAX_ATTEMPTS, calls)
+        assertEquals(MAX_ATTEMPTS, outcome.trace.attempts)
+        assertEquals(BrandAssetStage.TRANSPORT_UNAVAILABLE, outcome.trace.stage)
+        assertEquals(MONOGRAM, outcome.asset)
+    }
+
+    /**
+     * The exclusions are the point. A rejection means the server answered and the browser declined
+     * the answer, so asking again hammers a site whose logo legitimately 404s and changes nothing;
+     * the same bytes decode the same way; and there is nothing to request for an undeclared logo.
+     */
+    @Test fun `no other stage is retried`() = runTest {
+        val cases = listOf(
+            BrandAssetStage.TRANSPORT_REJECTED to case(
+                BrandAssetStage.TRANSPORT_REJECTED,
+                source = { rejected(BrandAssetRejection.HTTP_ERROR) },
+            ),
+            BrandAssetStage.SIGNATURE_MISMATCH to case(
+                BrandAssetStage.SIGNATURE_MISMATCH,
+                source = { fetched("<svg/>".toByteArray(), BrandImageFormat.PNG) },
+            ),
+            BrandAssetStage.DECODE_FAILED to case(
+                BrandAssetStage.DECODE_FAILED,
+                decoder = { FakeDecoder(BrandImageBounds(10, 10, BrandImageFormat.PNG), null) },
+            ),
+            BrandAssetStage.UNEXPECTED_ERROR to case(
+                BrandAssetStage.UNEXPECTED_ERROR,
+                source = { error("decoder boundary") },
+            ),
+        )
+
+        cases.forEach { (stage, case) ->
+            var calls = 0
+            val counted = BrandAssetSource { origin, url -> calls += 1; case.source.fetch(origin, url) }
+            val outcome = loader(counted, case.decoder()).load(configuration())
+
+            assertEquals("$stage must not be retried", 1, calls)
+            assertEquals(1, outcome.trace.attempts)
+            assertEquals(stage, outcome.trace.stage)
+        }
+
+        var undeclared = 0
+        loader(BrandAssetSource { _, _ -> undeclared += 1; BrandAssetFetchResult.Unavailable })
+            .load(configuration(logo = null))
+        assertEquals(0, undeclared)
+    }
+
+    @Test fun `cancellation during the backoff propagates rather than retrying`() = runTest {
+        val loader = loader(BrandAssetSource { _, _ -> BrandAssetFetchResult.Unavailable })
+        val job = launch { loader.load(configuration()) }
+
+        testScheduler.advanceTimeBy(RETRY_DELAY_MILLIS / 2)
+        job.cancelAndJoin()
+
+        assertTrue(job.isCancelled)
+    }
+
     @Test fun `elapsed time is recorded on every path`() = runTest {
         assertTrue(loader().load(configuration()).trace.elapsedMillis >= 0)
         assertTrue(loader().load(configuration(logo = null)).trace.elapsedMillis >= 0)
@@ -185,6 +274,11 @@ class BrandAssetLoaderTest {
     private companion object {
         val PNG = byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A)
         val MONOGRAM = BrandAsset.Monogram("B")
+
+        // Mirrored from BrandAssetLoader's private companion. Kept as literals rather than exposed
+        // from production code: a test that reads the constant it is asserting proves nothing.
+        const val MAX_ATTEMPTS = 3
+        const val RETRY_DELAY_MILLIS = 1_000L
         fun fetched(bytes: ByteArray, format: BrandImageFormat) = BrandAssetFetchResult.Fetched(bytes, format)
         fun rejected(reason: BrandAssetRejection = BrandAssetRejection.HTTP_ERROR) =
             BrandAssetFetchResult.Rejected(reason)

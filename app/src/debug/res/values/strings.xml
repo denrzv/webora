@@ -29,6 +29,7 @@
     <string name="inspector_brand_asset_redirects">Redirects followed</string>
     <string name="inspector_brand_asset_pixels">Decoded size</string>
     <string name="inspector_brand_asset_elapsed">Load took</string>
+    <string name="inspector_brand_asset_attempts">Attempts</string>
     <string name="inspector_brand_asset_pending">Still loading</string>
 
     <string name="inspector_manifest_url">Manifest URL</string>

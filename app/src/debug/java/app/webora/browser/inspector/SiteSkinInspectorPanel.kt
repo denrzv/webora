@@ -109,6 +109,9 @@ private fun InspectorBrandAssetSection(snapshot: InspectorSnapshot) {
         stringResource(R.string.inspector_brand_asset_elapsed),
         stringResource(R.string.inspector_brand_asset_elapsed_value, trace.elapsedMillis),
     )
+    // Only TRANSPORT_UNAVAILABLE is retried, so anything above 1 here says the network blinked and
+    // the browser asked again — the failure NET-004 found on the reference integration.
+    InspectorRow(stringResource(R.string.inspector_brand_asset_attempts), trace.attempts.toString())
 }
 
 @Composable

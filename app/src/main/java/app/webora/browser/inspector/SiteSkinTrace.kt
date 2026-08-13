@@ -145,4 +145,5 @@ internal data class BrandAssetTrace(
     val width: Int? = null,
     val height: Int? = null,
     val elapsedMillis: Long = 0,
+    val attempts: Int = 1,
 )
