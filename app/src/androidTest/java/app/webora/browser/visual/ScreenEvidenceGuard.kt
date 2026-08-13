@@ -8,10 +8,12 @@ import android.os.ParcelFileDescriptor
 import android.os.SystemClock
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.test.platform.io.PlatformTestStorage
+import app.webora.browser.evidence.CandidateVerdict
 import app.webora.browser.evidence.ContentVerdict
 import app.webora.browser.evidence.FocusVerdict
 import app.webora.browser.evidence.RenderedContentPolicy
 import app.webora.browser.evidence.ScreenEvidencePolicy
+import app.webora.browser.evidence.candidateVerdict
 
 /**
  * Refuses to photograph a screen Webora does not own.
@@ -102,38 +104,69 @@ class ScreenEvidenceGuard(
         val samples = StringBuilder()
         var attempt = 0
 
+        var contested = false
+
         while (SystemClock.uptimeMillis() < deadline) {
             attempt++
             val bitmap = takeScreenshot(label)
-            when (val verdict = RenderedContentPolicy.verdict(sampleRegion(bitmap, region, excluded))) {
-                is ContentVerdict.Rendered -> {
+            val content = RenderedContentPolicy.verdict(sampleRegion(bitmap, region, excluded))
+            val elapsed = SystemClock.uptimeMillis() - started
+
+            if (content is ContentVerdict.Blank) {
+                // No window dump on a blank poll. This loop runs up to forty times, and `CI-004`
+                // found the System UI ANR on run 13 was raised by System UI's own dump service — a
+                // harness that polls dumps harder may provoke what it is trying to detect. The
+                // ownership question is only worth asking about a frame we would otherwise keep.
+                samples.appendLine(
+                    "attempt=$attempt elapsed=${elapsed}ms differing=${content.differingFraction} " +
+                        "modal=#${Integer.toHexString(content.modalColor)} samples=${content.sampleCount}",
+                )
+                SystemClock.sleep(POLL_INTERVAL_MILLIS)
+                continue
+            }
+
+            val focus = ScreenEvidencePolicy.focusVerdict(readWindowDump(), appPackage)
+            when (val verdict = candidateVerdict(focus, content)) {
+                is CandidateVerdict.Accept -> {
                     // Recorded on success too, not only on failure. A passing check that leaves no
                     // measurement cannot be told apart from one that barely passed for the wrong
                     // reason — which is exactly what happened in run 10, where a browser-owned
                     // quick-action button inside the measured region cleared the bar on a blank page.
+                    // The owner is recorded for the same reason at the second property: run 14's
+                    // file could not say the frame it kept had a system dialog over it.
+                    val rendered = content as ContentVerdict.Rendered
                     record(
                         "rendered-$label.txt",
                         renderedReport(label, region, excluded, "PASSED differing=" +
-                            "${verdict.differingFraction} after ${SystemClock.uptimeMillis() - started}ms\n" +
-                            samples),
+                            "${rendered.differingFraction} after ${elapsed}ms " +
+                            "owner=${(focus as FocusVerdict.OwnedByApp).title}\n" + samples),
                     )
                     return bitmap
                 }
-                is ContentVerdict.Blank -> samples.appendLine(
-                    "attempt=$attempt elapsed=${SystemClock.uptimeMillis() - started}ms " +
-                        "differing=${verdict.differingFraction} " +
-                        "modal=#${Integer.toHexString(verdict.modalColor)} " +
-                        "samples=${verdict.sampleCount}",
-                )
+
+                is CandidateVerdict.Retry -> {
+                    contested = true
+                    samples.appendLine(
+                        "attempt=$attempt elapsed=${elapsed}ms REJECTED ${verdict.reason}",
+                    )
+                }
             }
             SystemClock.sleep(POLL_INTERVAL_MILLIS)
         }
 
-        record("rendered-$label.txt", renderedReport(label, region, excluded, "NEVER RENDERED\n$samples"))
+        // Never rendered and rendered-but-contested are different stories, and a reader who cannot
+        // tell them apart re-diagnoses this from scratch.
+        val summary = if (contested) "RENDERED BUT CONTESTED" else "NEVER RENDERED"
+        record("rendered-$label.txt", renderedReport(label, region, excluded, "$summary\n$samples"))
         throw AssertionError(
-            "Refusing to capture $label: the page region never rendered within " +
-                "${RENDER_TIMEOUT_MILLIS}ms. Every sample is in $DIAGNOSTICS_DIRECTORY/" +
-                "rendered-$label.txt.",
+            "Refusing to capture $label: " +
+                if (contested) {
+                    "the page region rendered, but Webora never owned the screen at the moment a " +
+                        "frame was taken, within ${RENDER_TIMEOUT_MILLIS}ms."
+                } else {
+                    "the page region never rendered within ${RENDER_TIMEOUT_MILLIS}ms."
+                } +
+                " Every sample is in $DIAGNOSTICS_DIRECTORY/rendered-$label.txt.",
         )
     }
 
