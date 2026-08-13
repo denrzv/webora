@@ -23,12 +23,22 @@ internal fun WeboraTheme(
     content: @Composable () -> Unit,
 ) {
     MaterialTheme(
-        colorScheme = materialColorScheme(WeboraColors.scheme(darkTheme)),
-        typography = weboraTypography(),
-        shapes = weboraShapes(),
+        colorScheme = if (darkTheme) DARK_MATERIAL_COLORS else LIGHT_MATERIAL_COLORS,
+        typography = WEBORA_TYPOGRAPHY,
+        shapes = WEBORA_SHAPES,
         content = content,
     )
 }
+
+/**
+ * The two derived schemes, built once.
+ *
+ * `WeboraColors.scheme(darkTheme)` still decides which one applies — the selection stays a pure
+ * function of the system setting, and `WeboraColorSchemeTest` still asserts it. What is hoisted is
+ * the derivation, whose inputs are compile-time constants.
+ */
+private val LIGHT_MATERIAL_COLORS = materialColorScheme(WeboraColors.scheme(darkTheme = false))
+private val DARK_MATERIAL_COLORS = materialColorScheme(WeboraColors.scheme(darkTheme = true))
 
 /**
  * Material's forty-eight colour roles, every one of them assigned from one of Webora's fourteen.

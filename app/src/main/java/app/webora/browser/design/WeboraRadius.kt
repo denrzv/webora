@@ -25,8 +25,8 @@ internal object WeboraRadius {
     val ALL: List<Dp> = listOf(EXTRA_SMALL, SMALL, MEDIUM, LARGE, PILL)
 }
 
-/** The Material shape scale, built entirely from [WeboraRadius]. */
-internal fun weboraShapes(): Shapes = Shapes(
+/** The Material shape scale, built entirely from [WeboraRadius]. Constant, so built once. */
+internal val WEBORA_SHAPES: Shapes = Shapes(
     extraSmall = RoundedCornerShape(WeboraRadius.EXTRA_SMALL),
     small = RoundedCornerShape(WeboraRadius.SMALL),
     medium = RoundedCornerShape(WeboraRadius.MEDIUM),

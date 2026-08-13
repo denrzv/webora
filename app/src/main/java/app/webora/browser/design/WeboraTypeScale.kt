@@ -36,8 +36,11 @@ internal object WeboraTypeScale {
  *
  * `FontFamily.Default` is Roboto on Android, which is what `ADR-013` names. It is stated rather than
  * omitted so the intent survives a reader who does not know the platform default.
+ *
+ * A `val` rather than a function: every value in it is a compile-time constant, so rebuilding it on
+ * each composition of the theme root would be computing a constant repeatedly.
  */
-internal fun weboraTypography(): Typography = Typography(
+internal val WEBORA_TYPOGRAPHY: Typography = Typography(
     displayLarge = style(WeboraTypeScale.DISPLAY, FontWeight.SemiBold),
     displayMedium = style(WeboraTypeScale.DISPLAY, FontWeight.SemiBold),
     displaySmall = style(WeboraTypeScale.DISPLAY, FontWeight.SemiBold),

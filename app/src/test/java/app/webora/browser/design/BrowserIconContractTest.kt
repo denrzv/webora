@@ -27,7 +27,7 @@ class BrowserIconContractTest {
 
     @Test
     fun `the icon set is exactly the one Direction A draws`() {
-        assertEquals(EXPECTED, drawables().map { it.nameWithoutExtension }.toSet())
+        assertEquals(EXPECTED, iconNames())
     }
 
     @Test
@@ -35,7 +35,11 @@ class BrowserIconContractTest {
         // Separate from the assertion above on purpose. That one pins the current set; this one is
         // the rule a later ticket has to reckon with, and it should be the thing that fails first
         // when an icon is added casually.
-        assertTrue("the browser icon budget is $BUDGET; found ${drawables().size}", drawables().size <= BUDGET)
+        //
+        // Counted by distinct name rather than by file: a `drawable-night` variant of an icon that
+        // already exists is one icon drawn twice, and the budget is about how many icons someone has
+        // to draw and check at 200% font scale, not about file count.
+        assertTrue("the browser icon budget is $BUDGET; found ${iconNames().size}", iconNames().size <= BUDGET)
     }
 
     @Test
@@ -95,6 +99,7 @@ class BrowserIconContractTest {
         const val STROKE_WIDTH = """android:strokeWidth="1.9""""
         const val FILL_ATTRIBUTE = "android:fillColor"
         const val PATH_DATA = "android:pathData"
+        const val DRAWABLE = "drawable"
 
         val VIEWPORT = listOf(
             """android:width="24dp"""",
@@ -118,13 +123,27 @@ class BrowserIconContractTest {
             "ic_warning",
         )
 
+        /** Distinct icons, so one icon drawn for two configurations still counts once. */
+        fun iconNames(): Set<String> = drawables().map { it.nameWithoutExtension }.toSet()
+
+        /**
+         * Every drawable directory, not just the unqualified one.
+         *
+         * `res/drawable-night/` and `res/drawable-v24/` are ordinary things to add and are drawable
+         * directories in every sense Android cares about. Scanning only `res/drawable` would let a
+         * qualifier sidestep both the budget and the geometry contract without anyone intending to.
+         */
         fun drawables(): List<File> {
             val root = requireNotNull(System.getProperty(RESOURCE_ROOT_PROPERTY)) {
                 "$RESOURCE_ROOT_PROPERTY is unset; app/build.gradle.kts must pass the app resource root"
             }
-            val directory = File(root, "drawable")
-            require(directory.isDirectory) { "no drawable directory at $directory" }
-            return directory.listFiles().orEmpty().filter { it.extension == "xml" }.sortedBy(File::getName)
+            val directories = File(root).listFiles().orEmpty()
+                .filter { it.isDirectory && (it.name == DRAWABLE || it.name.startsWith("$DRAWABLE-")) }
+            require(directories.isNotEmpty()) { "no drawable directory under $root" }
+            return directories
+                .flatMap { it.listFiles().orEmpty().asIterable() }
+                .filter { it.extension == "xml" }
+                .sortedBy(File::getName)
         }
     }
 }

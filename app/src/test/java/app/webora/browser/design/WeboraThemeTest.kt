@@ -84,7 +84,7 @@ class WeboraThemeTest {
 
     @Test
     fun `every text style is sized from the compiled scale`() {
-        val strays = weboraTypography().textStyles()
+        val strays = WEBORA_TYPOGRAPHY.textStyles()
             .filterValues { it.fontSize !in WeboraTypeScale.ALL }
             .map { (role, style) -> "$role is ${style.fontSize}" }
 
@@ -97,7 +97,7 @@ class WeboraThemeTest {
 
     @Test
     fun `the type scale covers every Material role`() {
-        val styles = weboraTypography().textStyles()
+        val styles = WEBORA_TYPOGRAPHY.textStyles()
 
         assertTrue("expected Material's full type scale; found ${styles.size}", styles.size >= TYPE_ROLES)
     }
@@ -105,7 +105,7 @@ class WeboraThemeTest {
     @Test
     fun `every shape corner comes from the compiled radii`() {
         val radii = WeboraRadius.ALL.map { it.value }.toSet()
-        val strays = weboraShapes().cornerBasedShapes().flatMap { (role, shape) ->
+        val strays = WEBORA_SHAPES.cornerBasedShapes().flatMap { (role, shape) ->
             shape.corners().filterNot { it in radii }.map { "$role has a ${it}dp corner" }
         }
 
@@ -122,7 +122,7 @@ class WeboraThemeTest {
         //
         // They are excluded structurally rather than by name: Kotlin mangles an `internal` member's
         // JVM name with a `$module` suffix, which is exactly the property that distinguishes them.
-        val settable = weboraShapes().cornerBasedShapes()
+        val settable = WEBORA_SHAPES.cornerBasedShapes()
 
         assertEquals(SHAPE_ROLES, settable.size)
     }
