@@ -8,8 +8,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -366,7 +364,6 @@ private fun rememberManifestDiscovery(
 }
 
 @Composable
-@OptIn(ExperimentalLayoutApi::class)
 internal fun SiteSkinConsentDialog(
     origin: String,
     model: SiteSkinConsentModel,
@@ -378,17 +375,32 @@ internal fun SiteSkinConsentDialog(
         onDismissRequest = onNotNow,
         title = { Text(stringResource(R.string.siteskin_consent_title, origin)) },
         text = { SiteSkinConsentDetails(model) },
-        confirmButton = { WeboraButton(stringResource(R.string.siteskin_allow), onAllow) },
-        dismissButton = {
-            // Three buttons plus a long "Never for this site" label do not fit one line at a large
-            // font scale. Wrapping keeps every consent choice reachable; shrinking them would trade
-            // the ADR-011 decision the user has to make against the target size they need to make it.
-            FlowRow {
-                WeboraButton(stringResource(R.string.siteskin_not_now), onNotNow)
-                WeboraButton(stringResource(R.string.siteskin_never), onNever)
-            }
-        },
+        confirmButton = { SiteSkinConsentActions(onAllow, onNotNow, onNever) },
     )
+}
+
+@Composable
+private fun SiteSkinConsentActions(
+    onAllow: () -> Unit,
+    onNotNow: () -> Unit,
+    onNever: () -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        WeboraButton(
+            label = stringResource(R.string.siteskin_allow),
+            onClick = onAllow,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        WeboraOutlinedButton(onClick = onNotNow, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.siteskin_not_now))
+        }
+        WeboraTextButton(onClick = onNever, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.siteskin_never))
+        }
+    }
 }
 
 @Composable

@@ -5,10 +5,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
 import app.webora.browser.siteskin.SiteSkinConsentModel
 import dev.siteskin.core.origin.SiteOrigin
 import org.junit.Rule
@@ -70,9 +72,9 @@ class BrowserFontScaleTest {
             }
         }
 
-        compose.onNodeWithText("Allow").assertIsDisplayed()
-        compose.onNodeWithText("Not now").assertIsDisplayed()
-        compose.onNodeWithText("Never for this site").assertIsDisplayed()
+        compose.onNodeWithText("Allow").assertIsDisplayed().assertHeightIsAtLeast(48.dp)
+        compose.onNodeWithText("Not now").assertIsDisplayed().assertHeightIsAtLeast(48.dp)
+        compose.onNodeWithText("Never for this site").assertIsDisplayed().assertHeightIsAtLeast(48.dp)
     }
 
     @Test fun regularChromeStaysReachableAtDoubleFontScale() {

@@ -4,10 +4,13 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import app.webora.browser.siteskin.SiteSkinConsentModel
 import dev.siteskin.core.origin.SiteOrigin
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -55,6 +58,30 @@ class SiteSkinConsentDialogTest {
         compose.onNodeWithText("Never for this site").performClick()
 
         assertEquals("never", selected)
+    }
+
+    @Test fun consentActionsHaveFixedStackedHierarchyAndMinimumTargets() {
+        compose.setContent {
+            SiteSkinConsentDialog(
+                origin = "https://shop.example",
+                model = consentModel(),
+                onAllow = {},
+                onNotNow = {},
+                onNever = {},
+            )
+        }
+
+        val allow = compose.onNodeWithText("Allow").assertHeightIsAtLeast(48.dp)
+            .fetchSemanticsNode().boundsInRoot
+        val notNow = compose.onNodeWithText("Not now").assertHeightIsAtLeast(48.dp)
+            .fetchSemanticsNode().boundsInRoot
+        val never = compose.onNodeWithText("Never for this site").assertHeightIsAtLeast(48.dp)
+            .fetchSemanticsNode().boundsInRoot
+
+        assertTrue(allow.top < notNow.top)
+        assertTrue(notNow.top < never.top)
+        assertEquals(allow.width, notNow.width, 1f)
+        assertEquals(notNow.width, never.width, 1f)
     }
 
     @Test fun consentDialogRendersOnlyTheBoundedSiteProjection() {

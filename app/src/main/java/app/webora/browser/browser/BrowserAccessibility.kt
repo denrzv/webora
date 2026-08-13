@@ -8,6 +8,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -61,6 +62,21 @@ internal fun WeboraTextButton(
     content: @Composable RowScope.() -> Unit,
 ) {
     TextButton(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier.browserTouchTarget(),
+        content = content,
+    )
+}
+
+@Composable
+internal fun WeboraOutlinedButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    content: @Composable RowScope.() -> Unit,
+) {
+    OutlinedButton(
         onClick = onClick,
         enabled = enabled,
         modifier = modifier.browserTouchTarget(),
