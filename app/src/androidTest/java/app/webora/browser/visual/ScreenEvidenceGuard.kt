@@ -248,7 +248,7 @@ class ScreenEvidenceGuard(
         attempt: Int,
         journal: DismissalJournal,
     ): String? {
-        val observation = inspector.inspect(verdict.title)
+        val observation = inspector.inspect()
         val decision = AnrDismissalPolicy.verdict(observation.affordances)
         journal.record(verdict.title, decision, observation)
 

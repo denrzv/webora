@@ -951,10 +951,27 @@ which is why it reached `main`.
 ANR dialog had been on screen for **63 seconds** before the test process started. A deterministic
 zero absorbed by a 20-second deadline is forty identical failures and then the same failed run. So
 **reachability leads**: the observation enumerates the windows the automation can see and searches
-the one already classified — by OS-supplied title, by input focus (the same notion as the
-`mCurrentFocus` line the classification came from), or by `rootInActiveWindow`. Run **14** on the
-same commit recorded `pressed=android:id/aerr_wait`, `click_accepted=true`, twice, which eliminates
-"the dialog has no Wait button" and leaves reachability as the difference between the two runs.
+the focused one — the same notion as the `mCurrentFocus` line the classification came from — falling
+back to `rootInActiveWindow`. Run **14** on the same commit recorded `pressed=android:id/aerr_wait`,
+`click_accepted=true`, twice, which eliminates "the dialog has no Wait button" and leaves
+reachability as the difference between the two runs.
+
+**The plan's own identification rule was wrong, and the first run with the new record said so.** It
+named matching the classified window title. Run **21** (`31771876172`, `8e9d8860`) reports what
+`AccessibilityWindowInfo.getTitle()` actually returns for that dialog:
+
+```
+searched_windows=[id=11 type=3 title=System UI isn't responding active=true focused=true matched=focused]
+```
+
+`System UI isn't responding` is the **translated user-facing** string; `focusVerdict` classifies
+`Application Not Responding: com.android.systemui`, built by AOSP from a process name. The title rule
+matched nothing on either frame and `matched=focused` carried the whole fix. It was deleted rather
+than repaired — repairing it means comparing against a localised string, which is exactly what
+`CI-002` refused. **Both surviving rules read structural facts, never text**, and `inspect()` takes no
+title at all so there is no parameter through which text could return. The record naming which rule
+fired is what made a wrong mechanism visible in one run instead of surviving as a rule nobody noticed
+never matches.
 
 **Enumerating windows is where this could have gone badly, and the package check is what stops it.**
 `android:id/button2` is the negative button of *every* `AlertDialog`, Webora's consent dialog

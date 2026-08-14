@@ -24,10 +24,9 @@ import app.webora.browser.evidence.WaitAffordances
  * Webora dialog whenever the system dialog's tree was unreachable — the exact thing `CI-002` refused,
  * arriving through a mechanism `CI-002` did not have. Every searched window is therefore identified
  * twice: by [AnrDismissalPolicy.mayBeSearchedForWaitAffordance], which owns the package allow-list
- * and carries the negative controls, and by an OS-supplied identity — the window title
- * [ScreenEvidencePolicy] already classified, or the input focus that classification came from.
- * Webora's windows carry the app's package and can never pass the first check, whichever identity
- * rule fires.
+ * and carries the negative controls, and by the input focus that [ScreenEvidencePolicy]'s
+ * classification came from. Webora's windows carry the app's package and can never pass the first
+ * check, whichever identity rule fires.
  *
  * The inspector only observes. [app.webora.browser.evidence.AnrDismissalPolicy] decides, in a source
  * set `./gradlew test` compiles, for the reason this ticket exists.
@@ -56,11 +55,21 @@ internal class AnrDialogInspector(private val uiAutomation: UiAutomation) {
         uiAutomation.serviceInfo = info
     }
 
-    /** Observes the dialog titled [dialogTitle]; the caller's policy turns this into a decision. */
-    fun inspect(dialogTitle: String): AnrDialogObservation {
+    /**
+     * Observes the focused system dialog; the caller's policy turns this into a decision.
+     *
+     * Takes no title, and that is deliberate. `CI-004`'s plan identified the dialog by matching the
+     * window title `focusVerdict` had classified, and hosted run 21 recorded what
+     * `AccessibilityWindowInfo.getTitle()` actually returns for it: `System UI isn't responding` —
+     * the translated, user-facing string, not `Application Not Responding: com.android.systemui`. So
+     * the rule matched nothing, and it could only have been repaired by comparing against a
+     * localised string, which is exactly what `CI-002` refused when it keyed the classification on
+     * process-derived titles. No OS-authored text reaches this path now.
+     */
+    fun inspect(): AnrDialogObservation {
         val flags = currentFlags()
         val visible = uiAutomation.windows.orEmpty()
-        val searched = searchableWindows(visible, dialogTitle)
+        val searched = searchableWindows(visible)
         val (pressable, unpressable) = affordanceNodes(searched)
             .partition { (_, node) -> node.isClickable && node.isVisibleToUser }
 
@@ -96,33 +105,32 @@ internal class AnrDialogInspector(private val uiAutomation: UiAutomation) {
     /**
      * The windows this observation is allowed to search, by the first rule that identifies one.
      *
-     * **Every rule is filtered through [AnrDismissalPolicy.mayBeSearchedForWaitAffordance] first, so
-     * none of them can widen what may be pressed.** They differ only in how the system-owned dialog
-     * is recognised, and each records which one fired so the next reader knows what the device
-     * actually supplied:
+     * **Both rules are filtered through [AnrDismissalPolicy.mayBeSearchedForWaitAffordance] first, so
+     * neither can widen what may be pressed.** They differ only in how the system-owned dialog is
+     * recognised, both read structural facts rather than text, and each records which one fired:
      *
-     * 1. `title` — the OS-supplied window title equals the one [ScreenEvidencePolicy] classified.
-     * 2. `focused` — the window holding input focus, which is the same notion as `mCurrentFocus` in
-     *    the dump that produced that classification. Not a guess: this branch runs only because that
-     *    dump already said the focused window is the System UI ANR dialog.
-     * 3. `active-window` — `rootInActiveWindow`, for a device where the interactive-windows flag
-     *    never took and the first two rules therefore have nothing to enumerate.
+     * 1. `focused` — the window holding input focus, which is the same notion as `mCurrentFocus` in
+     *    the dump that produced the classification. Not a guess: this branch runs only because that
+     *    dump already said the focused window is the System UI ANR dialog. Hosted run 21 shows this
+     *    is the rule that finds it.
+     * 2. `active-window` — `rootInActiveWindow`, for a device where the interactive-windows flag
+     *    never took and the first rule therefore has nothing to enumerate.
+     *
+     * There was a third, first, matching the classified window title, and run 21 deleted it: the
+     * accessibility title is `System UI isn't responding`, a translated user-facing string, so it
+     * never matched and could only have been repaired into a locale-dependent identification rule.
      *
      * One root per window, hoisted out of the per-id loop: the old code re-read `rootInActiveWindow`
      * once per view id, so two lookups could see different trees. De-duplication by window id matters
      * for the same reason in the other direction — one window supplying the same node twice would
      * manufacture an `Ambiguous` and fail a run that should have pressed.
      */
-    private fun searchableWindows(
-        visible: List<AccessibilityWindowInfo>,
-        dialogTitle: String,
-    ): List<SearchedWindow> {
+    private fun searchableWindows(visible: List<AccessibilityWindowInfo>): List<SearchedWindow> {
         val systemOwned = visible.mapNotNull { window ->
             window.root?.takeIf { AnrDismissalPolicy.mayBeSearchedForWaitAffordance(it.packageName?.toString()) }
                 ?.let { window to it }
         }
-        return rootsOf(systemOwned.filter { (window, _) -> window.title?.toString() == dialogTitle }, "title")
-            .ifEmpty { rootsOf(systemOwned.filter { (window, _) -> window.isFocused }, "focused") }
+        return rootsOf(systemOwned.filter { (window, _) -> window.isFocused }, "focused")
             .ifEmpty { activeWindow() }
     }
 
@@ -243,6 +251,12 @@ internal class DismissalJournal {
         polls++
         last = observation
         window = title
+        // Gathered here, not at report time, whenever the dialog was not cleared. `TASK-FIX-1` made
+        // the walk lazy to keep it off the per-poll path and run 21 showed the other end of that:
+        // both frames recorded `view_ids_present=[]`, the dialog having gone by the time the record
+        // was written. The success path does not need the field; the refusal path is what it is for,
+        // and there the tree is still on screen.
+        if (decision !is DismissalVerdict.Press) observation.presentViewIds
         val found = observation.affordances
         samples.appendLine(
             "poll=$polls verdict=${decision::class.simpleName} reason=${reasonOf(decision)} " +
