@@ -92,6 +92,10 @@ Evidence/DX track — can proceed without waiting for all M6 surfaces:
   that the window is OS-owned, since `android:id/button2` belongs to every `AlertDialog`
 - [x] `CI-005` The frame saved must be the frame validated — run 14 went green with a system dialog
   in the integrated frame, and the dialog's own pixels were what cleared the rendered check
+- [x] `CI-006` Hosted screenshot readiness calibration — keep the strict `<= 50%` aggregate CPU gate
+  with three consecutive quiet samples, provision the Pixel 6 / API 33 AVD with 2 cores and 4 GiB,
+  and allow a hosted-only 300s settle budget. Consecutive cold runs #28 and #29 settled in 98s/96s
+  and each produced three uncontested canonical frames.
 - [x] `DEVX-003` Inspector isolation and canonical evidence mode — the affordance moved into the two
   browser menus, one per mode, and left canonical composition. It also **disproved** `CI-003`'s
   claimed residual hole: the rendered fraction is bit-identical with the overlay and without it, so

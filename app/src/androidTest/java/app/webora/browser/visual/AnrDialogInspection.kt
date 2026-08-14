@@ -294,4 +294,3 @@ internal class DismissalJournal {
         const val NOT_GATHERED = "not gathered (the dialog was cleared)"
     }
 }
-
