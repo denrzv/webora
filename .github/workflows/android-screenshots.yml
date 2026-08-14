@@ -58,12 +58,12 @@ jobs:
 
       # Built here, deliberately, and not inside the emulator step. Run 31491580516 —
       # the first green screenshot run — executed 72 Gradle tasks over 8m39s while the
-      # emulator was already up, on a 4-vCPU runner. system_server and com.android.systemui
-      # finish their own start-up inside that window and are measured by wall-clock ANR
-      # timers, so the `System UI isn't responding` dialog that covered every canonical
-      # frame was caused by the build, not by the emulator. Compiling before boot removes
-      # the contention; scripts/android-screenshot-ci.sh then refuses to run at all if
-      # these two APKs are missing, so a regression here cannot quietly move the build back.
+      # emulator was already up, so host-side build work could overlap Android start-up
+      # and contribute to wall-clock ANR pressure. CI-006 later showed that cold-boot
+      # guest pressure mattered too: the API 33 google_apis AVD needed 4 GiB RAM and a
+      # measured settle gate. Compiling before boot removes one avoidable source of
+      # contention; scripts/android-screenshot-ci.sh then refuses to run at all if these
+      # two APKs are missing, so a regression here cannot quietly move the build back.
       - name: Build the app and Android-test APKs
         run: ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest
 
@@ -75,6 +75,8 @@ jobs:
           target: google_apis
           arch: x86_64
           profile: pixel_6
+          cores: 2
+          ram-size: 4096M
           emulator-boot-timeout: 300
           disable-animations: true
           emulator-options: >-
@@ -85,11 +87,11 @@ jobs:
             df -h /
             du -sh "$ANDROID_AVD_HOME" 2>/dev/null || true
             du -sh "$ANDROID_HOME/system-images" 2>/dev/null || true
-          script: bash scripts/android-screenshot-ci.sh
+          script: READY_DEADLINE_SECONDS=300 bash scripts/android-screenshot-ci.sh
 
-      # Deliberately outside the emulator step. CI-002 established that running work on
-      # this runner while the device is alive is what starved system_server into the ANR
-      # that covered every canonical frame; composing here costs the emulator nothing.
+      # Deliberately outside the emulator step. CI-002 showed that extra runner work
+      # while the device is alive can contribute to ANR pressure; composing after emulator
+      # teardown avoids adding host contention during the evidence window.
       #
       # The comparison below is the integrity check. composeContactSheet is total or it
       # throws, but a bug that dropped a tile would still write a plausible-looking sheet,
