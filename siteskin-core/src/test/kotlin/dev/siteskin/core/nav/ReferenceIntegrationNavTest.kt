@@ -3,6 +3,7 @@ package dev.siteskin.core.nav
 import dev.siteskin.core.SiteSkinValidationOutcome
 import dev.siteskin.core.SiteSkinValidator
 import dev.siteskin.core.model.NavigationItem
+import dev.siteskin.core.model.SiteSkinConfiguration
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -57,8 +58,8 @@ class ReferenceIntegrationNavTest {
         "/catalog/roses" to "catalog",
         "/cart" to "cart",
         "/cart/" to "cart",
-        "/account" to "profile",
-        "/account/orders" to "profile",
+        "/account" to "account",
+        "/account/orders" to "account",
     )
 
     @Test
@@ -109,14 +110,37 @@ class ReferenceIntegrationNavTest {
         assertTrue("the reference manifest declares no navigation", navigation.isNotEmpty())
     }
 
-    private fun bottomNavigation(): List<NavigationItem> {
+    @Test
+    fun theReferenceManifestExercisesTheFinalSemanticShowcase() {
+        val configuration = configuration()
+        val presentation = requireNotNull(configuration.bottomNavigation).map { item ->
+            "${item.id}:${item.label}:${item.icon}:${item.action.type}"
+        } + requireNotNull(configuration.quickActions).map { item ->
+            "${item.id}:${item.label}:${item.icon}:${item.action.type}"
+        }
+
+        assertEquals(
+            listOf(
+                "home:Home:home:internal_url",
+                "catalog:Flowers:flower:internal_url",
+                "cart:Cart:shopping_cart:internal_url",
+                "account:Account:person:internal_url",
+                "call-shop:Call:call:phone",
+            ),
+            presentation,
+        )
+    }
+
+    private fun bottomNavigation(): List<NavigationItem> = requireNotNull(configuration().bottomNavigation) {
+        "the reference manifest declares bottomNavigation"
+    }
+
+    private fun configuration(): SiteSkinConfiguration {
         val outcome = manifest.inputStream().use { SiteSkinValidator.validate(it, origin) }
         assertTrue(
             "the reference manifest must validate against $origin, got $outcome",
             outcome is SiteSkinValidationOutcome.Accepted,
         )
-        return requireNotNull((outcome as SiteSkinValidationOutcome.Accepted).configuration.bottomNavigation) {
-            "the reference manifest declares bottomNavigation"
-        }
+        return (outcome as SiteSkinValidationOutcome.Accepted).configuration
     }
 }

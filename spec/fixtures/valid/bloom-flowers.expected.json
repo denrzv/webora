@@ -32,8 +32,8 @@
       },
       {
         "id": "catalog",
-        "label": "Catalog",
-        "icon": "grid_view",
+        "label": "Flowers",
+        "icon": "flower",
         "action": { "type": "internal_url", "url": "https://bloomflowers.example/catalog" },
         "match": ["/catalog", "/catalog/**"]
       },
@@ -45,8 +45,8 @@
         "match": ["/cart/**"]
       },
       {
-        "id": "profile",
-        "label": "Profile",
+        "id": "account",
+        "label": "Account",
         "icon": "person",
         "action": { "type": "internal_url", "url": "https://bloomflowers.example/account" },
         "match": ["/account/**"]

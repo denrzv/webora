@@ -27,8 +27,8 @@
     },
     {
       "id": "catalog",
-      "label": "Catalog",
-      "icon": "grid_view",
+      "label": "Flowers",
+      "icon": "flower",
       "action": { "type": "internal_url", "url": "/catalog" },
       "match": ["/catalog", "/catalog/**"]
     },
@@ -40,8 +40,8 @@
       "match": ["/cart/**"]
     },
     {
-      "id": "profile",
-      "label": "Profile",
+      "id": "account",
+      "label": "Account",
       "icon": "person",
       "action": { "type": "internal_url", "url": "/account" },
       "match": ["/account/**"]
