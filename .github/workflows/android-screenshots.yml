@@ -75,7 +75,7 @@ jobs:
           target: google_apis
           arch: x86_64
           profile: pixel_6
-          cores: 4
+          cores: 2
           ram-size: 4096M
           emulator-boot-timeout: 300
           disable-animations: true
@@ -87,7 +87,7 @@ jobs:
             df -h /
             du -sh "$ANDROID_AVD_HOME" 2>/dev/null || true
             du -sh "$ANDROID_HOME/system-images" 2>/dev/null || true
-          script: bash scripts/android-screenshot-ci.sh
+          script: READY_DEADLINE_SECONDS=300 bash scripts/android-screenshot-ci.sh
 
       # Deliberately outside the emulator step. CI-002 established that running work on
       # this runner while the device is alive is what starved system_server into the ANR
