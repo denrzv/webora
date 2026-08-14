@@ -540,6 +540,31 @@ friends does not relax them.
 
 ### `UX-009` — Consent dialog renders as a circle and clips its own heading
 
+**Status:** CLOSED — fixed. **The confirming hosted frame is still outstanding**: run **19**
+(`31733873897`, `8ee78cc`) overran its own 40-minute timeout inside the journey step and uploaded
+nothing at all. The cause is proven and measured on the JVM; the picture has not been taken. See
+`reports/qa/UX-009.md`.
+
+**The mechanism, and none of its four steps looks like a bug on its own.** `WEBORA_SHAPES` put
+`WeboraRadius.PILL` (999 dp) on Material's `extraLarge` role; `DialogTokens.ContainerShape` is
+`CornerExtraLarge`, so every `AlertDialog` in the app read it; `CornerBasedShape.createOutline`
+scales an over-large corner to fit rather than rejecting it, resolving 999 dp to exactly 140 on a
+280 dp dialog — half the width, which rounds the sides away entirely; and `Surface` clips its
+content to the result, so the heading was removed rather than overlapped.
+
+**The fix is at the role, not at the call site.** `EXTRA_LARGE = 28.dp` is the container radius and
+the pill stays for the controls that name it directly — the address field on Home now does, as
+`BrowserChrome` already did. That fixed all five dialogs at once (consent, external-URL,
+external-navigation, clear-browsing-data, inspector); a `shape =` argument on the consent dialog
+would have fixed the photographed frame and left the collision live.
+
+**The gate is `WeboraThemeTest.a container role never rounds a dialog into a stadium`**, which lays
+every settable `Shapes` role out through the real `createOutline` and bounds the *resolved* radius.
+`every shape corner comes from the compiled radii` stayed green throughout the defect and still does
+under the negative control — it asks where a value came from, and 999 dp is a declared token. So does
+the whole instrumented suite: clipping happens in the parent's draw while semantics keep the full
+text, which is `CI-003`'s lesson one layer up.
+
 **Priority:** P1  
 **Depends on:** `UX-002`, `UX-007`  
 **Goal:** the first-use consent sheet is a dialog, not an ellipse.

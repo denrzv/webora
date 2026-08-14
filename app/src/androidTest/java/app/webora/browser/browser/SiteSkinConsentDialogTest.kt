@@ -17,6 +17,19 @@ import org.junit.Test
 class SiteSkinConsentDialogTest {
     @get:Rule val compose = createComposeRule()
 
+    /**
+     * `HARDEN-002`'s requirement, pinned where it is read: the complete canonical origin — scheme,
+     * host and a non-default port — is what the dialog asks about, so the visible grant matches the
+     * `SiteOrigin` persistence key.
+     *
+     * **It is not the gate against that text disappearing, which is worth stating because it looks
+     * like one.** `UX-009` was a container shape clipping this very heading down to `ow`, and this
+     * assertion stayed green across both hosted runs that photographed it: clipping happens in the
+     * parent's draw, while the semantics tree keeps the node's full text and its unclipped bounds
+     * either way — `CI-003`'s "semantics precede pixels", one layer up and in a suite rather than a
+     * harness. The assertion that fails on that defect is `WeboraThemeTest.a container role never
+     * rounds a dialog into a stadium`, which measures the resolved corner radius instead.
+     */
     @Test fun consentDialogNamesExactOriginAndBrowserOwnedBoundary() {
         val origin = requireNotNull(SiteOrigin.parse("https://checkout.shop.example:8443/cart"))
         compose.setContent {
