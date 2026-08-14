@@ -973,6 +973,24 @@ title at all so there is no parameter through which text could return. The recor
 fired is what made a wrong mechanism visible in one run instead of surviving as a rule nobody noticed
 never matches.
 
+**Run 22 then showed the fallback carrying a frame, which is why there are two rules and not one.**
+Frames 01 and 02 found the dialog by input focus; frame 03 found it by `rootInActiveWindow`, because
+the dialog's window was **absent from `uiAutomation.windows` entirely** — the enumeration listed only
+an unfocused system window and Webora's own — while the active-window read reached it at
+`id=15 pkg=android` and pressed it. That is run 13's shape from the other side, and either rule alone
+would have failed a frame in that run. It also confirms the package allow-list from the field: the
+AOSP dialog's root really does report `android`.
+
+**What the hosted runs do not prove.** Both reached the dialog on `poll=1` with
+`interactive_windows=true`, so the patience half was never exercised and `rootInActiveWindow` may
+have sufficed on some frames. The retry is justified by run 13's recorded failure and pinned by unit
+tests — not by a green run. Instrumented evidence, never a gate claim, as `CI-002`, `CI-003` and
+`CI-005` each recorded theirs.
+
+**`view_ids_present` says `not gathered (the dialog was cleared)` on a press, never `[]`.** The walk
+runs only on the refusal path it exists for, and an empty list must not be confused with a list
+nobody collected — `DEVX-002`'s `tiles=0` lesson, one artifact along.
+
 **Enumerating windows is where this could have gone badly, and the package check is what stops it.**
 `android:id/button2` is the negative button of *every* `AlertDialog`, Webora's consent dialog
 included. A search across all windows that fell back to "whatever has a button2" would press a Webora
