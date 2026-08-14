@@ -359,10 +359,17 @@ never trapped behind a major bump.
   },
   "bottomNavigation": [
     { "id": "home",    "label": "Home",    "icon": "home",
-      "action": { "type": "internal_url", "url": "/" } },
-    { "id": "catalog", "label": "Catalog", "icon": "grid_view",
+      "action": { "type": "internal_url", "url": "/" },
+      "match": ["/"] },
+    { "id": "catalog", "label": "Flowers", "icon": "flower",
       "action": { "type": "internal_url", "url": "/catalog" },
-      "match": ["/catalog", "/catalog/**"] }
+      "match": ["/catalog", "/catalog/**"] },
+    { "id": "cart", "label": "Cart", "icon": "shopping_cart",
+      "action": { "type": "internal_url", "url": "/cart" },
+      "match": ["/cart/**"] },
+    { "id": "account", "label": "Account", "icon": "person",
+      "action": { "type": "internal_url", "url": "/account" },
+      "match": ["/account/**"] }
   ],
   "quickActions": [
     { "id": "call-shop", "label": "Call", "icon": "call",

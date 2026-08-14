@@ -689,6 +689,14 @@ bound to `bloomflowers.example` and the document served from `denrzv.github.io`.
 
 `denrzv.github.io` is a stopgap and cannot supply the distinct origins `DEMO-002` would need.
 
+**The final showcase uses domain semantics, not compatibility artwork.** Its ordered presentation
+is Home/`home`, Flowers/`flower`, Cart/`shopping_cart`, Account/`person`, plus the Call/`call`
+quick action. The visible label, semantic token, route, match pattern and typed action describe
+different parts of one destination and need not share a spelling — Flowers still routes through
+`/catalog`, and Account through `/account` — but all five must stay aligned across the canonical
+fixture, normalized result, published copy, adoption guide and deployed origin. `grid_view` remains
+a supported compatibility token; it is deliberately not what the flower shop demonstrates.
+
 **Route layout is decided by the manifest, not by taste.** Manifest paths are origin-absolute and
 cannot be re-authored per host, and only the directory layout (`catalog/index.html`) resolves
 everywhere — a flat `catalog.html` serves `/catalog` on GitHub Pages and 404s under
