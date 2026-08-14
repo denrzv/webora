@@ -922,6 +922,65 @@ The record closes the gap that made this expensive to diagnose: `owner=` on the 
 `NEVER RENDERED`. Run 14's file recorded four attempts and could not say the frame it kept had a
 dialog over it.
 
+### The one permitted dismissal had to actually execute (CI-004)
+
+`CI-002` gave the harness an allow-list of one obstruction and one button. Hosted run **13**
+(`31697590198`, `d830cac8`) proved it could identify that obstruction and then **not press it**,
+twice, byte-identically, producing **zero frames**:
+
+```
+Refusing to capture 01-home: Application Not Responding: com.android.systemui is dismissable
+but 0 Wait affordances were found among android:id/button2, android:id/aerr_wait.
+```
+
+**The defect in one sentence: the verdict meaning *this is clearable* was the only one that could not
+be retried, and the verdict meaning *this is unrecoverable* was retried patiently for twenty
+seconds.** `requireAppOwnsScreen` polls a `Blocked` screen forty times; `dismissSystemAnr` inspected
+the accessibility tree once and threw. Three conditions read as that zero — no searchable tree, a
+null root, `FLAG_REPORT_VIEW_IDS` not in effect — and none of them means the dialog has no `Wait`
+button. The guard's own KDoc had already named the third as *"a recoverable run failing as an
+unrecoverable one"* and guarded exactly one route to it.
+
+**Only the zero case became patient.** Two or more candidates still fails immediately and is never
+resolved by choosing; making ambiguity retryable would be a worse bug than the one being fixed, and
+it has its own negative control. `AnrDismissalPolicy` joins `focusVerdict` and `RenderedContentPolicy`
+in `src/screenshotPolicy/java` — it was the last capture-time decision that was not a pure function,
+which is why it reached `main`.
+
+**Patience is not the fix, and the evidence is what says so.** The diagnostics artifact showed the
+ANR dialog had been on screen for **63 seconds** before the test process started. A deterministic
+zero absorbed by a 20-second deadline is forty identical failures and then the same failed run. So
+**reachability leads**: the observation enumerates the windows the automation can see and searches
+the one already classified — by OS-supplied title, by input focus (the same notion as the
+`mCurrentFocus` line the classification came from), or by `rootInActiveWindow`. Run **14** on the
+same commit recorded `pressed=android:id/aerr_wait`, `click_accepted=true`, twice, which eliminates
+"the dialog has no Wait button" and leaves reachability as the difference between the two runs.
+
+**Enumerating windows is where this could have gone badly, and the package check is what stops it.**
+`android:id/button2` is the negative button of *every* `AlertDialog`, Webora's consent dialog
+included. A search across all windows that fell back to "whatever has a button2" would press a Webora
+dialog whenever the system dialog's tree was unreachable — silently, on a green job. That is `CI-002`'s
+refusal arriving through a mechanism `CI-002` never had, because `rootInActiveWindow` was one tree.
+Every searched root must report a package in a closed set of two OS-supplied names. **A new window
+identification rule is only ever an identification rule; it may never be a reason to press.**
+
+**`MAX_DISMISSALS` counts presses, not looks.** `"survived N dismissals"` is false if nothing was
+pressed, so a "not yet" costs no budget. Conflating the two would reintroduce this bug with a larger
+constant: two looks instead of one. And `SETTLE_TIMEOUT_MILLIS` was not raised — raising the deadline
+instead of fixing the lookup is the shortcut `CI-003` refused for its threshold.
+
+**Every zero carries a different reason, and `dismissal-<label>.txt` records what was actually
+there.** The old message named the ids the harness *looked for* and never the ids that were
+*present*, which is why two hosted runs and a log download produced no more information than the
+first assertion. `CI-005`'s standing constraint still binds: this may only ever make the harness
+refuse **later**, never make it press something it would refuse today.
+
+**`./gradlew detekt` does not analyse `androidTest`** — verified by appending a 140-character line to
+an instrumented file and watching the gate stay green, while `:app:detektDebugAndroidTest` reports it
+at once. That is `CI-003`'s "the gate never compiles `androidTest`" one rule further along. Not fixed
+here; wiring the variant task in surfaces pre-existing findings across the whole instrumented suite
+and needs its own ticket.
+
 ### Browser-owned design tokens (UX-002)
 
 `SiteSkinTheme` gave *websites* six colour roles, a dark projection and a WCAG guard;
