@@ -540,9 +540,10 @@ friends does not relax them.
 
 ### `UX-009` — Consent dialog renders as a circle and clips its own heading
 
-**Status:** CLOSED — fixed. **The confirming hosted frame is still outstanding**: run **19**
-(`31733873897`, `8ee78cc`) overran its own 40-minute timeout inside the journey step and uploaded
-nothing at all. The cause is proven and measured on the JVM; the picture has not been taken. See
+**Status:** CLOSED — fixed and visually confirmed. Hosted runs **28** (`31804437572`) and **29**
+(`31807060517`) supplied the previously missing confirmation: both produced a clean canonical
+`02-siteskin-consent.png` after the CI-006 readiness gate settled, with no OS contamination and no
+return of the stadium/clipping defect. Run **19** remains the failed first confirmation attempt. See
 `reports/qa/UX-009.md`.
 
 **The mechanism, and none of its four steps looks like a bug on its own.** `WEBORA_SHAPES` put
