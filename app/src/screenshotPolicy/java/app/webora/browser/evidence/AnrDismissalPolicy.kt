@@ -100,4 +100,34 @@ object AnrDismissalPolicy {
 
         else -> DismissalVerdict.NotYet("no sanctioned affordance is on the searched tree yet")
     }
+
+    /**
+     * Whether a window with this package may be searched for a `Wait` affordance at all.
+     *
+     * **This is the control that keeps `CI-002`'s promise once the harness enumerates windows.**
+     * The old lookup read `rootInActiveWindow` — one tree, whichever it was. `CI-004` searches every
+     * window the automation can see in order to reach a dialog `rootInActiveWindow` could not, and
+     * `android:id/button2` is the negative button of *every* `AlertDialog`, Webora's first-use
+     * consent dialog included — a dialog the screenshot journey deliberately captures with focus. A
+     * window enumeration with no ownership check would press a Webora dialog whenever the system
+     * dialog's tree was unreachable, silently, on a green job.
+     *
+     * An allow-list of two OS-supplied names, in the shape `PROJECT_RULES.md` requires: `android` is
+     * the package `system_server` builds the AOSP dialog under (`package=android`, `mOwnerUid=1000`
+     * in `dumpsys window`), and the System UI package is accepted alongside it because it is the
+     * process [ScreenEvidencePolicy.focusVerdict] has already allow-listed. Both are accepted only
+     * because a package mismatch that rejected everything would turn the fix into a silent no-op.
+     *
+     * Exact equality, never a prefix: `com.android.systemui.foo` and `android.evil` are not the
+     * system, and a `startsWith` here would be the same mistake
+     * [ScreenEvidencePolicy] avoids with its whole-token match on window titles.
+     *
+     * **A window-identification rule may identify; only this may permit.** Any future rule for
+     * finding the dialog belongs behind this check, never beside it.
+     */
+    fun mayBeSearchedForWaitAffordance(windowPackage: String?): Boolean =
+        windowPackage in SEARCHABLE_WINDOW_PACKAGES
+
+    private val SEARCHABLE_WINDOW_PACKAGES =
+        setOf("android", ScreenEvidencePolicy.DISMISSABLE_ANR_PROCESS)
 }

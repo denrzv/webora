@@ -1,6 +1,7 @@
 package app.webora.browser.evidence
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -98,6 +99,33 @@ class AnrDismissalPolicyTest {
             verdicts.none { it is DismissalVerdict.Ambiguous },
         )
         assertTrue("nor may it press anything", verdicts.none { it is DismissalVerdict.Press })
+    }
+
+    /**
+     * The control that keeps `CI-002`'s promise once the harness enumerates windows rather than
+     * reading one tree. `android:id/button2` is on Webora's consent dialog too.
+     */
+    @Test fun `only the two system packages may be searched`() {
+        assertTrue(AnrDismissalPolicy.mayBeSearchedForWaitAffordance("android"))
+        assertTrue(AnrDismissalPolicy.mayBeSearchedForWaitAffordance(ScreenEvidencePolicy.DISMISSABLE_ANR_PROCESS))
+    }
+
+    @Test fun `webora's own package may not be searched`() {
+        assertFalse(
+            "the consent dialog carries android:id/button2 and must never be pressable by the harness",
+            AnrDismissalPolicy.mayBeSearchedForWaitAffordance("app.webora.browser.debug"),
+        )
+    }
+
+    @Test fun `a null package may not be searched`() {
+        assertFalse(AnrDismissalPolicy.mayBeSearchedForWaitAffordance(null))
+    }
+
+    /** Exact equality, never a prefix — the same trap `focusVerdict` avoids on window titles. */
+    @Test fun `a lookalike package may not be searched`() {
+        listOf("com.android.systemui.foo", "android.evil", "evil.android", "com.evil.android").forEach { lookalike ->
+            assertFalse(lookalike, AnrDismissalPolicy.mayBeSearchedForWaitAffordance(lookalike))
+        }
     }
 
     /** Every combination the guard can observe with an empty `pressable` list. */

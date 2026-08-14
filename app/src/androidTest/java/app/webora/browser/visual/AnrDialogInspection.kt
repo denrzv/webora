@@ -4,6 +4,7 @@ import android.accessibilityservice.AccessibilityServiceInfo
 import android.app.UiAutomation
 import android.view.accessibility.AccessibilityNodeInfo
 import android.view.accessibility.AccessibilityWindowInfo
+import app.webora.browser.evidence.AnrDismissalPolicy
 import app.webora.browser.evidence.DismissalVerdict
 import app.webora.browser.evidence.ScreenEvidencePolicy
 import app.webora.browser.evidence.WaitAffordances
@@ -22,8 +23,9 @@ import app.webora.browser.evidence.WaitAffordances
  * included. A search across all windows that fell back to "whatever has a button2" would press a
  * Webora dialog whenever the system dialog's tree was unreachable — the exact thing `CI-002` refused,
  * arriving through a mechanism `CI-002` did not have. Every searched window is therefore identified
- * twice: by an OS-supplied package in `SYSTEM_PACKAGES`, and by an OS-supplied identity — the window
- * title [ScreenEvidencePolicy] already classified, or the input focus that classification came from.
+ * twice: by [AnrDismissalPolicy.mayBeSearchedForWaitAffordance], which owns the package allow-list
+ * and carries the negative controls, and by an OS-supplied identity — the window title
+ * [ScreenEvidencePolicy] already classified, or the input focus that classification came from.
  * Webora's windows carry the app's package and can never pass the first check, whichever identity
  * rule fires.
  *
@@ -72,7 +74,11 @@ internal class AnrDialogInspector(private val uiAutomation: UiAutomation) {
             pressableNodes = pressable,
             searchedWindows = searched.map { it.description },
             visibleWindows = visible.map { describe(it) },
-            presentViewIds = presentViewIds(searched),
+            // A thunk, not a list. The fix that made a stuck dialog patient turned one look into
+            // ~40, and only the last observation's ids are ever printed — so an eager walk here is
+            // 400 accessibility reads per poll to produce a diagnostic read once, on a device that
+            // is by construction already not responding.
+            walkPresentViewIds = { presentViewIds(searched) },
             flags = flags,
         )
     }
@@ -90,9 +96,10 @@ internal class AnrDialogInspector(private val uiAutomation: UiAutomation) {
     /**
      * The windows this observation is allowed to search, by the first rule that identifies one.
      *
-     * **Every rule is filtered through [isSystemOwned] first, so none of them can widen what may be
-     * pressed.** They differ only in how the system-owned dialog is recognised, and each records
-     * which one fired so the next reader knows what the device actually supplied:
+     * **Every rule is filtered through [AnrDismissalPolicy.mayBeSearchedForWaitAffordance] first, so
+     * none of them can widen what may be pressed.** They differ only in how the system-owned dialog
+     * is recognised, and each records which one fired so the next reader knows what the device
+     * actually supplied:
      *
      * 1. `title` — the OS-supplied window title equals the one [ScreenEvidencePolicy] classified.
      * 2. `focused` — the window holding input focus, which is the same notion as `mCurrentFocus` in
@@ -110,16 +117,21 @@ internal class AnrDialogInspector(private val uiAutomation: UiAutomation) {
         visible: List<AccessibilityWindowInfo>,
         dialogTitle: String,
     ): List<SearchedWindow> {
-        val systemOwned = visible.filter { window -> window.root?.let(::isSystemOwned) == true }
-        return rootsOf(systemOwned.filter { it.title?.toString() == dialogTitle }, "title")
-            .ifEmpty { rootsOf(systemOwned.filter { it.isFocused }, "focused") }
+        val systemOwned = visible.mapNotNull { window ->
+            window.root?.takeIf { AnrDismissalPolicy.mayBeSearchedForWaitAffordance(it.packageName?.toString()) }
+                ?.let { window to it }
+        }
+        return rootsOf(systemOwned.filter { (window, _) -> window.title?.toString() == dialogTitle }, "title")
+            .ifEmpty { rootsOf(systemOwned.filter { (window, _) -> window.isFocused }, "focused") }
             .ifEmpty { activeWindow() }
     }
 
-    private fun rootsOf(windows: List<AccessibilityWindowInfo>, rule: String): List<SearchedWindow> {
+    private fun rootsOf(
+        windows: List<Pair<AccessibilityWindowInfo, AccessibilityNodeInfo>>,
+        rule: String,
+    ): List<SearchedWindow> {
         val byWindowId = LinkedHashMap<Int, SearchedWindow>()
-        windows.forEach { window ->
-            val root = window.root ?: return@forEach
+        windows.forEach { (window, root) ->
             byWindowId[root.windowId] = SearchedWindow(root, "${describe(window)} matched=$rule")
         }
         return byWindowId.values.toList()
@@ -127,23 +139,11 @@ internal class AnrDialogInspector(private val uiAutomation: UiAutomation) {
 
     private fun activeWindow(): List<SearchedWindow> {
         val active = uiAutomation.rootInActiveWindow ?: return emptyList()
-        if (!isSystemOwned(active)) return emptyList()
+        if (!AnrDismissalPolicy.mayBeSearchedForWaitAffordance(active.packageName?.toString())) return emptyList()
         return listOf(
             SearchedWindow(active, "id=${active.windowId} pkg=${active.packageName} matched=active-window"),
         )
     }
-
-    /**
-     * Whether a window is owned by the OS rather than by Webora.
-     *
-     * A closed list of two OS-supplied names, not a heuristic. The AOSP dialog is built by
-     * `system_server` (`package=android` in `dumpsys window`, `mOwnerUid=1000`); the System UI
-     * package is accepted alongside it because it is the process
-     * [ScreenEvidencePolicy.focusVerdict] has already allow-listed, and a package mismatch that made
-     * this check reject everything would turn the fix into a silent no-op.
-     */
-    private fun isSystemOwned(root: AccessibilityNodeInfo): Boolean =
-        root.packageName?.toString() in SYSTEM_PACKAGES
 
     private fun affordanceNodes(searched: List<SearchedWindow>): List<Pair<String, AccessibilityNodeInfo>> =
         searched.flatMap { window ->
@@ -189,7 +189,6 @@ internal class AnrDialogInspector(private val uiAutomation: UiAutomation) {
          */
         val WAIT_VIEW_IDS = listOf("android:id/button2", "android:id/aerr_wait")
 
-        private val SYSTEM_PACKAGES = setOf("android", ScreenEvidencePolicy.DISMISSABLE_ANR_PROCESS)
         private const val MAX_NODES_WALKED = 400
         private const val MAX_IDS_RECORDED = 60
     }
@@ -202,15 +201,22 @@ internal data class AutomationFlags(
     val interactiveWindows: Boolean,
 )
 
-/** One look at the dialog: what the policy decides on, plus everything a reader would want after. */
+/**
+ * One look at the dialog: what the policy decides on, plus everything a reader would want after.
+ *
+ * [presentViewIds] is deferred until something reads it. The roots may be a poll stale by then; a
+ * stale node yields fewer ids, which degrades a diagnostic and cannot change a decision.
+ */
 internal class AnrDialogObservation(
     val affordances: WaitAffordances,
     val pressableNodes: List<Pair<String, AccessibilityNodeInfo>>,
     val searchedWindows: List<String>,
     val visibleWindows: List<String>,
-    val presentViewIds: List<String>,
     val flags: AutomationFlags,
-)
+    walkPresentViewIds: () -> List<String>,
+) {
+    val presentViewIds: List<String> by lazy(LazyThreadSafetyMode.NONE, walkPresentViewIds)
+}
 
 /**
  * What the guard saw across one `requireAppOwnsScreen` call, written out as `dismissal-<label>.txt`.
@@ -254,9 +260,9 @@ internal class DismissalJournal {
         appendLine("polls=$polls")
         appendLine()
         append(samples)
+        val observation = last ?: return@buildString
         appendLine()
         appendLine("--- last observation ---")
-        val observation = last ?: return@buildString
         appendLine("searched_windows=${observation.searchedWindows}")
         appendLine("visible_windows=${observation.visibleWindows}")
         appendLine("view_ids_present=${observation.presentViewIds}")

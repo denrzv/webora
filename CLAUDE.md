@@ -961,7 +961,9 @@ same commit recorded `pressed=android:id/aerr_wait`, `click_accepted=true`, twic
 included. A search across all windows that fell back to "whatever has a button2" would press a Webora
 dialog whenever the system dialog's tree was unreachable — silently, on a green job. That is `CI-002`'s
 refusal arriving through a mechanism `CI-002` never had, because `rootInActiveWindow` was one tree.
-Every searched root must report a package in a closed set of two OS-supplied names. **A new window
+Every searched root must report a package in a closed set of two OS-supplied names, and that check
+lives in `AnrDismissalPolicy` with the negative controls — a security control added in `androidTest`
+would have been a fresh instance of the very defect this ticket removes. **A new window
 identification rule is only ever an identification rule; it may never be a reason to press.**
 
 **`MAX_DISMISSALS` counts presses, not looks.** `"survived N dismissals"` is false if nothing was
