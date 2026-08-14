@@ -244,6 +244,7 @@ internal class DismissalJournal {
     private var polls = 0
     private var last: AnrDialogObservation? = null
     private var window = "none"
+    private var viewIds = NOT_GATHERED
 
     val hasSamples: Boolean get() = polls > 0
 
@@ -251,12 +252,13 @@ internal class DismissalJournal {
         polls++
         last = observation
         window = title
-        // Gathered here, not at report time, whenever the dialog was not cleared. `TASK-FIX-1` made
-        // the walk lazy to keep it off the per-poll path and run 21 showed the other end of that:
-        // both frames recorded `view_ids_present=[]`, the dialog having gone by the time the record
-        // was written. The success path does not need the field; the refusal path is what it is for,
-        // and there the tree is still on screen.
-        if (decision !is DismissalVerdict.Press) observation.presentViewIds
+        // Gathered here, not at report time, and only when the dialog was not cleared. `TASK-FIX-1`
+        // made the walk lazy to keep it off the per-poll path; runs 21 and 22 showed the other end of
+        // that, recording `view_ids_present=[]` on every pressed frame because the dialog was gone by
+        // the time the record was written. **An empty list and "never gathered" must not look alike**
+        // — `DEVX-002` learned that from `tiles=0` — so the success path says so in words, and the
+        // walk only runs on the refusal path it exists for, while the tree is still on screen.
+        viewIds = if (decision is DismissalVerdict.Press) NOT_GATHERED else observation.presentViewIds.toString()
         val found = observation.affordances
         samples.appendLine(
             "poll=$polls verdict=${decision::class.simpleName} reason=${reasonOf(decision)} " +
@@ -279,13 +281,17 @@ internal class DismissalJournal {
         appendLine("--- last observation ---")
         appendLine("searched_windows=${observation.searchedWindows}")
         appendLine("visible_windows=${observation.visibleWindows}")
-        appendLine("view_ids_present=${observation.presentViewIds}")
+        appendLine("view_ids_present=$viewIds")
     }
 
     private fun reasonOf(decision: DismissalVerdict): String = when (decision) {
         is DismissalVerdict.Press -> "pressed ${decision.viewId}"
         is DismissalVerdict.NotYet -> decision.reason
         is DismissalVerdict.Ambiguous -> "ambiguous: ${decision.viewIds.joinToString()}"
+    }
+
+    private companion object {
+        const val NOT_GATHERED = "not gathered (the dialog was cleared)"
     }
 }
 
