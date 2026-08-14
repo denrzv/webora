@@ -1,7 +1,7 @@
 # Webora Browser — developer execution plan
 
 Status: ACTIVE
-Last updated: 2026-08-11
+Last updated: 2026-08-14
 
 This document is the execution companion to [`DEVELOPMENT_PLAN.md`](DEVELOPMENT_PLAN.md),
 [`ROADMAP.md`](ROADMAP.md), and [`BACKLOG.md`](BACKLOG.md). It does not replace ticket PRDs or
@@ -151,3 +151,76 @@ minimal friction, a clean and intentional visual story:
 5. diagnostics still available separately when a run fails;
 6. the SiteSkin Inspector remains accessible to developers without appearing in canonical evidence;
 7. all protected domain/TLS and manifest-trust invariants remain unchanged.
+
+## Post-M7 queue — M8 native browser UX
+
+Do not start M8 until `DEMO-003` is merged and its final hosted evidence is accepted. M8 is not a
+replacement for M7 polish; it starts from the completed integrated experience and makes ordinary web
+browsing equally intentional.
+
+The product model has three distinct navigation layers:
+
+1. **Android system navigation** — OS-owned. Depending on device settings this is a gesture handle or
+   Back/Home/Recents buttons. Webora must respect its insets and back contract, but must not draw a
+   fake copy of it.
+2. **Browser navigation** — Webora-owned. Address/security identity, Back, Forward, Reload, Home,
+   tabs and overflow remain discoverable on Home and ordinary pages independent of OS navigation.
+3. **Site navigation** — SiteSkin-owned within the validated semantic contract. It may occupy the
+   bottom navigation slot only while an integration is active and can never suppress browser escape
+   or security identity.
+
+### M8 execution order
+
+```text
+DEMO-003 (M7 done)
+        │
+        ▼
+BROWSE-006 tabs/session
+        ├──────────────► BROWSE-007 recents/history/favourites ───────┐
+        │                                                             │
+        ▼                                                             │
+UX-011 persistent browser shell                                       │
+        │                                                             │
+        ▼                                                             │
+UX-012 regular ↔ SiteSkin chrome handoff                              │
+        │                                                             │
+        ▼                                                             │
+CI-007 canonical regular-browsing evidence ───────────────────────────┤
+                                                                      ▼
+                                                            DEMO-004 browser-first walkthrough
+```
+
+`BROWSE-006` comes first because the shell should expose a real tab switcher rather than reserve a
+non-functional affordance. `BROWSE-007` can proceed in parallel once the tab/session identity model
+is stable. `UX-012` owns the transition contract; `CI-007` proves it visually rather than inferring
+it from state tests.
+
+### M8 quality gates
+
+The M7 security/accessibility/evidence gates continue to apply, plus these browser-specific ones:
+
+- **System-boundary gate:** Webora never imitates Android Back/Home/Recents; gesture and three-button
+  navigation both remain usable without overlap with browser chrome.
+- **Session gate:** switching tabs cannot leak URL history, SiteSkin mode, security identity or
+  navigation state from another tab.
+- **Mode-handoff gate:** leaving an integrated origin removes SiteSkin navigation and restores the
+  browser shell deterministically; declining consent never hides ordinary browser controls.
+- **Privacy gate:** history, recents and favourites remain local by default and clear-browsing-data
+  semantics explicitly cover any new persisted browsing records.
+- **Visual gate:** canonical evidence includes at least one ordinary non-integrated HTTPS page with
+  browser navigation and security identity visible.
+
+### M8 exit criteria
+
+M8 is complete when the same build tells a coherent browser-first story without relying on Android
+system navigation for browser actions:
+
+1. Home and ordinary browsing share a discoverable browser-owned navigation shell;
+2. multiple tabs maintain independent history and SiteSkin state and can be switched/closed safely;
+3. Home recents and favourites contain real local browsing data rather than placeholders;
+4. entering SiteSkin intentionally hands the bottom navigation slot to the site while preserving
+   browser-owned escape and security identity;
+5. leaving SiteSkin or switching to a regular tab restores ordinary browser chrome with no leakage;
+6. hosted evidence contains a clean ordinary-site frame as well as the existing SiteSkin story;
+7. the reference walkthrough explains Webora as a browser first and SiteSkin as an optional,
+   consented enhancement.
