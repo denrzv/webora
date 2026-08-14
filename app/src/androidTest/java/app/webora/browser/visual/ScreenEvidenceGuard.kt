@@ -1,6 +1,5 @@
 package app.webora.browser.visual
 
-import android.accessibilityservice.AccessibilityServiceInfo
 import android.app.UiAutomation
 import android.graphics.Bitmap
 import android.graphics.Rect
@@ -8,8 +7,10 @@ import android.os.ParcelFileDescriptor
 import android.os.SystemClock
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.test.platform.io.PlatformTestStorage
+import app.webora.browser.evidence.AnrDismissalPolicy
 import app.webora.browser.evidence.CandidateVerdict
 import app.webora.browser.evidence.ContentVerdict
+import app.webora.browser.evidence.DismissalVerdict
 import app.webora.browser.evidence.FocusVerdict
 import app.webora.browser.evidence.RenderedContentPolicy
 import app.webora.browser.evidence.ScreenEvidencePolicy
@@ -32,6 +33,12 @@ import app.webora.browser.evidence.candidateVerdict
  * The bounded poll exists because a dialog dismissal is asynchronous: for a moment after `Wait` the
  * focused window can legitimately be nothing at all. So a blocking verdict is retried until the
  * deadline and only then fails — with the last reason and the dump that produced it.
+ *
+ * `CI-004` closed the inversion in that patience. The verdict meaning *this is clearable* was the
+ * only one that could not be retried — it looked once and threw — while the verdict meaning *this is
+ * unrecoverable* was retried for twenty seconds. A dismissal now asks
+ * [AnrDismissalPolicy] and returns "not yet" to this loop, which already owns the deadline, the
+ * sleep and the re-dump. Patience lives in exactly one place.
  */
 class ScreenEvidenceGuard(
     private val uiAutomation: UiAutomation,
@@ -39,8 +46,10 @@ class ScreenEvidenceGuard(
     private val storage: PlatformTestStorage,
 ) {
 
+    private val inspector = AnrDialogInspector(uiAutomation)
+
     init {
-        enableViewIdReporting()
+        inspector.enableRequiredFlags()
     }
 
     /**
@@ -48,9 +57,15 @@ class ScreenEvidenceGuard(
      *
      * Clears at most [MAX_DISMISSALS] instances of the one known System UI ANR dialog, recording
      * each. Every other obstruction — including one owned by Webora — throws.
+     *
+     * [MAX_DISMISSALS] counts **presses**, not looks. `"survived N dismissals"` is only true if
+     * something was pressed, and a dialog cannot survive a dismissal that never pressed anything, so
+     * an observation that found nothing pressable yet costs no budget. Conflating the two would
+     * reintroduce `CI-004`'s defect with a larger constant: two looks instead of one.
      */
     fun requireAppOwnsScreen(label: String) {
         val deadline = SystemClock.uptimeMillis() + SETTLE_TIMEOUT_MILLIS
+        val journal = DismissalJournal()
         var dismissals = 0
         var lastDump = ""
         var lastReason = "the screen was never inspected"
@@ -60,14 +75,15 @@ class ScreenEvidenceGuard(
             when (val verdict = ScreenEvidencePolicy.focusVerdict(lastDump, appPackage)) {
                 is FocusVerdict.OwnedByApp -> {
                     recordFocus(label, lastDump)
+                    writeDismissalJournal(label, journal)
                     return
                 }
 
                 is FocusVerdict.Blocked -> lastReason = verdict.reason
 
                 is FocusVerdict.DismissableSystemAnr -> if (dismissals < MAX_DISMISSALS) {
-                    dismissals++
-                    dismissSystemAnr(verdict, label, dismissals)
+                    val notPressed = attemptDismissal(verdict, label, dismissals + 1, journal)
+                    if (notPressed == null) dismissals++ else lastReason = notPressed
                 } else {
                     lastReason = "${verdict.title} survived $MAX_DISMISSALS dismissals"
                 }
@@ -76,6 +92,7 @@ class ScreenEvidenceGuard(
             SystemClock.sleep(POLL_INTERVAL_MILLIS)
         }
 
+        writeDismissalJournal(label, journal)
         throw evidenceFailure(label, lastDump, lastReason)
     }
 
@@ -212,26 +229,56 @@ class ScreenEvidenceGuard(
     private fun takeScreenshot(label: String): Bitmap =
         requireNotNull(uiAutomation.takeScreenshot()) { "UiAutomation returned no screenshot for $label" }
 
-    private fun dismissSystemAnr(verdict: FocusVerdict.DismissableSystemAnr, label: String, attempt: Int) {
-        val candidates = WAIT_VIEW_IDS.flatMap { viewId ->
-            val root = uiAutomation.rootInActiveWindow ?: return@flatMap emptyList()
-            root.findAccessibilityNodeInfosByViewId(viewId)
-                .filter { it.isClickable && it.isVisibleToUser }
-                .map { viewId to it }
-        }
+    /**
+     * Presses `Wait`, or returns the reason it did not — which the caller stores and retries on.
+     *
+     * The three-way split is the ticket. **Zero pressable candidates is a retry**, because "the tree
+     * was not searchable", "the root was null" and "view-id reporting is off" all read as zero and
+     * none of them means the dialog has no `Wait` button. **Two or more still fails immediately** and
+     * is never resolved by choosing: the button ids are not public API, so "press whatever looks like
+     * Wait" is not a thing this may do — a wrong press on an error dialog can close an app. Making
+     * ambiguity retryable would be a worse bug than the one being fixed.
+     *
+     * The node pressed is selected by the id the policy returned, not re-derived here, so the press
+     * is provably the decision rather than a parallel one that happens to agree.
+     */
+    private fun attemptDismissal(
+        verdict: FocusVerdict.DismissableSystemAnr,
+        label: String,
+        attempt: Int,
+        journal: DismissalJournal,
+    ): String? {
+        val observation = inspector.inspect()
+        val decision = AnrDismissalPolicy.verdict(observation.affordances)
+        journal.record(verdict.title, decision, observation)
 
-        // Fail closed rather than guess. The button ids are not public API, so "press whatever looks
-        // like Wait" is not a thing this may do — a wrong press on an error dialog can close an app.
-        if (candidates.size != 1) {
-            throw evidenceFailure(
-                label,
-                readWindowDump(),
-                "${verdict.title} is dismissable but ${candidates.size} Wait affordances were found " +
-                    "among ${WAIT_VIEW_IDS.joinToString()}",
-            )
-        }
+        return when (decision) {
+            is DismissalVerdict.Press -> {
+                press(verdict, label, attempt, observation.pressableNodes.first { it.first == decision.viewId })
+                null
+            }
 
-        val (viewId, node) = candidates.single()
+            is DismissalVerdict.NotYet -> "${verdict.title} is dismissable but ${decision.reason}"
+
+            is DismissalVerdict.Ambiguous -> {
+                writeDismissalJournal(label, journal)
+                throw evidenceFailure(
+                    label,
+                    readWindowDump(),
+                    "${verdict.title} is dismissable but ${decision.viewIds.size} Wait affordances were " +
+                        "pressable at once (${decision.viewIds.joinToString()}); refusing to choose one",
+                )
+            }
+        }
+    }
+
+    private fun press(
+        verdict: FocusVerdict.DismissableSystemAnr,
+        label: String,
+        attempt: Int,
+        candidate: Pair<String, AccessibilityNodeInfo>,
+    ) {
+        val (viewId, node) = candidate
         val clicked = node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
         record(
             "interference-$label-$attempt.txt",
@@ -239,6 +286,9 @@ class ScreenEvidenceGuard(
                 appendLine("window=${verdict.title}")
                 appendLine("process=${verdict.processName}")
                 appendLine("pressed=$viewId")
+                // Recorded for the reader and never consulted. The decision reads sanctioned resource
+                // ids only, the same way `focusVerdict` reads a process-derived title rather than a
+                // translated string.
                 appendLine("label=${node.text}")
                 appendLine("click_accepted=$clicked")
             },
@@ -248,16 +298,9 @@ class ScreenEvidenceGuard(
         }
     }
 
-    /**
-     * `findAccessibilityNodeInfosByViewId` returns nothing at all without this flag, which would be
-     * indistinguishable from a dialog with no Wait button — a recoverable run failing as an
-     * unrecoverable one.
-     */
-    private fun enableViewIdReporting() {
-        val info = uiAutomation.serviceInfo ?: return
-        if (info.flags and AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS != 0) return
-        info.flags = info.flags or AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS
-        uiAutomation.serviceInfo = info
+    /** Writes `dismissal-<label>.txt` once, and only when there was something to say. */
+    private fun writeDismissalJournal(label: String, journal: DismissalJournal) {
+        if (journal.hasSamples) record("dismissal-$label.txt", journal.report(label))
     }
 
     private fun readWindowDump(): String =
@@ -308,12 +351,5 @@ class ScreenEvidenceGuard(
         const val IDLE_TIMEOUT_MILLIS = 5_000L
         const val RENDER_TIMEOUT_MILLIS = 20_000L
         const val SAMPLE_STRIDE = 4
-
-        /**
-         * `AppNotRespondingDialog` is an `AlertDialog`, so `Wait` is its negative button; the crash
-         * dialog uses the `aerr_*` layout instead. Both are checked because neither id is public
-         * API, and finding anything other than exactly one match is a failure rather than a guess.
-         */
-        val WAIT_VIEW_IDS = listOf("android:id/button2", "android:id/aerr_wait")
     }
 }

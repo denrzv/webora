@@ -85,9 +85,12 @@ Evidence/DX track — can proceed without waiting for all M6 surfaces:
 - [x] `DEVX-002` Screenshot review experience — separate human/diagnostic artifacts and add one
   labelled contact-sheet preview
 - [x] `CI-003` Capture must wait for rendered content — pixel check on the page region, not semantics
-- [ ] `CI-004` The one permitted dismissal must actually execute — the harness identifies the System
-  UI ANR it may clear and then cannot press Wait; run 13 produced zero frames twice
-- [ ] `CI-005` The frame saved must be the frame validated — run 14 went green with a system dialog
+- [x] `CI-004` The one permitted dismissal must actually execute — run 13 produced zero frames twice
+  because the only retryable-looking verdict was the one that could not be retried. The decision is a
+  pure function now, zero candidates is patient while two or more still fails closed, and the lookup
+  searches the classified window rather than whatever `rootInActiveWindow` returns — behind a check
+  that the window is OS-owned, since `android:id/button2` belongs to every `AlertDialog`
+- [x] `CI-005` The frame saved must be the frame validated — run 14 went green with a system dialog
   in the integrated frame, and the dialog's own pixels were what cleared the rendered check
 - [x] `DEVX-003` Inspector isolation and canonical evidence mode — the affordance moved into the two
   browser menus, one per mode, and left canonical composition. It also **disproved** `CI-003`'s
