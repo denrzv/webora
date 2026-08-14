@@ -126,6 +126,31 @@ The SiteSkin manifest already supplies semantic icon names; trusted chrome must 
 those names to **browser-owned** assets rather than accepting arbitrary site-provided icons. M7
 revives the ticket once `UX-002` supplies that asset foundation.
 
+## M8 — Native browser UX & mode continuity
+
+Starts **after `DEMO-003`**. M7 makes the SiteSkin story deliberate; M8 makes ordinary browsing feel
+like an equally intentional product rather than the mode between Home and an integration. Android's
+system navigation remains OS-owned — gesture navigation may show only the gesture handle, while
+three-button navigation may show Back/Home/Recents. Webora does not recreate those controls; it owns
+browser navigation, tabs, history and the transition between regular and integrated chrome.
+
+- [ ] `BROWSE-006` Multi-tab browsing and session model — independent tab history/mode, create/close/
+  switch, browser-owned tab switcher and bounded session restoration
+- [ ] `UX-011` Persistent browser-owned navigation shell — reuse the existing Back/Forward/Reload/
+  Home/More dock across Home and regular browsing, add tabs, and respect Android navigation insets
+- [ ] `BROWSE-007` Recents, history and favourites — replace the current Home placeholders with local,
+  privacy-preserving browser data and integrate it with clear-browsing-data behaviour
+- [ ] `UX-012` Mode-aware chrome handoff — make Home → regular → SiteSkin → regular transitions
+  explicit, preserve browser-owned escape/security controls, and prevent SiteSkin chrome leakage
+- [ ] `CI-007` Canonical regular-browsing evidence — add an uncontested ordinary-site frame proving
+  that regular chrome, security identity and browser navigation are visible without SiteSkin
+- [ ] `DEMO-004` Browser-first reference walkthrough — document and demonstrate ordinary browsing and
+  SiteSkin enhancement as one coherent user journey rather than two unrelated modes
+
+`BROWSE-006` is the foundation for `UX-011`; `BROWSE-007` can proceed once the tab/session model is
+stable. `UX-012` follows the persistent shell, `CI-007` validates the resulting mode handoff, and
+`DEMO-004` is the final product-facing evidence for M8.
+
 ## Descoped
 
 Not abandoned — parked, with the reasoning kept in [`BACKLOG.md`](BACKLOG.md) so reviving any of
@@ -158,3 +183,5 @@ From concept §62. All must hold:
 
 M7 adds a visual-quality bar on top of that functional prototype: canonical evidence must be clean,
 cheap to review, free of debug/OS contamination, and representative of the intended SiteSkin UX.
+M8 adds the browser-usability bar: ordinary sites must expose a coherent browser-owned shell and the
+handoff into and out of SiteSkin must remain predictable without relying on Android system controls.

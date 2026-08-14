@@ -487,6 +487,207 @@ functional existence.
 
 ---
 
+## M8 — Native browser UX & mode continuity
+
+Opened after reviewing the clean M7 Home and SiteSkin frames side by side. The regular browser is not
+missing all navigation: `RegularBrowser` already renders `BrowserNavigationDock` with Back, Forward,
+Reload, Home and More on non-integrated pages. The gap is product continuity and proof. `HomeScreen`
+has no persistent browser shell, its Recent sites and Favourites sections are still placeholders,
+there is no tab/session model, and the canonical screenshot journey never shows an ordinary website.
+
+**System navigation is explicitly outside this milestone's ownership.** Android may expose a gesture
+handle or the classic Back/Home/Recents buttons depending on device settings. Webora must respect
+those insets and back semantics, but must not draw a fake copy of Android navigation. M8 owns the
+browser layer above it: browser navigation, tabs, local browsing data and deterministic chrome
+handoff when SiteSkin activates or deactivates.
+
+### `BROWSE-006` — Multi-tab browsing and session model
+
+**Priority:** P0  
+**Depends on:** `BROWSE-002`; starts after `DEMO-003` closes M7  
+**Goal:** give Webora the independent browsing contexts users expect from a general-purpose browser,
+without allowing SiteSkin state or security identity to leak between tabs.
+
+**Scope**
+- Introduce a browser-owned tab/session model with one independent browsing state per tab: URL,
+  WebView history/navigation capability, load state and `BrowserMode` belong to that tab.
+- Support create, close, switch and active-tab selection through a browser-owned tab switcher.
+- A new tab starts at Webora Home. Closing the active tab selects a deterministic neighbour; closing
+  the last tab returns to one fresh Home tab rather than exiting into an undefined state.
+- Keep tab count bounded and make the limit explicit in the UI rather than silently refusing or
+  evicting a tab; the PRD may choose the exact cap after measuring the WebView memory trade-off.
+- Preserve enough session metadata across Activity/process recreation that returning to Webora does
+  not collapse multiple tabs into one. Do not persist page pixels or SiteSkin-controlled chrome.
+- SiteSkin activation, consent state and security identity are resolved independently for the active
+  tab; switching tabs never copies an integrated mode into another origin.
+
+**Acceptance**
+- Two tabs can hold different origins and independent back/forward histories, and switching between
+  them restores the correct URL and navigation capability.
+- One tab may be SiteSkin-integrated while another remains regular; switching between them never
+  leaks SiteSkin chrome, domain/TLS identity or active navigation state.
+- Create/close/switch behaviour is deterministic and covered by state tests, including closing the
+  active and final tabs.
+- The selected tab/session set survives Activity recreation without changing origins or modes.
+- `bash scripts/pre-commit-check.sh` passes.
+
+### `UX-011` — Persistent browser-owned navigation shell
+
+**Priority:** P0  
+**Depends on:** `BROWSE-006`, `UX-003`, `UX-008`  
+**Goal:** make Home and ordinary browsing feel like one native browser experience rather than two
+screens where browser controls appear only after a page happens to be open.
+
+**Scope**
+- Reuse and evolve the existing `BrowserNavigationDock`; do **not** create a second navigation
+  implementation for Home.
+- Keep a browser-owned shell visible on Home/new-tab and regular browsing surfaces. Back/Forward may
+  be disabled when there is no page history; Reload is meaningful only for a loaded page.
+- Add the real tab-switcher entry point from `BROWSE-006` and retain Home and overflow access.
+- Keep the editable address/search surface and browser-authored security identity coherent with the
+  bottom shell rather than presenting two competing navigation systems.
+- Treat Android system navigation as an external platform layer: consume gesture/three-button
+  navigation insets correctly, integrate with predictive/system back, and never render fake
+  Back/Home/Recents controls.
+- Preserve >=48 dp touch targets, accessible names, state descriptions where useful, and usable
+  layout at 200% font scale.
+- A manifest cannot hide, relabel, reorder or restyle this shell in Home or regular mode.
+
+**Acceptance**
+- Home/new-tab and a normal non-integrated HTTPS page both expose discoverable browser-owned
+  navigation without requiring the user to rely on Android gestures or three-button navigation.
+- Gesture-navigation and three-button-navigation configurations do not overlap, clip or visually
+  duplicate the browser shell.
+- The shell exposes a working tab switcher, Home and overflow; Back/Forward/Reload state reflects the
+  active tab rather than a global stale value.
+- A negative control proves manifest input cannot suppress or style regular browser navigation.
+- Pixel-sized and 200%-font tests retain minimum touch targets and accessible names.
+- `bash scripts/pre-commit-check.sh` passes.
+
+### `BROWSE-007` — Recents, history and favourites
+
+**Priority:** P1  
+**Depends on:** `BROWSE-006`  
+**Goal:** replace Home's current Recent sites / Favourites placeholders with useful, local browser
+data while preserving Webora's zero-telemetry privacy stance.
+
+**Scope**
+- Record local main-frame browsing history with canonical URL/origin, display title when available and
+  visit time; deduplicate the Home recents presentation without erasing the underlying history.
+- Add explicit add/remove-favourite behaviour and persistent favourites keyed by canonical URL rather
+  than page-controlled display labels.
+- Populate the existing Home Recent sites and Favourites sections from these stores, with useful
+  empty states only when they are actually empty.
+- Integrate the new stores with `Clear browsing data`: history/recents must be clearable, and the UX
+  must make the treatment of favourites explicit rather than deleting them accidentally.
+- Keep all records local by default. No sync account, analytics endpoint, recommendation service or
+  Webora-controlled network request is introduced by this ticket.
+- Do not let an untrusted page inject arbitrary actions into browser history/favourite UI; navigation
+  still resolves through the browser's existing URL/origin rules.
+
+**Acceptance**
+- Visiting ordinary and integrated sites produces real Recent sites entries on Home with deterministic
+  ordering and duplicate handling.
+- A favourite persists across restart, can be removed explicitly, and opens the exact stored URL.
+- Clear-browsing-data tests prove history/recents follow the documented clear semantics and
+  favourites follow the separately documented choice.
+- A network capture of browsing/history/favourite operations contains no new Webora-controlled host.
+- `bash scripts/pre-commit-check.sh` passes.
+
+### `UX-012` — Mode-aware chrome handoff
+
+**Priority:** P0  
+**Depends on:** `UX-011`, `UX-005`, `UX-008`, `SKIN-004`  
+**Goal:** make the transition between ordinary browser chrome and SiteSkin chrome feel like a
+predictable enhancement of the browser, not a mode switch that hides navigation unexpectedly.
+
+**Scope**
+- Define and test the user-visible chrome state for Home → regular site → integrated site → regular
+  site → Home, including consent accepted, dismissed and permanently denied paths.
+- In Home and regular mode, show the browser-owned navigation shell from `UX-011`.
+- When an integration activates, SiteSkin bottom navigation may take over the bottom product slot,
+  but browser-owned security identity and an escape/back affordance remain visible and manifest-
+  independent as established by `ADR-006` and `UX-008`.
+- Leaving the integrated origin, declining/denying consent, or switching to a regular tab restores
+  ordinary browser chrome deterministically; no SiteSkin navigation/action may survive the mode that
+  authorised it.
+- Switching tabs restores each tab's own mode and chrome without transiently showing the previous
+  tab's site navigation or security identity.
+- Preserve Android system-back/predictive-back semantics independently of the visible browser shell.
+
+**Acceptance**
+- A state/transition test covers Home → regular → integrated → regular and proves each state exposes
+  exactly the intended browser/site chrome layer.
+- Declining SiteSkin consent leaves a fully usable regular browser shell; consent is never required
+  to recover browser navigation.
+- Changing to a non-integrated origin removes SiteSkin bottom navigation and quick actions before the
+  regular browser frame is accepted.
+- Switching between integrated and regular tabs never flashes or retains the wrong origin, security
+  identity or navigation controls.
+- A negative control proves manifest input cannot suppress the browser-owned escape/security layer.
+- `bash scripts/pre-commit-check.sh` passes.
+
+### `CI-007` — Canonical regular-browsing evidence
+
+**Priority:** P1  
+**Depends on:** `UX-011`, `UX-012`; reuses the clean-device guarantees from `CI-006`  
+**Goal:** make ordinary web browsing a first-class visual acceptance path instead of inferring its UX
+from code while canonical evidence covers only Home, consent and SiteSkin mode.
+
+**Scope**
+- Extend the hosted screenshot journey with one canonical frame of a stable, non-integrated HTTPS
+  page. Select a deterministic origin/fixture during ticket planning; do not make the assertion
+  depend on volatile third-party page decoration.
+- The accepted regular frame must show browser-owned address/security identity and the regular
+  navigation shell, with no SiteSkin bottom navigation or quick action.
+- Prefer a journey that exits Bloom Flowers to the non-integrated origin so the same evidence also
+  exercises `UX-012`'s integrated → regular handoff.
+- Keep `CI-005` frame-ownership/rendered validation and `CI-006` device-readiness policy unchanged;
+  regular evidence must be uncontested by the same standards as existing canonical frames.
+- Add the ordinary frame to the human-facing contact sheet and keep diagnostics separate.
+
+**Acceptance**
+- A hosted cold run produces the existing M7 canonical frames plus one clean regular-browsing frame.
+- The regular frame visibly contains Webora's browser navigation and security identity and visibly
+  does **not** contain SiteSkin navigation/actions.
+- Evidence from the transition proves the integrated chrome was removed rather than merely hidden
+  under a new page.
+- The contact sheet and job summary report the new canonical count without dropping any existing
+  frame or diagnostics.
+- `bash scripts/pre-commit-check.sh` passes.
+
+### `DEMO-004` — Browser-first reference walkthrough
+
+**Priority:** P2  
+**Depends on:** `BROWSE-006`, `BROWSE-007`, `UX-012`, `CI-007`  
+**Goal:** make the finished prototype explain itself as a browser first and SiteSkin as an optional,
+consented enhancement rather than making the integrated demo look like the entire product.
+
+**Scope**
+- Document one concise reference journey: Home/new tab → ordinary HTTPS browsing → tab switch or
+  return to Home → Bloom Flowers consent → integrated mode → back/switch to ordinary browsing.
+- Use the real M8 browser shell, tabs, recents/favourites and canonical evidence; do not add a fake
+  demo-only navigation path or a second browser implementation.
+- Explain the distinction between Android system navigation, Webora browser navigation and SiteSkin
+  site navigation so screenshots are not misread as Webora attempting to replace OS controls.
+- Keep `DEMO-002` descoped: this walkthrough may use a stable ordinary HTTPS site but does not require
+  maintaining another custom SiteSkin origin.
+- Update install/demo documentation and the screenshot narrative/contact sheet references as needed.
+
+**Acceptance**
+- A first-time reviewer can follow the documented flow and see both ordinary and integrated browsing
+  without needing hidden gestures or developer-only controls.
+- The walkthrough demonstrates at least two tabs or equivalent session switching, a real Recent or
+  Favourite entry, the regular browser shell, SiteSkin consent/integration, and deterministic return
+  to regular chrome.
+- Hosted visual evidence contains the ordinary and integrated states described by the walkthrough and
+  remains free of OS/debug contamination.
+- Documentation states clearly that Android system navigation is OS-owned and that SiteSkin may
+  replace only the site's product-navigation slot, never browser security/escape controls.
+- `bash scripts/pre-commit-check.sh` passes.
+
+---
+
 ## Descoped
 
 Parked with their reasoning, not deleted — `SCOPE-001` records the decisions. Each entry keeps its
