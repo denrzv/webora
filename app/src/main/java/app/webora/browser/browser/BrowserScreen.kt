@@ -56,6 +56,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import app.webora.browser.R
 import app.webora.browser.design.WeboraSpacing
+import app.webora.browser.design.reducedMotionEnabled
 import app.webora.browser.siteskin.ManifestDiscoveryCoordinator
 import app.webora.browser.siteskin.ManifestDiscoveryOutcome
 import app.webora.browser.siteskin.OkHttpManifestSource
@@ -75,8 +76,7 @@ import app.webora.browser.siteskin.SiteSkinChromeModel
 import app.webora.browser.siteskin.SiteSkinQuickActions
 import app.webora.browser.siteskin.SiteSkinMenu
 import app.webora.browser.siteskin.SiteSkinConsentModel
-import app.webora.browser.siteskin.SiteSkinTheme
-import app.webora.browser.siteskin.scheme
+import app.webora.browser.siteskin.ExpressiveSiteSkinPresentation
 import app.webora.browser.siteskin.SiteSkinTopBar
 import app.webora.browser.siteskin.SiteSkinTopBarModel
 import app.webora.browser.siteskin.brandMonogram
@@ -668,10 +668,14 @@ internal fun RegularBrowser(
                 val asset = brandAsset ?: BrandAsset.Monogram(
                     brandMonogram(mode.configuration.site.shortName, mode.configuration.site.name),
                 )
-                val colors = SiteSkinTheme.from(mode.configuration).scheme(isSystemInDarkTheme())
+                val presentation = ExpressiveSiteSkinPresentation.from(
+                    configuration = mode.configuration,
+                    darkTheme = isSystemInDarkTheme(),
+                    reducedMotion = reducedMotionEnabled(LocalContext.current),
+                )
                 SiteSkinTopBar(
                     model = SiteSkinTopBarModel.from(mode.configuration, asset, identity),
-                    colors = colors,
+                    presentation = presentation,
                     canGoBack = canNavigateBack,
                     onBack = onBack,
                 )
