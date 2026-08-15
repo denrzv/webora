@@ -21,6 +21,27 @@ class SiteSkinNavigationContractTest {
         )
     }
 
+    @Test
+    fun `expressive header keeps security identity browser owned and unconditional`() {
+        val source = source("app/webora/browser/siteskin/SiteSkinTopBar.kt").readText()
+
+        assertTrue("production must keep the expressive ownership contract", expressiveIdentity(source))
+        assertFalse(
+            "negative control: SiteSkin-coloured conditional identity must be rejected",
+            expressiveIdentity(
+                "ExpressiveSiteSkinHeader(presentation) { if (model.subtitle != null) " +
+                    "SecurityIdentity(model.security, presentation.colors) }",
+            ),
+        )
+    }
+
+    private fun expressiveIdentity(source: String): Boolean =
+        source.contains("ExpressiveSiteSkinHeader(") &&
+            source.contains("SecurityIdentity(model.security)") &&
+            source.contains("MaterialTheme.colorScheme.surfaceContainer") &&
+            !source.contains("SecurityIdentity(model.security, presentation.colors)") &&
+            !source.contains("if (model.security")
+
     private fun browserOwnedBack(source: String): Boolean {
         val start = source.indexOf("private fun BrowserBack(")
         val end = source.indexOf("private fun BrandLogo(", start)

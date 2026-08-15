@@ -182,7 +182,7 @@ appearance field to the SiteSkin manifest.
 - [x] `UX-013` Expressive SiteSkin chrome primitives & ownership model — define browser-owned curved/
   floating primitives, motion/inset rules, light/dark projections and negative controls for manifest
   influence. GitHub: #84.
-- [ ] `UX-014` Curved branded integrated top chrome — compact browser-owned domain/TLS identity inside
+- [x] `UX-014` Curved branded integrated top chrome — compact browser-owned domain/TLS identity inside
   a soft branded top surface with deterministic curved lower edge, preserving Back/tabs/overflow and
   cross-origin teardown. GitHub: #85.
 - [ ] `UX-015` Branded browser dock & SiteSkin navigation hub — replace the persistent site bottom

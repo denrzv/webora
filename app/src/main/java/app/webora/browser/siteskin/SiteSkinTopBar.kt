@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -28,7 +27,6 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.webora.browser.R
@@ -39,38 +37,44 @@ import app.webora.browser.browser.WeboraIconButton
 @Composable
 internal fun SiteSkinTopBar(
     model: SiteSkinTopBarModel,
-    colors: SiteSkinColorScheme,
+    presentation: ExpressiveSiteSkinPresentation,
     canGoBack: Boolean,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = modifier
-            .fillMaxWidth()
-            .heightIn(min = TOP_BAR_MIN_HEIGHT)
-            .background(colors.background)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-    ) {
-        BrowserBack(canGoBack, onBack)
-        Spacer(Modifier.width(8.dp))
-        BrandLogo(model.brandAsset, colors)
-        Spacer(Modifier.width(12.dp))
-        Column(
-            verticalArrangement = Arrangement.Center,
-            modifier = Modifier.weight(1f),
-        ) {
-            Text(
-                text = model.title,
-                color = colors.onBackground,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            model.subtitle?.let {
-                Text(it, color = colors.onBackground, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    ExpressiveSiteSkinHeader(presentation, modifier) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().testTag(SITESKIN_BRAND_TAG),
+            ) {
+                BrowserBack(canGoBack, onBack)
+                Spacer(Modifier.width(8.dp))
+                BrandLogo(model.brandAsset, presentation.colors)
+                Spacer(Modifier.width(12.dp))
+                Column(
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text(
+                        text = model.title,
+                        color = presentation.colors.onBackground,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    model.subtitle?.let {
+                        Text(
+                            it,
+                            color = presentation.colors.onBackground,
+                            fontSize = 12.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
             }
-            SecurityIdentity(model.security, colors)
+            SecurityIdentity(model.security)
         }
     }
 }
@@ -116,7 +120,7 @@ private fun BrandLogo(asset: BrandAsset, colors: SiteSkinColorScheme) {
 }
 
 @Composable
-private fun SecurityIdentity(security: SecurityPresentation, colors: SiteSkinColorScheme) {
+private fun SecurityIdentity(security: SecurityPresentation) {
     val transport = when (security.transportSecurity) {
         TransportSecurity.SECURE -> stringResource(R.string.siteskin_tls_secure)
         TransportSecurity.NOT_SECURE -> stringResource(R.string.siteskin_tls_not_secure)
@@ -125,18 +129,27 @@ private fun SecurityIdentity(security: SecurityPresentation, colors: SiteSkinCol
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .padding(horizontal = 12.dp, vertical = 8.dp)
             .semantics { contentDescription = description }
             .testTag(SITESKIN_SECURITY_TAG),
     ) {
-        Text(transport, color = colors.onBackground, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+        Text(
+            transport,
+            color = MaterialTheme.colorScheme.onSurface,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium,
+        )
         Text(
             stringResource(R.string.siteskin_security_separator),
-            color = colors.onBackground,
+            color = MaterialTheme.colorScheme.onSurface,
             fontSize = 12.sp,
         )
         Text(
             security.registrableDomain,
-            color = colors.onBackground,
+            color = MaterialTheme.colorScheme.onSurface,
             fontSize = 12.sp,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -144,32 +157,8 @@ private fun SecurityIdentity(security: SecurityPresentation, colors: SiteSkinCol
     }
 }
 
-@Preview(showBackground = true, widthDp = 360)
-@Composable
-private fun SiteSkinTopBarPreview() {
-    val colors = SiteSkinColorScheme(
-        primary = androidx.compose.ui.graphics.Color(0xFFD94F8A),
-        onPrimary = androidx.compose.ui.graphics.Color.White,
-        secondary = androidx.compose.ui.graphics.Color(0xFFFADADD),
-        onSecondary = androidx.compose.ui.graphics.Color.Black,
-        background = androidx.compose.ui.graphics.Color.White,
-        onBackground = androidx.compose.ui.graphics.Color.Black,
-    )
-    SiteSkinTopBar(
-        SiteSkinTopBarModel(
-            "Bloom Flowers",
-            "Fresh flowers delivered today",
-            BrandAsset.Monogram("B"),
-            SecurityPresentation("bloomflowers.example", TransportSecurity.SECURE),
-        ),
-        colors,
-        canGoBack = true,
-        onBack = {},
-    )
-}
-
 internal const val SITESKIN_LOGO_TAG = "siteskin_logo"
 internal const val SITESKIN_SECURITY_TAG = "siteskin_security"
 internal const val SITESKIN_BACK_TAG = "siteskin_back"
+internal const val SITESKIN_BRAND_TAG = "siteskin_brand"
 internal val LOGO_SLOT_SIZE = 40.dp
-private val TOP_BAR_MIN_HEIGHT = 80.dp

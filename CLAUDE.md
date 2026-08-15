@@ -1399,6 +1399,32 @@ browser commands and trusted typed site items. Neither ticket may move identity,
 geometry, inset, or motion duration into manifest-derived state merely because the containers now
 accept site colours.
 
+### Expressive integrated top chrome preserves a separate browser identity (UX-014)
+
+Protected integrated mode now fills `ExpressiveSiteSkinHeader` with a fixed browser-authored Back/
+brand row followed by an unconditional canonical domain/TLS surface. The outer curve and site text
+use only the closed, contrast-guarded `ExpressiveSiteSkinPresentation`; the identity and Back
+sub-surfaces use `WeboraTheme` tokens, local icons/labels, observed state, and explicit controller
+callbacks. A manifest therefore cannot suppress, relabel, reorder, restyle, enable, or dispatch
+either browser contract, even though its validated colours paint the containing header.
+
+`BrowserScreen` constructs this presentation only for the active tab's exhaustive
+`PROTECTED_INTEGRATED` projection. Exact-origin departure and tab switching still remove integrated
+decoration before the next projection, and accepted brand assets retain their configuration-
+identity publication guard and immediate monogram fallback. Loading and error regions remain outside
+the header. The header does not read global safe-drawing insets; the browser shell consumes those
+once.
+
+Animator duration scale is read through a thin app-layer wrapper. A missing, invalid, non-finite, or
+non-positive value conservatively selects the closed reduced-motion policy; a manifest has no input
+to that decision. The header currently needs no decorative animation, so both policies compose the
+same required slots immediately. Future decoration must consume this policy rather than add its own
+platform read or manifest-controlled timing.
+
+Tabs and overflow remain reachable through their existing browser-owned surfaces in UX-014. They
+are intentionally not duplicated in the top header: UX-015 owns moving them into the fixed floating
+browser dock and projecting validated site navigation into the separate SiteSkin hub.
+
 Reduced motion is a closed policy before it is an animation. UX-013 introduces no fake transition
 just to exercise it; the first downstream ticket adding a real decorative transition must map
 `REDUCED` to an immediate state change. Security identity, origin teardown, controls, and input
