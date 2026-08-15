@@ -67,6 +67,13 @@ earlier — Android will refuse the next build with *"App not installed"* or
 `INSTALL_FAILED_UPDATE_INCOMPATIBLE`. **Uninstall Webora once**, then install the new build; every
 build after that upgrades in place.
 
+## Walk through Webora as a browser
+
+For the complete product tour, follow the
+[browser-first reference walkthrough](WALKTHROUGH.md). It starts with ordinary HTTPS browsing, uses
+two real tabs and a locally created Recent/Favourite entry, consents to Bloom Flowers, and then
+switches back to regular chrome. No developer-only control or hidden gesture is required.
+
 ## Seeing SiteSkin work
 
 1. On the home screen, open the suggested integration — **Bloom Flowers**,
@@ -76,7 +83,7 @@ build after that upgrades in place.
 3. The browser then asks whether to apply the site's branding, showing the site's full origin. This
    is a per-site decision and you can decline it permanently.
 4. Allow it. The top bar takes the site's colours, logo, title and subtitle; a bottom navigation bar
-   appears with Home, Catalog, Cart and Profile, plus a Call quick action.
+   appears with Home, Flowers, Cart and Account, plus a Call quick action.
 5. Tap through the tabs — the active tab tracks the page you are on.
 
 **What to notice, because it is the point of the design:** the site's registrable domain and the TLS
@@ -85,7 +92,10 @@ restyle or move them. The site gets colours, a title and a bounded logo slot *be
 never instead of it.
 
 Try any other website too. Sites without a manifest behave like an ordinary browser, which is the
-other half of the contract.
+other half of the contract. Android's gesture or three-button navigation remains OS-owned; Webora's
+labelled Back, Forward, Reload, Home, Tabs and More controls are browser navigation, while Bloom's
+bottom bar is bounded site navigation. SiteSkin can replace only that site-navigation slot, never
+the browser's security identity or escape control.
 
 ## Turning it off
 
