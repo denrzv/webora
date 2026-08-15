@@ -185,7 +185,7 @@ appearance field to the SiteSkin manifest.
 - [x] `UX-014` Curved branded integrated top chrome — compact browser-owned domain/TLS identity inside
   a soft branded top surface with deterministic curved lower edge, preserving Back/tabs/overflow and
   cross-origin teardown. GitHub: #85.
-- [ ] `UX-015` Branded browser dock & SiteSkin navigation hub — replace the persistent site bottom
+- [x] `UX-015` Branded browser dock & SiteSkin navigation hub — replace the persistent site bottom
   navbar with a fixed browser-owned Back/Forward/brand-hub/Tabs/More dock; project validated site
   navigation and quick actions into a native hub. GitHub: #86.
 - [ ] `DEMO-005` Expressive Bloom Flowers integrated showcase — integrate the Android surfaces with

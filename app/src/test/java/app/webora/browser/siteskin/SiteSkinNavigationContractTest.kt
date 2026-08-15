@@ -7,6 +7,30 @@ import org.junit.Test
 
 class SiteSkinNavigationContractTest {
     @Test
+    fun `expressive dock exposes only fixed browser owned commands`() {
+        val source = source("app/webora/browser/siteskin/SiteSkinDock.kt").readText()
+
+        assertTrue("production dock must keep the closed command contract", fixedDock(source))
+        assertFalse(
+            "negative control: manifest-derived generic commands must be rejected",
+            fixedDock(
+                "ExpressiveSiteSkinDock(presentation) { " +
+                    "model.items.forEach { DockCommand(it.icon, it.label) } }",
+            ),
+        )
+    }
+
+    @Test
+    fun `integrated composition replaces persistent site navigation with the dock`() {
+        val source = source("app/webora/browser/browser/BrowserScreen.kt").readText()
+        val regularBrowser = source.substringAfter("internal fun RegularBrowser(")
+
+        assertTrue(regularBrowser.contains("SiteSkinDock("))
+        assertFalse(regularBrowser.contains("SiteSkinBottomNavigation("))
+        assertFalse(regularBrowser.contains("SiteSkinQuickActions("))
+    }
+
+    @Test
     fun `integrated back remains browser owned and cannot be suppressed by manifest styling`() {
         val source = source("app/webora/browser/siteskin/SiteSkinTopBar.kt").readText()
 
@@ -41,6 +65,15 @@ class SiteSkinNavigationContractTest {
             source.contains("MaterialTheme.colorScheme.surfaceContainer") &&
             !source.contains("SecurityIdentity(model.security, presentation.colors)") &&
             !source.contains("if (model.security")
+
+    private fun fixedDock(source: String): Boolean {
+        val order = listOf("ic_back", "ic_forward", "ic_siteskin_flower", "ic_tabs", "ic_more")
+        val positions = order.map(source::indexOf)
+        return source.contains("ExpressiveSiteSkinDock(") &&
+            positions.all { it >= 0 } && positions == positions.sorted() &&
+            source.contains("MaterialTheme.colorScheme.surfaceContainer") &&
+            !source.contains("model.items") && !source.contains("forEach { DockCommand")
+    }
 
     private fun browserOwnedBack(source: String): Boolean {
         val start = source.indexOf("private fun BrowserBack(")

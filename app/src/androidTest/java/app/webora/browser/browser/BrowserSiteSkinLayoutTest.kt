@@ -10,7 +10,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import app.webora.browser.siteskin.BrandAsset
-import app.webora.browser.siteskin.SITESKIN_BOTTOM_NAV_TAG
+import app.webora.browser.siteskin.SITESKIN_DOCK_TAG
 import app.webora.browser.web.BrowserWebViewController
 import dev.siteskin.core.SiteSkinValidationOutcome
 import dev.siteskin.core.SiteSkinValidator
@@ -24,7 +24,7 @@ class BrowserSiteSkinLayoutTest {
     val composeRule = createComposeRule()
 
     @Test
-    fun integratedBrowserKeepsBottomNavigationAndQuickActionsVisible() {
+    fun integratedBrowserUsesFixedDockInsteadOfPersistentSiteNavigation() {
         var backInvoked = false
         val origin = requireNotNull(SiteOrigin.parse(SITE_URL))
         val configuration = SiteSkinValidator.validate(MANIFEST.byteInputStream(), SITE_URL)
@@ -48,7 +48,7 @@ class BrowserSiteSkinLayoutTest {
                     onDownload = {},
                     onFileChooser = { _, complete -> complete(null) },
                     brandAsset = BrandAsset.Monogram("S"),
-                    onSiteSelect = {},
+                    onOpenSiteHub = {},
                     onPageStarted = {},
                     onPageCompleted = { _, _ -> },
                     onTabs = {},
@@ -59,9 +59,9 @@ class BrowserSiteSkinLayoutTest {
             }
         }
 
-        composeRule.onNodeWithTag(SITESKIN_BOTTOM_NAV_TAG).assertIsDisplayed()
+        composeRule.onNodeWithTag(SITESKIN_DOCK_TAG).assertIsDisplayed()
         composeRule.onNodeWithTag(BROWSER_NAVIGATION_SHELL_TAG).assertDoesNotExist()
-        composeRule.onNodeWithContentDescription("Quick actions").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Open site navigation").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("Back").assertIsEnabled().performClick()
         assertTrue(backInvoked)
     }
@@ -85,7 +85,7 @@ class BrowserSiteSkinLayoutTest {
                     onDownload = {},
                     onFileChooser = { _, complete -> complete(null) },
                     brandAsset = null,
-                    onSiteSelect = {},
+                    onOpenSiteHub = {},
                     onPageStarted = {},
                     onPageCompleted = { _, _ -> },
                     onTabs = {},
@@ -97,7 +97,7 @@ class BrowserSiteSkinLayoutTest {
         }
 
         composeRule.onNodeWithTag(BROWSER_NAVIGATION_SHELL_TAG).assertIsDisplayed()
-        composeRule.onNodeWithTag(SITESKIN_BOTTOM_NAV_TAG).assertDoesNotExist()
+        composeRule.onNodeWithTag(SITESKIN_DOCK_TAG).assertDoesNotExist()
         composeRule.onNodeWithContentDescription("Back").assertIsEnabled().performClick()
         assertTrue(backInvoked)
     }

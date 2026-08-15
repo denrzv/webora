@@ -1430,6 +1430,28 @@ just to exercise it; the first downstream ticket adding a real decorative transi
 `REDUCED` to an immediate state change. Security identity, origin teardown, controls, and input
 availability are never animation participants.
 
+### The integrated dock is browser-owned; site commands live in a typed hub (UX-015)
+
+Protected integrated mode's floating dock has exactly five compiled commands in fixed order: Back,
+Forward, brand hub, Tabs, and More. Their local icons, localized labels, enabled state, 48 dp targets,
+Webora-token sub-surfaces, geometry, order, and callbacks are browser policy. Site navigation count,
+labels, colours, or actions cannot remove, imitate, reorder, restyle, or dispatch them. Back and
+Forward read only the selected tab's observed history and call its current controller; Tabs reuses
+the one browser tab switcher.
+
+The brand control and More open one browser-owned SiteSkin hub. The hub projects the current trusted,
+bounded `SiteSkinChromeModel` into separately headed navigation and quick-action groups and then a
+distinct Webora-controls section. Rows emit the original trusted `NavigationItem` to the existing
+`ActionResolver`; no raw URI, intent, controller, tab id, or generic command is stored or introduced.
+Only navigation rows publish selected/not-selected semantics—quick actions and browser commands are
+actions, not routes, and must not claim selection state.
+
+Hub state is visibility only. Page generation, active tab/configuration change, SiteSkin
+deactivation, or loss of `PROTECTED_INTEGRATED` authorization closes or removes it before another
+projection can dispatch. Regular and Home continue to use `BrowserNavigationShell`; the old
+integrated persistent bottom navigation and over-content quick-action launcher are no longer part of
+the protected projection.
+
 ### Ordinary browsing is canonical evidence too (CI-007)
 
 The hosted journey does not stop when Bloom Flowers reaches integrated mode. It leaves through the

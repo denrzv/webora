@@ -105,7 +105,8 @@ class BrowserChromeContractTest {
 
         assertTrue(screen.contains("val handoff = state.mode.chromeHandoff()"))
         assertTrue(screen.contains("when (handoff.top)"))
-        assertTrue(screen.contains("handoff.contentActions == ContentActions.SITESKIN"))
+        assertFalse(screen.contains("handoff.contentActions == ContentActions.SITESKIN"))
+        assertFalse(screen.contains("SiteSkinQuickActions("))
         assertTrue(screen.contains("handoff.bottom == BottomChrome.SITESKIN"))
         assertFalse(handoff.contains("SiteSkinConfiguration"))
         assertFalse(handoff.contains("NavigationItem"))
