@@ -1375,6 +1375,35 @@ clear-browsing-data and the debug inspector — because a default reaches everyt
 override it. Fixing the role fixed all five; a `shape =` argument on the consent dialog would have
 fixed the frame and left the collision live.
 
+### Expressive SiteSkin geometry is browser policy (UX-013)
+
+M9's richer composition does not widen the manifest surface. `ExpressiveSiteSkinPresentation` is
+the one app-layer projection: it reuses the already contrast-guarded `SiteSkinColorScheme`, selects
+light/dark from an explicit browser/platform input, and maps an explicit accessibility input into a
+closed standard/reduced motion policy. It contains no dimension, shape, URL, asset, navigation,
+action, callback, composable, or animation value. `SiteSkinColorScheme` remains the complete
+website-influenceable visual vocabulary; `WeboraTheme` remains separately compiled.
+
+The curved header and floating dock own their curve, depth, minimum size, gutters, rounding, dock
+inset, and fixed slot order. A caller may provide local composable content, but cannot provide those
+geometry decisions through the presentation model. The dock's painted surface is inset inside a
+full-width ownership container rather than relying on UX-015 to remember caller padding—the
+floating separation is policy, not decoration. The curve reserves its depth below content, and the
+dock inherits the one 48 dp browser target contract rather than defining a shrinkable duplicate.
+
+The primitives deliberately do **not** read `WindowInsets.safeDrawing`: `BrowserScreen` consumes it
+once for the whole browser, and a second read would double-pad future integrated chrome. They are
+also deliberately unwired in this ticket. UX-014 owns filling the header with browser-observed
+canonical domain/TLS identity and fixed browser controls; UX-015 owns filling the dock/hub with
+browser commands and trusted typed site items. Neither ticket may move identity, callbacks, order,
+geometry, inset, or motion duration into manifest-derived state merely because the containers now
+accept site colours.
+
+Reduced motion is a closed policy before it is an animation. UX-013 introduces no fake transition
+just to exercise it; the first downstream ticket adding a real decorative transition must map
+`REDUCED` to an immediate state change. Security identity, origin teardown, controls, and input
+availability are never animation participants.
+
 ### Ordinary browsing is canonical evidence too (CI-007)
 
 The hosted journey does not stop when Bloom Flowers reaches integrated mode. It leaves through the

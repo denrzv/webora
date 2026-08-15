@@ -179,7 +179,7 @@ SiteSkin data: bounded text, normalized colours, semantic icon names, typed acti
 assets. M9 deliberately does not add arbitrary remote layouts, SVG/CSS, Compose definitions or a new
 appearance field to the SiteSkin manifest.
 
-- [ ] `UX-013` Expressive SiteSkin chrome primitives & ownership model — define browser-owned curved/
+- [x] `UX-013` Expressive SiteSkin chrome primitives & ownership model — define browser-owned curved/
   floating primitives, motion/inset rules, light/dark projections and negative controls for manifest
   influence. GitHub: #84.
 - [ ] `UX-014` Curved branded integrated top chrome — compact browser-owned domain/TLS identity inside
