@@ -233,6 +233,24 @@ Home recents. Clear browsing data deletes history/recents but deliberately prese
 the confirmation states. Do not add sync, telemetry, favicon fetches or browser-controlled networking
 to this store without a new privacy/trust-boundary ticket.
 
+### Home and regular pages share one browser shell (UX-011)
+
+`BrowserNavigationShell` is the one placement contract for `BrowserNavigationDock` on Home/new-tab
+and ordinary pages. Its fixed browser-authored order is Back, Forward, Reload, Home, Tabs and More;
+the direct Tabs action and overflow both reach the real session switcher. Home keeps page-dependent
+actions visible and disabled, while regular enabled state and dispatch come only from the active
+tab's observed state and controller.
+
+The shell accepts no manifest configuration, labels, icons, colours, order, URL or generic action.
+A manifest therefore cannot hide, relabel, reorder, restyle, enable or dispatch it. SiteSkin may
+occupy the integrated bottom product slot only through its existing validated chrome model;
+`UX-012` owns the explicit mode handoff.
+
+Edge-to-edge ownership remains at `BrowserScreen`: `WindowInsets.safeDrawing` is consumed once around
+the active surface, and the dock does not draw Android Back/Home/Recents or add another system inset.
+System/predictive Back continues through `OnBackPressedDispatcher` to the active controller. The
+shell uses 16 dp horizontal spacing so six enforced 48 dp targets fit a 320 dp host exactly.
+
 ---
 
 ## Java version — two knobs, do not conflate them

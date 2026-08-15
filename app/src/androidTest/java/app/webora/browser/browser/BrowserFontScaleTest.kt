@@ -4,6 +4,7 @@ import app.webora.browser.design.WeboraTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -92,7 +93,7 @@ class BrowserFontScaleTest {
                     onAddressChanged = {}, onSubmit = {},
                 )
                 BrowserNavigationDock(
-                    canGoBack = true, canGoForward = false, onBack = {}, onForward = {},
+                    canGoBack = true, canGoForward = false, canReload = true, onBack = {}, onForward = {},
                     onReload = {}, onHome = {}, onTabs = {}, onSettings = {}, onInspector = {},
                 )
             }
@@ -102,6 +103,22 @@ class BrowserFontScaleTest {
         compose.onNodeWithText("Secure · example.com").assertIsDisplayed()
         compose.onNodeWithContentDescription("Back").assertIsDisplayed()
         compose.onNodeWithContentDescription("More").assertIsDisplayed()
+    }
+
+    @Test fun HomeShellStaysReachableAtDoubleFontScale() {
+        compose.setContent {
+            AtDoubleFontScale {
+                androidx.compose.foundation.layout.Column {
+                    HomeScreen(onNavigate = {}, modifier = Modifier.weight(1f))
+                    BrowserNavigationShell(false, false, false, {}, {}, {}, {}, {}, {}, {})
+                }
+            }
+        }
+
+        compose.onNodeWithContentDescription("Search or enter address").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Home").assertIsDisplayed().assertHeightIsAtLeast(48.dp)
+        compose.onNodeWithContentDescription("Tabs").assertIsDisplayed().assertHeightIsAtLeast(48.dp)
+        compose.onNodeWithContentDescription("More").assertIsDisplayed().assertHeightIsAtLeast(48.dp)
     }
 
     @Composable

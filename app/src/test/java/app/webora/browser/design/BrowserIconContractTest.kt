@@ -106,7 +106,7 @@ class BrowserIconContractTest {
 
     private companion object {
         const val RESOURCE_ROOT_PROPERTY = "webora.app.res"
-        const val BUDGET = 17
+        const val BUDGET = 18
         const val STROKE_WIDTH = """android:strokeWidth="1.9""""
         const val FILL_ATTRIBUTE = "android:fillColor"
         const val PATH_DATA = "android:pathData"
@@ -126,6 +126,7 @@ class BrowserIconContractTest {
             "ic_forward",
             "ic_reload",
             "ic_home",
+            "ic_tabs",
             "ic_menu",
             "ic_more",
             "ic_lock",

@@ -32,7 +32,6 @@ import app.webora.browser.design.WeboraSpacing
 @Composable
 internal fun HomeScreen(
     onNavigate: (String) -> Unit,
-    onTabs: () -> Unit,
     recents: List<BrowsingRecord> = emptyList(),
     favourites: List<BrowsingRecord> = emptyList(),
     onRemoveFavourite: (String) -> Unit = {},
@@ -45,13 +44,6 @@ internal fun HomeScreen(
         verticalArrangement = Arrangement.spacedBy(WeboraSpacing.LARGE),
     ) {
         item { HomeHeader() }
-        item {
-            WeboraButton(
-                label = stringResource(R.string.tabs),
-                onClick = onTabs,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
         item { HomeAddress(address, { address = it }, onNavigate) }
         item { BrowsingRecordSection(R.string.home_recent_title, R.string.home_recent_empty, recents, onNavigate) }
         item {

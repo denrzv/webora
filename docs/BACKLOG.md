@@ -531,7 +531,7 @@ without allowing SiteSkin state or security identity to leak between tabs.
 - The selected tab/session set survives Activity recreation without changing origins or modes.
 - `bash scripts/pre-commit-check.sh` passes.
 
-### `UX-011` — Persistent browser-owned navigation shell
+### `UX-011` — Persistent browser-owned navigation shell ✅
 
 **Priority:** P0  
 **Depends on:** `BROWSE-006`, `UX-003`, `UX-008`  

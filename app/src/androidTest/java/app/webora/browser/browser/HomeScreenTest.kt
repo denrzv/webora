@@ -3,6 +3,8 @@ package app.webora.browser.browser
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performTextInput
@@ -15,7 +17,7 @@ class HomeScreenTest {
 
     @Test fun addressAndSuggestionActionsResolveToSafeDestinations() {
         val navigations = mutableListOf<String>()
-        compose.setContent { HomeScreen(onNavigate = navigations::add, onTabs = {}) }
+        compose.setContent { HomeScreen(onNavigate = navigations::add) }
 
         compose.onNodeWithText("Search or enter address").performTextInput("example.com")
         compose.onNodeWithText("Search or enter address").performImeAction()
@@ -25,11 +27,28 @@ class HomeScreenTest {
     }
 
     @Test fun emptyBrowserOwnedSectionsRemainVisible() {
-        compose.setContent { HomeScreen(onNavigate = {}, onTabs = {}) }
+        compose.setContent { HomeScreen(onNavigate = {}) }
 
         compose.onNodeWithText("Recent sites").assertIsDisplayed()
         compose.onNodeWithText("Favourites").assertIsDisplayed()
         compose.onNodeWithText("Suggested integrations").assertIsDisplayed()
+    }
+
+    @Test fun HomeContentAndSharedShellExposeOnlyAvailableBrowserActions() {
+        compose.setContent {
+            androidx.compose.foundation.layout.Column {
+                HomeScreen(onNavigate = {}, modifier = androidx.compose.ui.Modifier.weight(1f))
+                BrowserNavigationShell(
+                    false, false, false, {}, {}, {}, {}, {}, {}, {},
+                )
+            }
+        }
+
+        compose.onNodeWithContentDescription("Back").assertIsNotEnabled()
+        compose.onNodeWithContentDescription("Forward").assertIsNotEnabled()
+        compose.onNodeWithContentDescription("Reload").assertIsNotEnabled()
+        compose.onNodeWithContentDescription("Tabs").assertIsDisplayed()
+        compose.onNodeWithContentDescription("More").assertIsDisplayed()
     }
 
     @Test fun populatedRecordsOpenExactStoredUrlsAndFavouriteCanBeRemoved() {
@@ -40,7 +59,6 @@ class HomeScreenTest {
         compose.setContent {
             HomeScreen(
                 onNavigate = opened::add,
-                onTabs = {},
                 recents = listOf(recent),
                 favourites = listOf(favourite),
                 onRemoveFavourite = removed::add,
