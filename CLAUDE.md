@@ -1370,3 +1370,19 @@ The blast radius was every dialog in the app — consent, external-URL, external
 clear-browsing-data and the debug inspector — because a default reaches everything that does not
 override it. Fixing the role fixed all five; a `shape =` argument on the consent dialog would have
 fixed the frame and left the collision live.
+
+### Ordinary browsing is canonical evidence too (CI-007)
+
+The hosted journey does not stop when Bloom Flowers reaches integrated mode. It leaves through the
+fixed browser-owned Back affordance, submits the reserved `example.com` destination through Webora's
+visible address input, and captures `04-regular-browsing.png`. The frame is accepted only after the
+regular security identity and navigation shell exist and integrated identity, bottom navigation,
+and quick actions are all absent. That layer-set assertion is the evidence that `UX-012` removed the
+prior integration; page title, prose, decoration, and manifest data are never acceptance signals.
+
+Frame 04 uses the same `ScreenEvidenceGuard` ownership/rendered policy as the integrated page. It
+does not add a screenshot mode, direct controller injection, new dismissal, deadline, pixel
+threshold, or exclusion. The collector and contact-sheet production remain cardinality-independent:
+tests pin the current four-frame inventory and order, while the workflow compares the number of
+actual PNGs with the number of tiles it composed. Captions still come only from filenames, and
+diagnostics remain in the separate artifact.

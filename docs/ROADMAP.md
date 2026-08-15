@@ -142,7 +142,7 @@ browser navigation, tabs, history and the transition between regular and integra
   privacy-preserving browser data and integrate it with clear-browsing-data behaviour
 - [x] `UX-012` Mode-aware chrome handoff — make Home → regular → SiteSkin → regular transitions
   explicit, preserve browser-owned escape/security controls, and prevent SiteSkin chrome leakage
-- [ ] `CI-007` Canonical regular-browsing evidence — add an uncontested ordinary-site frame proving
+- [x] `CI-007` Canonical regular-browsing evidence — add an uncontested ordinary-site frame proving
   that regular chrome, security identity and browser navigation are visible without SiteSkin
 - [ ] `DEMO-004` Browser-first reference walkthrough — document and demonstrate ordinary browsing and
   SiteSkin enhancement as one coherent user journey rather than two unrelated modes

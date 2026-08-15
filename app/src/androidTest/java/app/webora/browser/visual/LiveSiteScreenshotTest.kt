@@ -4,22 +4,29 @@ import android.graphics.Bitmap
 import android.graphics.Rect
 import android.os.SystemClock
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextClearance
+import androidx.compose.ui.test.performTextInput
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.platform.io.PlatformTestStorageRegistry
 import app.webora.browser.MainActivity
 import app.webora.browser.R
 import app.webora.browser.browser.BROWSER_CONTENT_TAG
+import app.webora.browser.browser.BROWSER_NAVIGATION_SHELL_TAG
+import app.webora.browser.browser.BROWSER_SECURITY_TAG
 import app.webora.browser.inspector.BrandAssetStage
 import app.webora.browser.inspector.BrandAssetTrace
 import app.webora.browser.inspector.inspectorRecorder
 import app.webora.browser.siteskin.SITESKIN_BOTTOM_NAV_TAG
+import app.webora.browser.siteskin.SITESKIN_BACK_TAG
 import app.webora.browser.siteskin.SITESKIN_QUICK_ACTIONS_TAG
 import app.webora.browser.siteskin.SITESKIN_SECURITY_TAG
 import org.junit.Assert.assertEquals
@@ -67,6 +74,34 @@ class LiveSiteScreenshotTest {
             BrandAssetStage.DECODED,
             brandAsset?.stage,
         )
+        captureRegularBrowsingEvidence()
+    }
+
+    /**
+     * Leaves the already-proven integrated origin through browser-owned UI, then uses Webora's
+     * address input. Page prose is deliberately not an assertion: the remote document is untrusted
+     * content, while these tags are the browser's closed chrome-handoff contract from UX-012.
+     */
+    private fun captureRegularBrowsingEvidence() {
+        composeRule.onNodeWithTag(SITESKIN_BACK_TAG).performClick()
+        val addressLabel = string(R.string.address_label)
+        val addressInput = hasText(addressLabel) or hasContentDescription(addressLabel)
+        waitUntilNodeExists(addressInput)
+        composeRule.onNode(addressInput).performTextClearance()
+        composeRule.onNode(addressInput).performTextInput(REGULAR_ADDRESS)
+        composeRule.onNode(addressInput).performImeAction()
+
+        waitUntilNodeExists(hasTestTag(BROWSER_SECURITY_TAG))
+        waitUntilNodeExists(hasTestTag(BROWSER_NAVIGATION_SHELL_TAG))
+        composeRule.onNodeWithTag(BROWSER_SECURITY_TAG).assertIsDisplayed()
+        val secure = string(R.string.security_secure)
+        composeRule.onNodeWithText(string(R.string.security_identity, secure, REGULAR_DOMAIN))
+            .assertIsDisplayed()
+        composeRule.onNodeWithTag(BROWSER_NAVIGATION_SHELL_TAG).assertIsDisplayed()
+        composeRule.onNodeWithTag(SITESKIN_SECURITY_TAG).assertDoesNotExist()
+        composeRule.onNodeWithTag(SITESKIN_BOTTOM_NAV_TAG).assertDoesNotExist()
+        composeRule.onNodeWithTag(SITESKIN_QUICK_ACTIONS_TAG).assertDoesNotExist()
+        captureDeviceScreenshot("04-regular-browsing.png", requirePageContent = true)
     }
 
     /**
@@ -202,6 +237,8 @@ class LiveSiteScreenshotTest {
 
     private companion object {
         const val LIVE_ORIGIN = "https://denrzv.github.io"
+        const val REGULAR_ADDRESS = "example.com"
+        const val REGULAR_DOMAIN = "example.com"
         const val SCREENSHOT_DIRECTORY = "screenshots"
         const val LIVE_SITE_TIMEOUT_MILLIS = 45_000L
         const val BRAND_ASSET_TIMEOUT_MILLIS = 30_000L

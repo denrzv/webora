@@ -23,17 +23,23 @@ class ContactSheetTest {
     @get:Rule val temp = TemporaryFolder()
 
     @Test fun composesOneTilePerFrameInFilenameOrder() {
-        val dir = frames("03-siteskin-integrated.png", "01-home.png", "02-siteskin-consent.png")
+        val dir = frames(
+            "03-siteskin-integrated.png",
+            "01-home.png",
+            "04-regular-browsing.png",
+            "02-siteskin-consent.png",
+        )
 
-        assertEquals(3, composeContactSheet(dir))
+        assertEquals(4, composeContactSheet(dir))
 
         val sheet = ImageIO.read(dir.resolve(PREVIEW_FILE_NAME).toFile())
-        assertEquals(expectedSheetWidth(3), sheet.width)
+        assertEquals(expectedSheetWidth(4), sheet.width)
         // Discovery is sorted, not argument- or filesystem-ordered: the tile drawn from the frame
         // whose marker colour is unique to 01- must be the leftmost one.
         assertEquals(markers.getValue("01-home.png"), tileMarkerColor(sheet, 0))
         assertEquals(markers.getValue("02-siteskin-consent.png"), tileMarkerColor(sheet, 1))
         assertEquals(markers.getValue("03-siteskin-integrated.png"), tileMarkerColor(sheet, 2))
+        assertEquals(markers.getValue("04-regular-browsing.png"), tileMarkerColor(sheet, 3))
     }
 
     /**
@@ -198,6 +204,7 @@ class ContactSheetTest {
         "02-siteskin-consent.png" to Color.GREEN,
         "02-siteskin-consent-renamed.png" to Color.GREEN,
         "03-siteskin-integrated.png" to Color.BLUE,
+        "04-regular-browsing.png" to Color.MAGENTA,
     )
 
     private var folderSequence = 0
