@@ -115,4 +115,16 @@ class BrowserSessionTest {
         assertEquals(BrowserMode.Home, session.activeTab.state.mode)
         assertFalse(session.activeTab.state.canGoBack)
     }
+
+    @Test fun `Home fallback resets only the active tab`() {
+        val firstPage = BrowserSession.fresh().updateActive { it.navigateFromHome("https://one.example") }
+        val twoPages = firstPage.createTab().updateActive { it.navigateFromHome("https://two.example") }
+        val inactiveBefore = twoPages.tabs.first()
+
+        val returnedHome = twoPages.updateActive { BrowserState() }
+
+        assertEquals(BrowserMode.Home, returnedHome.activeTab.state.mode)
+        assertEquals("", returnedHome.activeTab.state.displayedUrl)
+        assertEquals(inactiveBefore, returnedHome.tabs.first())
+    }
 }

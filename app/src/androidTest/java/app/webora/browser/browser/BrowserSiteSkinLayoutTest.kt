@@ -4,9 +4,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import app.webora.browser.design.WeboraTheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performClick
 import app.webora.browser.siteskin.BrandAsset
 import app.webora.browser.siteskin.SITESKIN_BOTTOM_NAV_TAG
 import app.webora.browser.web.BrowserWebViewController
@@ -15,6 +17,7 @@ import dev.siteskin.core.SiteSkinValidator
 import dev.siteskin.core.origin.SiteOrigin
 import org.junit.Rule
 import org.junit.Test
+import org.junit.Assert.assertTrue
 
 class BrowserSiteSkinLayoutTest {
     @get:Rule
@@ -22,6 +25,7 @@ class BrowserSiteSkinLayoutTest {
 
     @Test
     fun integratedBrowserKeepsBottomNavigationAndQuickActionsVisible() {
+        var backInvoked = false
         val origin = requireNotNull(SiteOrigin.parse(SITE_URL))
         val configuration = SiteSkinValidator.validate(MANIFEST.byteInputStream(), SITE_URL)
             .let { (it as SiteSkinValidationOutcome.Accepted).configuration }
@@ -36,6 +40,8 @@ class BrowserSiteSkinLayoutTest {
                 RegularBrowser(
                     state = state,
                     controller = BrowserWebViewController(),
+                    canNavigateBack = true,
+                    onBack = { backInvoked = true },
                     onObservation = {},
                     onHome = {},
                     onExternalNavigation = {},
@@ -56,10 +62,13 @@ class BrowserSiteSkinLayoutTest {
         composeRule.onNodeWithTag(SITESKIN_BOTTOM_NAV_TAG).assertIsDisplayed()
         composeRule.onNodeWithTag(BROWSER_NAVIGATION_SHELL_TAG).assertDoesNotExist()
         composeRule.onNodeWithContentDescription("Quick actions").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Back").assertIsEnabled().performClick()
+        assertTrue(backInvoked)
     }
 
     @Test
     fun regularBrowserRemovesSiteSkinLayersBeforeShowingBrowserNavigation() {
+        var backInvoked = false
         val origin = requireNotNull(SiteOrigin.parse(SITE_URL))
         val state = BrowserState(mode = BrowserMode.Regular(origin), displayedUrl = "about:blank")
 
@@ -68,6 +77,8 @@ class BrowserSiteSkinLayoutTest {
                 RegularBrowser(
                     state = state,
                     controller = BrowserWebViewController(),
+                    canNavigateBack = true,
+                    onBack = { backInvoked = true },
                     onObservation = {},
                     onHome = {},
                     onExternalNavigation = {},
@@ -87,6 +98,8 @@ class BrowserSiteSkinLayoutTest {
 
         composeRule.onNodeWithTag(BROWSER_NAVIGATION_SHELL_TAG).assertIsDisplayed()
         composeRule.onNodeWithTag(SITESKIN_BOTTOM_NAV_TAG).assertDoesNotExist()
+        composeRule.onNodeWithContentDescription("Back").assertIsEnabled().performClick()
+        assertTrue(backInvoked)
     }
 
     private companion object {

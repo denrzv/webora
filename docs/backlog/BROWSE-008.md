@@ -1,6 +1,6 @@
 # BROWSE-008 — Back returns to Home when WebView history is empty
 
-Status: BACKLOG
+Status: COMPLETE
 
 **Priority:** P0  
 **Depends on:** `BROWSE-002`, `BROWSE-006`, `UX-011`, `UX-012`  
@@ -71,3 +71,11 @@ less trustworthy.
   frames, `png_count=4`, a four-tile contact sheet, and frame 04 showing regular browser chrome with
   no SiteSkin layers.
 - `bash scripts/pre-commit-check.sh` passes.
+
+## Result
+
+Implemented by the shared browser-owned Back policy: live WebView history wins, the first page
+falls back to native Home for only the active tab, and Home delegates to Android. Regular and
+integrated visible controls plus system/predictive Back use the same action. JVM tests pass and
+Android UI tests compile; device runtime and the two hosted CI-007 evidence runs remain downstream
+environment/acceptance work rather than screenshot-only shortcuts in this ticket.

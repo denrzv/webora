@@ -470,7 +470,11 @@ browser-observed origin, or Integrated with a trusted origin and `SiteSkinConfig
 callbacks may produce only Regular mode; a future validated SiteSkin activation seam must produce
 Integrated mode. Address input is resolved by browser-owned policy into explicit HTTP(S), host-like
 input promoted to HTTPS, or an encoded HTTPS search query; denied schemes never reach the renderer.
-System and predictive back consult live WebView history and delegate when it cannot be consumed.
+System, predictive and visible browser Back share one browser-owned contract. They consult live
+WebView history first, return only the active tab to native Home when history is empty, and delegate
+to Android/app-exit behavior only from Home. Visible regular and integrated Back therefore remain
+enabled on a first page even though `WebView.canGoBack()` is false. Home is never represented by a
+fake URL or inserted into WebView history, and manifests cannot influence this precedence.
 
 ### Home and onboarding (BROWSE-003)
 
