@@ -3,6 +3,11 @@
 Webora can exercise the deployed Bloom Flowers integration on a GitHub-hosted Pixel 6 emulator and
 return full-device screenshots without a local Android phone.
 
+For the corresponding installed-app journey—including two tabs, a naturally created local browsing
+record, SiteSkin consent, and the return to the retained ordinary tab—see the
+[browser-first walkthrough](WALKTHROUGH.md). The four frames below prove Home, consent, integrated,
+and ordinary surfaces; they do not depict the tab switcher, Recent sites, or Favourites.
+
 ## Run it
 
 1. Open the Webora repository on GitHub.
