@@ -31,4 +31,27 @@ class HomeScreenTest {
         compose.onNodeWithText("Favourites").assertIsDisplayed()
         compose.onNodeWithText("Suggested integrations").assertIsDisplayed()
     }
+
+    @Test fun populatedRecordsOpenExactStoredUrlsAndFavouriteCanBeRemoved() {
+        val opened = mutableListOf<String>()
+        val removed = mutableListOf<String>()
+        val recent = BrowsingRecord("https://recent.example/path", "https://recent.example", "Recent", 2, 2)
+        val favourite = BrowsingRecord("https://saved.example/exact?q=1", "https://saved.example", "Saved", 1, 1)
+        compose.setContent {
+            HomeScreen(
+                onNavigate = opened::add,
+                onTabs = {},
+                recents = listOf(recent),
+                favourites = listOf(favourite),
+                onRemoveFavourite = removed::add,
+            )
+        }
+
+        compose.onNodeWithText("Open Recent").performClick()
+        compose.onNodeWithText("Open Saved").performClick()
+        compose.onNodeWithText("Remove Saved from favourites").performClick()
+
+        assertEquals(listOf(recent.url, favourite.url), opened)
+        assertEquals(listOf(favourite.url), removed)
+    }
 }

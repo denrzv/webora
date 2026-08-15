@@ -39,6 +39,9 @@ internal fun HardenedWebView(
                     onPageChanged = { view, url, isLoading ->
                         currentObserver.value(WebViewEvent.PageChanged(view.toObservation(url, isLoading)))
                     },
+                    onMainFrameCompleted = { view, url, title ->
+                        currentObserver.value(WebViewEvent.MainFrameCompleted(view.toObservation(url, false), title))
+                    },
                     onMainFrameFailed = { url, kind ->
                         currentObserver.value(WebViewEvent.MainFrameFailed(url, kind))
                     },

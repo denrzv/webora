@@ -44,6 +44,7 @@ class BrowserSiteSkinLayoutTest {
                     brandAsset = BrandAsset.Monogram("S"),
                     onSiteSelect = {},
                     onPageStarted = {},
+                    onPageCompleted = { _, _ -> },
                     onTabs = {},
                     onSettings = {},
                     onInspector = {},

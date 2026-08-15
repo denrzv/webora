@@ -51,11 +51,12 @@ class BrowsingDataCleanerTest {
             clearWebView = { calls += "webview" },
             clearManifestCache = { calls += "manifest" },
             clearConsent = { calls += "consent" },
+            clearHistory = { calls += "history" },
             clearTrace = { calls += "trace" },
         )
 
         assertTrue(cleaner.clear())
-        assertEquals(listOf("cookies", "storage", "webview", "manifest", "consent", "trace"), calls)
+        assertEquals(listOf("cookies", "storage", "webview", "manifest", "consent", "history", "trace"), calls)
     }
 
     @Test fun `no cookies to remove is still a complete clear`() = runTest {
@@ -81,10 +82,11 @@ class BrowsingDataCleanerTest {
             clearWebView = { calls += "webview" },
             clearManifestCache = { calls += "manifest" },
             clearConsent = { calls += "consent" },
+            clearHistory = { calls += "history" },
             clearTrace = { calls += "trace" },
         )
 
         assertFalse(cleaner.clear())
-        assertEquals(listOf("webview", "manifest", "consent", "trace"), calls)
+        assertEquals(listOf("webview", "manifest", "consent", "history", "trace"), calls)
     }
 }

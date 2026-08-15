@@ -138,7 +138,7 @@ browser navigation, tabs, history and the transition between regular and integra
   switch, browser-owned tab switcher and bounded session restoration
 - [ ] `UX-011` Persistent browser-owned navigation shell — reuse the existing Back/Forward/Reload/
   Home/More dock across Home and regular browsing, add tabs, and respect Android navigation insets
-- [ ] `BROWSE-007` Recents, history and favourites — replace the current Home placeholders with local,
+- [x] `BROWSE-007` Recents, history and favourites — replace the current Home placeholders with local,
   privacy-preserving browser data and integrate it with clear-browsing-data behaviour
 - [ ] `UX-012` Mode-aware chrome handoff — make Home → regular → SiteSkin → regular transitions
   explicit, preserve browser-owned escape/security controls, and prevent SiteSkin chrome leakage

@@ -133,6 +133,8 @@ internal fun BrowserNavigationDock(
     onTabs: () -> Unit,
     onSettings: () -> Unit,
     onInspector: () -> Unit,
+    isFavourite: Boolean = false,
+    onToggleFavourite: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
@@ -148,7 +150,15 @@ internal fun BrowserNavigationDock(
             WeboraIconButton(R.drawable.ic_reload, stringResource(R.string.reload), onReload)
             WeboraIconButton(R.drawable.ic_home, stringResource(R.string.home), onHome)
             WeboraIconButton(R.drawable.ic_more, stringResource(R.string.more), { menuExpanded = true })
-            BrowserOverflowMenu(menuExpanded, { menuExpanded = false }, onTabs, onSettings, onInspector)
+            BrowserOverflowMenu(
+                menuExpanded,
+                { menuExpanded = false },
+                onTabs,
+                onSettings,
+                onInspector,
+                isFavourite,
+                onToggleFavourite,
+            )
         }
     }
 }
@@ -160,8 +170,14 @@ private fun BrowserOverflowMenu(
     onTabs: () -> Unit,
     onSettings: () -> Unit,
     onInspector: () -> Unit,
+    isFavourite: Boolean,
+    onToggleFavourite: () -> Unit,
 ) {
     DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
+        DropdownMenuItem(
+            text = { Text(stringResource(if (isFavourite) R.string.remove_favourite else R.string.add_favourite)) },
+            onClick = { onDismiss(); onToggleFavourite() },
+        )
         browserMenuCommands().forEach { command ->
             DropdownMenuItem(
                 text = { Text(browserMenuLabel(command)) },

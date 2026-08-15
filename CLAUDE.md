@@ -222,6 +222,19 @@ are tool errors, not synthetic `SS-*` diagnostics.
 
 ---
 
+### Local browsing records (BROWSE-007)
+
+History and favourites are browser-owned, app-private records. Identity and navigation target use a
+canonical full HTTP(S) URL with its fragment removed; a bounded sanitized HTML title is presentation
+only and never a key or command. Successful main-frame completion is the only recording seam, and a
+matching failed navigation finish is suppressed. Persisted records are untrusted after restore, so
+the versioned codec revalidates every entry and enforces 200 visits, 100 favourites and ten distinct
+Home recents. Clear browsing data deletes history/recents but deliberately preserves favourites, as
+the confirmation states. Do not add sync, telemetry, favicon fetches or browser-controlled networking
+to this store without a new privacy/trust-boundary ticket.
+
+---
+
 ## Java version — two knobs, do not conflate them
 
 | Knob | Value | Constrained by |
