@@ -94,24 +94,42 @@ internal fun SiteSkinMenu(
     modifier: Modifier = Modifier,
 ) {
     ModalDrawerSheet(modifier.testTag(SITESKIN_MENU_TAG)) {
-        if (model.siteMenu.isNotEmpty()) {
-            MenuHeading(stringResource(R.string.siteskin_site_menu_heading))
-            model.siteMenu.take(MAX_VISIBLE_MENU_ITEMS).forEach { item ->
-                MenuItem(item.label, item.icon) { onSiteSelect(item.item) }
-            }
-            HorizontalDivider()
-        }
+        SiteHubSections(model, onSiteSelect)
+        if (model.hasSiteItems()) HorizontalDivider()
         MenuHeading(stringResource(R.string.siteskin_browser_menu_heading))
         MenuItem(
             stringResource(if (isFavourite) R.string.remove_favourite else R.string.add_favourite),
             null,
-            onToggleFavourite,
+            onClick = onToggleFavourite,
         )
         model.browserMenu.forEach { command ->
             MenuItem(browserMenuLabel(command), null) { onBrowserSelect(command) }
         }
     }
 }
+
+@Composable
+private fun SiteHubSections(model: SiteSkinChromeModel, onSiteSelect: (NavigationItem) -> Unit) {
+    if (model.bottomNavigation.isNotEmpty()) {
+        MenuHeading(stringResource(R.string.siteskin_site_menu_heading))
+        model.bottomNavigation.forEach { item ->
+            MenuItem(item.label, item.icon, item.isActive) { onSiteSelect(item.item) }
+        }
+    }
+    if (model.quickActions.isNotEmpty()) {
+        MenuHeading(stringResource(R.string.siteskin_quick_actions))
+        model.quickActions.forEach { item -> MenuItem(item.label, item.icon) { onSiteSelect(item.item) } }
+    }
+    if (model.siteMenu.isNotEmpty()) {
+        MenuHeading(stringResource(R.string.siteskin_site_menu_heading))
+        model.siteMenu.take(MAX_VISIBLE_MENU_ITEMS).forEach { item ->
+            MenuItem(item.label, item.icon) { onSiteSelect(item.item) }
+        }
+    }
+}
+
+private fun SiteSkinChromeModel.hasSiteItems(): Boolean =
+    bottomNavigation.isNotEmpty() || quickActions.isNotEmpty() || siteMenu.isNotEmpty()
 
 /**
  * The browser-authored label for a browser-owned menu command.
@@ -135,14 +153,21 @@ private fun MenuHeading(label: String) {
 }
 
 @Composable
-private fun MenuItem(label: String, icon: String?, onClick: () -> Unit) {
+private fun MenuItem(label: String, icon: String?, selected: Boolean? = null, onClick: () -> Unit) {
+    val selectedDescription = stringResource(R.string.siteskin_nav_selected)
+    val notSelectedDescription = stringResource(R.string.siteskin_nav_not_selected)
     DropdownMenuItem(
         text = { BoundedLabel(label) },
         leadingIcon = icon?.let { { SiteSkinIcon(it) } },
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = MINIMUM_TOUCH_TARGET),
+            .heightIn(min = MINIMUM_TOUCH_TARGET)
+            .semantics {
+                if (selected != null) {
+                    stateDescription = if (selected) selectedDescription else notSelectedDescription
+                }
+            },
     )
 }
 

@@ -71,9 +71,8 @@ import app.webora.browser.siteskin.BrandAssetLoader
 import app.webora.browser.siteskin.publishesBrandAsset
 import app.webora.browser.siteskin.BitmapBrandAssetDecoder
 import app.webora.browser.siteskin.OkHttpBrandAssetSource
-import app.webora.browser.siteskin.SiteSkinBottomNavigation
 import app.webora.browser.siteskin.SiteSkinChromeModel
-import app.webora.browser.siteskin.SiteSkinQuickActions
+import app.webora.browser.siteskin.SiteSkinDock
 import app.webora.browser.siteskin.SiteSkinMenu
 import app.webora.browser.siteskin.SiteSkinConsentModel
 import app.webora.browser.siteskin.ExpressiveSiteSkinPresentation
@@ -201,6 +200,7 @@ internal fun BrowserScreen(
     }
     val downloadMessages = stringResource(R.string.download_started) to stringResource(R.string.download_failed)
     val integrated = state.mode as? BrowserMode.Integrated
+    LaunchedEffect(activeTabId, integrated?.configuration) { siteMenuExpanded = false }
     val currentBrandAsset = integrated?.configuration?.let { configuration ->
         brandAsset?.takeIf { it.first === configuration }?.second
             ?: BrandAsset.Monogram(brandMonogram(configuration.site.shortName, configuration.site.name))
@@ -285,13 +285,14 @@ internal fun BrowserScreen(
         },
         onFileChooser = onFileChooser,
         brandAsset = currentBrandAsset,
-        onSiteSelect = dispatchSiteItem,
+        onOpenSiteHub = { siteMenuExpanded = true },
         onPageStarted = { url ->
             completedPages.remove(activeTabId)
             val nextGeneration = generation + 1
             generations[activeTabId] = nextGeneration
             discoveryOwner = activeTabId
             pendingConsent = null
+            siteMenuExpanded = false
             if (siteSkinEnabled) manifestDiscovery.onPageStarted(url, nextGeneration)
         },
         onPageCompleted = { url, title ->
@@ -639,7 +640,7 @@ internal fun RegularBrowser(
     onDownload: (String) -> Unit,
     onFileChooser: (String, (String?) -> Unit) -> Unit,
     brandAsset: BrandAsset?,
-    onSiteSelect: (NavigationItem) -> Unit,
+    onOpenSiteHub: () -> Unit,
     onPageStarted: (String) -> Unit,
     onPageCompleted: (String, String?) -> Unit,
     onTabs: () -> Unit,
@@ -700,14 +701,23 @@ internal fun RegularBrowser(
                     modifier = Modifier.fillMaxSize(),
                 )
             }
-            if (handoff.contentActions == ContentActions.SITESKIN && integrated != null) {
-                val chrome = SiteSkinChromeModel.from(integrated.configuration, state.displayedUrl)
-                SiteSkinQuickActions(chrome.quickActions, onSiteSelect)
-            }
         }
         if (handoff.bottom == BottomChrome.SITESKIN && integrated != null) {
-            val chrome = SiteSkinChromeModel.from(integrated.configuration, state.displayedUrl)
-            SiteSkinBottomNavigation(chrome.bottomNavigation, onSiteSelect)
+            val presentation = ExpressiveSiteSkinPresentation.from(
+                configuration = integrated.configuration,
+                darkTheme = isSystemInDarkTheme(),
+                reducedMotion = reducedMotionEnabled(LocalContext.current),
+            )
+            SiteSkinDock(
+                presentation = presentation,
+                canGoBack = canNavigateBack,
+                canGoForward = state.canGoForward,
+                onBack = onBack,
+                onForward = controller::goForward,
+                onOpenHub = onOpenSiteHub,
+                onTabs = onTabs,
+                onMore = onOpenSiteHub,
+            )
         } else {
             BrowserNavigationShell(
                 canGoBack = canNavigateBack,
