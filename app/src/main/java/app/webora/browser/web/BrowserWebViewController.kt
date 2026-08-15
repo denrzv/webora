@@ -26,7 +26,16 @@ internal class BrowserWebViewController {
     }
 
     fun detach(webView: WebView) {
-        if (this.webView === webView) this.webView = null
+        // Keep the renderer associated with its tab while Compose shows another tab. The owning
+        // session destroys it when that tab closes.
+        if (this.webView !== webView) return
+    }
+
+    fun attached(): WebView? = webView
+
+    fun destroy() {
+        webView?.destroy()
+        webView = null
     }
 
     fun navigate(url: String) {

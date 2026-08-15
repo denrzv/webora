@@ -31,7 +31,7 @@ internal class BrowsingDataCleaner(
 
     companion object {
         fun android(
-            controller: BrowserWebViewController,
+            controllers: Collection<BrowserWebViewController>,
             discovery: ManifestDiscoveryCoordinator,
             consentStore: SiteConsentStore,
             trace: SiteSkinTraceRecorder?,
@@ -44,7 +44,7 @@ internal class BrowsingDataCleaner(
                 }
             },
             clearWebStorage = { WebStorage.getInstance().deleteAllData() },
-            clearWebView = controller::clearBrowsingData,
+            clearWebView = { controllers.forEach(BrowserWebViewController::clearBrowsingData) },
             clearManifestCache = discovery::clearCache,
             clearConsent = consentStore::clear,
             // Debug-only and in memory, but it is per-origin state derived from browsing, so it

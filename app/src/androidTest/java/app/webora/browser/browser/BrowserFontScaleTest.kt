@@ -93,7 +93,7 @@ class BrowserFontScaleTest {
                 )
                 BrowserNavigationDock(
                     canGoBack = true, canGoForward = false, onBack = {}, onForward = {},
-                    onReload = {}, onHome = {}, onSettings = {}, onInspector = {},
+                    onReload = {}, onHome = {}, onTabs = {}, onSettings = {}, onInspector = {},
                 )
             }
         }

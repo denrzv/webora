@@ -50,7 +50,7 @@ class BrowserChromeTest {
                 )
                 BrowserNavigationDock(
                     canGoBack = false, canGoForward = true, onBack = {}, onForward = {},
-                    onReload = { reload = true }, onHome = { home = true },
+                    onReload = { reload = true }, onHome = { home = true }, onTabs = {},
                     onSettings = { settings = true }, onInspector = {},
                 )
             }

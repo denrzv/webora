@@ -15,7 +15,7 @@ class HomeScreenTest {
 
     @Test fun addressAndSuggestionActionsResolveToSafeDestinations() {
         val navigations = mutableListOf<String>()
-        compose.setContent { HomeScreen(onNavigate = navigations::add) }
+        compose.setContent { HomeScreen(onNavigate = navigations::add, onTabs = {}) }
 
         compose.onNodeWithText("Search or enter address").performTextInput("example.com")
         compose.onNodeWithText("Search or enter address").performImeAction()
@@ -25,7 +25,7 @@ class HomeScreenTest {
     }
 
     @Test fun emptyBrowserOwnedSectionsRemainVisible() {
-        compose.setContent { HomeScreen(onNavigate = {}) }
+        compose.setContent { HomeScreen(onNavigate = {}, onTabs = {}) }
 
         compose.onNodeWithText("Recent sites").assertIsDisplayed()
         compose.onNodeWithText("Favourites").assertIsDisplayed()
