@@ -165,6 +165,68 @@ emulator failure: frames 01–03 are captured, then `captureRegularBrowsingEvide
 because Home is not a WebView history entry and the first-page integrated Back affordance is disabled.
 `BROWSE-008` owns the product fix; `CI-007` owns the confirming four-frame hosted evidence.
 
+## M9 — Expressive SiteSkin experience
+
+Starts after M8 acceptance closes. M9 is the visual/product step that makes the integrated experience
+feel like the site and browser were designed together rather than like a recoloured Material shell
+around a WebView. The visual direction is based on the Bloom Flowers reference sketches: a soft curved
+integrated header, a branded floating browser dock, richer storefront content, and a real product
+journey.
+
+The trust model does **not** change with the richer presentation. Webora owns geometry, browser
+navigation, security identity, touch targets and callbacks. Sites continue to provide only validated
+SiteSkin data: bounded text, normalized colours, semantic icon names, typed actions and bounded brand
+assets. M9 deliberately does not add arbitrary remote layouts, SVG/CSS, Compose definitions or a new
+appearance field to the SiteSkin manifest.
+
+- [ ] `UX-013` Expressive SiteSkin chrome primitives & ownership model — define browser-owned curved/
+  floating primitives, motion/inset rules, light/dark projections and negative controls for manifest
+  influence. GitHub: #84.
+- [ ] `UX-014` Curved branded integrated top chrome — compact browser-owned domain/TLS identity inside
+  a soft branded top surface with deterministic curved lower edge, preserving Back/tabs/overflow and
+  cross-origin teardown. GitHub: #85.
+- [ ] `UX-015` Branded browser dock & SiteSkin navigation hub — replace the persistent site bottom
+  navbar with a fixed browser-owned Back/Forward/brand-hub/Tabs/More dock; project validated site
+  navigation and quick actions into a native hub. GitHub: #86.
+- [ ] `DEMO-005` Expressive Bloom Flowers integrated showcase — integrate the Android surfaces with
+  `denrzv/bloom-flowers#3` (`BLOOM-001` storefront refresh) and `denrzv/bloom-flowers#4`
+  (`BLOOM-002` Happy Days product journey). GitHub: #87.
+- [ ] `CI-009` Expressive SiteSkin visual acceptance — expand the hosted journey/contact sheet to
+  cover storefront, product detail, navigation hub and final regular-mode teardown; require two
+  consecutive cold accepted runs. GitHub: #88.
+
+Recommended dependency order:
+
+```text
+M8 accepted
+    │
+    ▼
+ UX-013
+   ├────────► UX-014 ───────┐
+   └────────► UX-015 ───────┤
+                            │
+Bloom BLOOM-001 ────────────┤
+Bloom BLOOM-002 ────────────┤
+                            ▼
+                         DEMO-005
+                            │
+                            ▼
+                          CI-009
+```
+
+The Bloom website work can proceed in parallel with `UX-013..015` because it remains a normal
+responsive website with no Webora-specific DOM or user-agent behavior. `DEMO-005` is the integration
+owner; `CI-009` is the evidence owner.
+
+M9 intentionally revises one M8 presentation choice without weakening its ownership contract: site
+navigation no longer has to occupy the persistent bottom slot. In M9 the persistent integrated dock
+remains browser-owned, while validated SiteSkin navigation/actions move into the branded native hub.
+Android system navigation remains OS-owned.
+
+A SiteSkin appearance-preset/spec ticket is deliberately deferred. Revisit bounded presentation
+presets only after a second materially different integration demonstrates that one browser-owned
+expressive style is insufficient.
+
 ## Descoped
 
 Not abandoned — parked, with the reasoning kept in [`BACKLOG.md`](BACKLOG.md) so reviving any of
@@ -189,7 +251,7 @@ From concept §62. All must hold:
 - manifests are discovered, and invalid ones fail safely
 - Bloom Flowers renders with its own branding
 - a site without a manifest stays in regular mode
-- native bottom navigation opens the correct routes
+- validated SiteSkin navigation opens the correct routes
 - an origin change deactivates SiteSkin mode — covered by `SKIN-004`'s tests rather than by a second
   demo origin, which is descoped with `DEMO-002`
 - **no manifest can hide the domain or the TLS indicator** (`ADR-006`)
@@ -199,3 +261,6 @@ M7 adds a visual-quality bar on top of that functional prototype: canonical evid
 cheap to review, free of debug/OS contamination, and representative of the intended SiteSkin UX.
 M8 adds the browser-usability bar: ordinary sites must expose a coherent browser-owned shell and the
 handoff into and out of SiteSkin must remain predictable without relying on Android system controls.
+M9 adds the expressive-integration bar: an integrated site should feel deliberately native-like while
+browser ownership/security remains structurally obvious and ordinary non-SiteSkin browsing remains
+unchanged.

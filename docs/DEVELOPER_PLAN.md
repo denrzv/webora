@@ -1,7 +1,7 @@
 # Webora Browser — developer execution plan
 
 Status: ACTIVE
-Last updated: 2026-08-14
+Last updated: 2026-08-15
 
 This document is the execution companion to [`DEVELOPMENT_PLAN.md`](DEVELOPMENT_PLAN.md),
 [`ROADMAP.md`](ROADMAP.md), and [`BACKLOG.md`](BACKLOG.md). It does not replace ticket PRDs or
@@ -224,3 +224,111 @@ system navigation for browser actions:
 6. hosted evidence contains a clean ordinary-site frame as well as the existing SiteSkin story;
 7. the reference walkthrough explains Webora as a browser first and SiteSkin as an optional,
    consented enhancement.
+
+## Post-M8 queue — M9 expressive SiteSkin experience
+
+M9 starts only after `CI-007` and `DEMO-004` close M8 acceptance. Its purpose is not to add more
+protocol surface; it is to make the existing validated SiteSkin data produce a substantially more
+native-like, branded composition.
+
+M9 deliberately changes the **placement** of site navigation while keeping the M8 ownership model:
+Android navigation stays OS-owned, essential browser navigation stays browser-owned, and site
+navigation remains SiteSkin-controlled only through validated semantic items/actions. The persistent
+integrated bottom surface becomes a browser dock; site navigation moves into a native SiteSkin hub.
+
+### M9 workstreams
+
+**Track A — Webora expressive chrome**
+
+1. **`UX-013` (#84) — Expressive SiteSkin chrome primitives & ownership model**
+   - define the browser-owned curved/floating geometry, branded surfaces, elevation and motion rules;
+   - derive only bounded presentation roles from the already-trusted SiteSkin configuration;
+   - lock the trust boundary before richer surfaces are implemented;
+   - define 320 dp, 200% font, dark-theme and reduced-motion fallback behavior.
+2. **`UX-014` (#85) — Curved branded integrated top chrome**
+   - build the compact domain/TLS identity surface and curved header from UX-013 primitives;
+   - preserve shared Back, tabs/overflow, loading/error and origin-change contracts;
+   - keep the canonical origin visually/semantically separate from site-controlled content.
+3. **`UX-015` (#86) — Branded browser dock & SiteSkin navigation hub**
+   - replace persistent `Home/Catalog/Cart/Profile` chrome with fixed browser-owned
+     Back/Forward/brand-hub/Tabs/More controls;
+   - project the validated SiteSkin navigation and quick actions into the brand hub;
+   - preserve active-route semantics, typed action dispatch and tab/origin isolation.
+
+`UX-014` and `UX-015` may proceed in parallel once the UX-013 model is stable.
+
+**Track B — Bloom Flowers site**
+
+- `denrzv/bloom-flowers#3` / `BLOOM-001` — mobile-first storefront redesign: real bouquet imagery,
+  Bloom wordmark/header, hero, categories and Popular Picks while remaining a normal responsive
+  same-origin static website.
+- `denrzv/bloom-flowers#4` / `BLOOM-002` — `Happy Days Bouquet` product-detail route and local image
+  set, producing real WebView history for the integrated demo.
+
+Bloom work can proceed in parallel with Track A. It must not add Webora detection, UA sniffing or a
+Webora-specific DOM/API contract.
+
+**Track C — integration and evidence**
+
+- **`DEMO-005` (#87)** is the cross-repository integration owner. It proves Home → consent →
+  expressive storefront → product → SiteSkin navigation hub → regular site as one coherent story.
+- **`CI-009` (#88)** expands deterministic hosted evidence to the M9 journey and remains the final
+  acceptance owner for screenshot totality, uncontested frames and integrated→regular teardown.
+
+### M9 recommended order
+
+```text
+M8 accepted
+    │
+    ▼
+ UX-013
+   ├──────────────► UX-014 ──────────────┐
+   └──────────────► UX-015 ──────────────┤
+                                          │
+Bloom BLOOM-001 ──────────────────────────┤
+Bloom BLOOM-002 ──────────────────────────┤
+                                          ▼
+                                       DEMO-005
+                                          │
+                                          ▼
+                                        CI-009
+```
+
+`CI-009` harness work may start once the M9 semantics/tags are stable, but its acceptance run must
+use the final deployed Bloom site and final M9 Android surfaces.
+
+### M9 quality gates
+
+All previous security/accessibility/evidence gates continue to apply, plus:
+
+- **Geometry-ownership gate:** no manifest value controls arbitrary dimensions, paths, layout order,
+  remote SVG/CSS or executable UI definitions.
+- **Identity-separation gate:** richer brand treatment must never make the canonical domain/TLS node
+  site-controlled or visually suppressible.
+- **Dock-ownership gate:** Back, Forward, Tabs and browser More remain browser-owned regardless of
+  manifest navigation count/content.
+- **Site-hub gate:** validated site items/actions are clearly separated from browser commands and are
+  invalidated on tab/origin generation changes.
+- **Regular-web gate:** Bloom remains fully usable and visually intentional in a non-SiteSkin browser.
+- **Visual-story gate:** screenshots demonstrate a material qualitative change from recoloured
+  Material chrome, without requiring pixel-perfect matching to concept art.
+
+### M9 non-goals and deferred decision
+
+Do not add a SiteSkin appearance-preset field as part of M9. One expressive browser-owned style is
+sufficient for the Bloom milestone. Revisit bounded presets only after a second materially different
+integration provides evidence that the current style cannot represent it well.
+
+### M9 exit criteria
+
+M9 is complete when:
+
+1. Bloom integrated mode uses the curved branded top surface and browser-owned floating dock;
+2. site navigation/actions are reachable through the native SiteSkin hub without removing essential
+   browser controls;
+3. Bloom home and Happy Days product detail form a polished, normal responsive web journey;
+4. Back/Forward history works across the real product navigation and shared Back-to-Home behavior is
+   preserved;
+5. leaving Bloom returns to ordinary Webora chrome with no brand/navigation leakage;
+6. compact width, dark theme, large text and reduced motion remain usable;
+7. two consecutive cold hosted CI-009 runs publish the complete uncontested canonical M9 evidence.
