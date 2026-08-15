@@ -140,7 +140,7 @@ browser navigation, tabs, history and the transition between regular and integra
   Home/More dock across Home and regular browsing, add tabs, and respect Android navigation insets
 - [x] `BROWSE-007` Recents, history and favourites — replace the current Home placeholders with local,
   privacy-preserving browser data and integrate it with clear-browsing-data behaviour
-- [ ] `UX-012` Mode-aware chrome handoff — make Home → regular → SiteSkin → regular transitions
+- [x] `UX-012` Mode-aware chrome handoff — make Home → regular → SiteSkin → regular transitions
   explicit, preserve browser-owned escape/security controls, and prevent SiteSkin chrome leakage
 - [ ] `CI-007` Canonical regular-browsing evidence — add an uncontested ordinary-site frame proving
   that regular chrome, security identity and browser navigation are visible without SiteSkin

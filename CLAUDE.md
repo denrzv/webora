@@ -243,8 +243,23 @@ tab's observed state and controller.
 
 The shell accepts no manifest configuration, labels, icons, colours, order, URL or generic action.
 A manifest therefore cannot hide, relabel, reorder, restyle, enable or dispatch it. SiteSkin may
-occupy the integrated bottom product slot only through its existing validated chrome model;
-`UX-012` owns the explicit mode handoff.
+occupy the integrated bottom product slot only through its existing validated chrome model.
+
+### Mode-aware chrome handoff (UX-012)
+
+`ChromeHandoff` is the exhaustive pure projection from the selected tab's browser-observed
+`BrowserMode` to its visible top, content-action and bottom layers. Home and regular modes authorise
+the shared browser bottom shell and no SiteSkin actions. Integrated mode alone authorises SiteSkin
+quick actions and bottom navigation, paired with an indivisible `PROTECTED_INTEGRATED` top contract
+whose domain/TLS identity and Back escape are browser-owned. Renderers consume that projection rather
+than maintaining independent mode booleans.
+
+An exact-origin observation drops integrated mode before the next projection, and tab switching
+projects only `BrowserSession.activeTab`; inactive configuration and asynchronously loaded brand
+assets cannot authorise or decorate the selected tab. A brand asset is associated by configuration
+identity and the active configuration falls back immediately to its browser-produced monogram, so a
+regular/integrated tab switch cannot flash the previous origin's brand. Consent refusal performs no
+activation, therefore the regular browser shell never depends on consent as an escape route.
 
 Edge-to-edge ownership remains at `BrowserScreen`: `WindowInsets.safeDrawing` is consumed once around
 the active surface, and the dock does not draw Android Back/Home/Recents or add another system inset.
