@@ -97,6 +97,20 @@ class BrowserChromeContractTest {
         assertFalse(home.contains("configuration ="))
     }
 
+    @Test
+    fun `regular renderer consumes one handoff projection and keeps protected top manifest independent`() {
+        val screen = source("app/webora/browser/browser/BrowserScreen.kt").readText()
+            .substringAfter("internal fun RegularBrowser(")
+        val handoff = source("app/webora/browser/browser/ChromeHandoff.kt").readText()
+
+        assertTrue(screen.contains("val handoff = state.mode.chromeHandoff()"))
+        assertTrue(screen.contains("when (handoff.top)"))
+        assertTrue(screen.contains("handoff.contentActions == ContentActions.SITESKIN"))
+        assertTrue(screen.contains("handoff.bottom == BottomChrome.SITESKIN"))
+        assertFalse(handoff.contains("SiteSkinConfiguration"))
+        assertFalse(handoff.contains("NavigationItem"))
+    }
+
     private fun source(relative: String): File = File(
         requireNotNull(System.getProperty(SOURCE_ROOT_PROPERTY))
             .split(File.pathSeparator)

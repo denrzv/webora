@@ -101,6 +101,7 @@ import dev.siteskin.core.origin.SiteOrigin
 import dev.siteskin.core.action.ActionResolver
 import dev.siteskin.core.action.ResolvedAction
 import dev.siteskin.core.model.NavigationItem
+import dev.siteskin.core.model.SiteSkinConfiguration
 
 @Composable
 @Suppress("LongMethod", "CyclomaticComplexMethod", "CognitiveComplexMethod")
@@ -141,7 +142,7 @@ internal fun BrowserScreen(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current.applicationContext
     val assetLoader = remember { BrandAssetLoader(OkHttpBrandAssetSource(), BitmapBrandAssetDecoder()) }
-    var brandAsset by remember { mutableStateOf<BrandAsset?>(null) }
+    var brandAsset by remember { mutableStateOf<Pair<SiteSkinConfiguration, BrandAsset>?>(null) }
     val consentStore = remember(context) { SiteConsentStore(context) }
     val privacyStore = remember(context) { PrivacySettingsStore(context) }
     val recordStore = remember(context) { BrowsingRecordStore(context) }
@@ -200,17 +201,21 @@ internal fun BrowserScreen(
     }
     val downloadMessages = stringResource(R.string.download_started) to stringResource(R.string.download_failed)
     val integrated = state.mode as? BrowserMode.Integrated
+    val currentBrandAsset = integrated?.configuration?.let { configuration ->
+        brandAsset?.takeIf { it.first === configuration }?.second
+            ?: BrandAsset.Monogram(brandMonogram(configuration.site.shortName, configuration.site.name))
+    }
     LaunchedEffect(integrated?.configuration) {
         val configuration = integrated?.configuration
         brandAsset = configuration?.let {
-            BrandAsset.Monogram(brandMonogram(it.site.shortName, it.site.name))
+            it to BrandAsset.Monogram(brandMonogram(it.site.shortName, it.site.name))
         }
         if (configuration != null) {
             val loaded = assetLoader.load(configuration)
             // Recorded whether or not it publishes: a load dropped for being superseded is one of
             // the things a developer needs to be able to see, and the guard is what would hide it.
             brandAssetSink.record(configuration.origin, loaded.trace)
-            if (publishesBrandAsset(state.mode, configuration)) brandAsset = loaded.asset
+            if (publishesBrandAsset(state.mode, configuration)) brandAsset = configuration to loaded.asset
         }
     }
 
@@ -268,7 +273,7 @@ internal fun BrowserScreen(
             scope.launch { snackbar.showSnackbar(message) }
         },
         onFileChooser = onFileChooser,
-        brandAsset = brandAsset,
+        brandAsset = currentBrandAsset,
         onSiteSelect = dispatchSiteItem,
         onPageStarted = { url ->
             completedPages.remove(activeTabId)
@@ -403,7 +408,7 @@ internal fun BrowserScreen(
                 configuration = (state.mode as? BrowserMode.Integrated)?.configuration,
                 consent = state.mode.observedOrigin()?.let(consentStore::decision),
                 siteSkinEnabled = siteSkinEnabled,
-                brandAsset = brandAsset,
+                brandAsset = currentBrandAsset,
                 darkTheme = isSystemInDarkTheme(),
             ),
         ),
@@ -635,21 +640,29 @@ internal fun RegularBrowser(
 ) {
     Column(modifier = modifier) {
         val integrated = state.mode as? BrowserMode.Integrated
+        val handoff = state.mode.chromeHandoff()
         val security = securityPresentation(state.mode)
-        if (integrated != null && security != null && brandAsset != null) {
-            val colors = SiteSkinTheme.from(integrated.configuration).scheme(isSystemInDarkTheme())
-            SiteSkinTopBar(
-                model = SiteSkinTopBarModel.from(integrated.configuration, brandAsset, security),
-                colors = colors,
-                canGoBack = state.canGoBack,
-                onBack = controller::goBack,
-            )
-        } else {
-            BrowserChrome(
-                state = state,
-                onAddressChanged = { onObservation(BrowserObservation.AddressEdited(it)) },
-                onSubmit = { resolveAddressInput(state.addressText)?.let(controller::navigate) },
-            )
+        when (handoff.top) {
+            TopChrome.NONE -> Unit
+            TopChrome.REGULAR -> BrowserChrome(
+                    state = state,
+                    onAddressChanged = { onObservation(BrowserObservation.AddressEdited(it)) },
+                    onSubmit = { resolveAddressInput(state.addressText)?.let(controller::navigate) },
+                )
+            TopChrome.PROTECTED_INTEGRATED -> {
+                val mode = checkNotNull(integrated)
+                val identity = checkNotNull(security)
+                val asset = brandAsset ?: BrandAsset.Monogram(
+                    brandMonogram(mode.configuration.site.shortName, mode.configuration.site.name),
+                )
+                val colors = SiteSkinTheme.from(mode.configuration).scheme(isSystemInDarkTheme())
+                SiteSkinTopBar(
+                    model = SiteSkinTopBarModel.from(mode.configuration, asset, identity),
+                    colors = colors,
+                    canGoBack = state.canGoBack,
+                    onBack = controller::goBack,
+                )
+            }
         }
         BrowserStatusRegion(state)
         Box(Modifier.fillMaxWidth().weight(1f).testTag(BROWSER_CONTENT_TAG)) {
@@ -670,12 +683,12 @@ internal fun RegularBrowser(
                     modifier = Modifier.fillMaxSize(),
                 )
             }
-            if (integrated != null) {
+            if (handoff.contentActions == ContentActions.SITESKIN && integrated != null) {
                 val chrome = SiteSkinChromeModel.from(integrated.configuration, state.displayedUrl)
                 SiteSkinQuickActions(chrome.quickActions, onSiteSelect)
             }
         }
-        if (integrated != null) {
+        if (handoff.bottom == BottomChrome.SITESKIN && integrated != null) {
             val chrome = SiteSkinChromeModel.from(integrated.configuration, state.displayedUrl)
             SiteSkinBottomNavigation(chrome.bottomNavigation, onSiteSelect)
         } else {

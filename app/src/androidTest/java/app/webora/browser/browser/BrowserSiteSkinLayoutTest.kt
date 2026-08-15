@@ -54,7 +54,39 @@ class BrowserSiteSkinLayoutTest {
         }
 
         composeRule.onNodeWithTag(SITESKIN_BOTTOM_NAV_TAG).assertIsDisplayed()
+        composeRule.onNodeWithTag(BROWSER_NAVIGATION_SHELL_TAG).assertDoesNotExist()
         composeRule.onNodeWithContentDescription("Quick actions").assertIsDisplayed()
+    }
+
+    @Test
+    fun regularBrowserRemovesSiteSkinLayersBeforeShowingBrowserNavigation() {
+        val origin = requireNotNull(SiteOrigin.parse(SITE_URL))
+        val state = BrowserState(mode = BrowserMode.Regular(origin), displayedUrl = "about:blank")
+
+        composeRule.setContent {
+            WeboraTheme {
+                RegularBrowser(
+                    state = state,
+                    controller = BrowserWebViewController(),
+                    onObservation = {},
+                    onHome = {},
+                    onExternalNavigation = {},
+                    onDownload = {},
+                    onFileChooser = { _, complete -> complete(null) },
+                    brandAsset = null,
+                    onSiteSelect = {},
+                    onPageStarted = {},
+                    onPageCompleted = { _, _ -> },
+                    onTabs = {},
+                    onSettings = {},
+                    onInspector = {},
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(BROWSER_NAVIGATION_SHELL_TAG).assertIsDisplayed()
+        composeRule.onNodeWithTag(SITESKIN_BOTTOM_NAV_TAG).assertDoesNotExist()
     }
 
     private companion object {
