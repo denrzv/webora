@@ -126,6 +126,7 @@ internal fun BrowserSecurityIdentity(security: SecurityPresentation) {
 internal fun BrowserNavigationDock(
     canGoBack: Boolean,
     canGoForward: Boolean,
+    canReload: Boolean,
     onBack: () -> Unit,
     onForward: () -> Unit,
     onReload: () -> Unit,
@@ -147,8 +148,9 @@ internal fun BrowserNavigationDock(
         Row(verticalAlignment = Alignment.CenterVertically) {
             WeboraIconButton(R.drawable.ic_back, stringResource(R.string.back), onBack, enabled = canGoBack)
             WeboraIconButton(R.drawable.ic_forward, stringResource(R.string.forward), onForward, enabled = canGoForward)
-            WeboraIconButton(R.drawable.ic_reload, stringResource(R.string.reload), onReload)
+            WeboraIconButton(R.drawable.ic_reload, stringResource(R.string.reload), onReload, enabled = canReload)
             WeboraIconButton(R.drawable.ic_home, stringResource(R.string.home), onHome)
+            WeboraIconButton(R.drawable.ic_tabs, stringResource(R.string.tabs), onTabs)
             WeboraIconButton(R.drawable.ic_more, stringResource(R.string.more), { menuExpanded = true })
             BrowserOverflowMenu(
                 menuExpanded,
@@ -162,6 +164,34 @@ internal fun BrowserNavigationDock(
         }
     }
 }
+
+/** Shared Home/regular placement for the browser-owned dock. */
+@Composable
+internal fun BrowserNavigationShell(
+    canGoBack: Boolean,
+    canGoForward: Boolean,
+    canReload: Boolean,
+    onBack: () -> Unit,
+    onForward: () -> Unit,
+    onReload: () -> Unit,
+    onHome: () -> Unit,
+    onTabs: () -> Unit,
+    onSettings: () -> Unit,
+    onInspector: () -> Unit,
+    isFavourite: Boolean = false,
+    onToggleFavourite: () -> Unit = {},
+) {
+    BrowserNavigationDock(
+        canGoBack, canGoForward, canReload, onBack, onForward, onReload, onHome, onTabs,
+        onSettings, onInspector, isFavourite, onToggleFavourite,
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = WeboraSpacing.LARGE, vertical = WeboraSpacing.SMALL)
+            .testTag(BROWSER_NAVIGATION_SHELL_TAG),
+    )
+}
+
+internal const val BROWSER_NAVIGATION_SHELL_TAG = "browser_navigation_shell"
 
 @Composable
 private fun BrowserOverflowMenu(

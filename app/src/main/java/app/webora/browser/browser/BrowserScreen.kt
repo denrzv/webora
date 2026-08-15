@@ -216,28 +216,31 @@ internal fun BrowserScreen(
 
     BrowserBackHandler(enabled = state.canGoBack, controller = controller)
     if (state.mode == BrowserMode.Home) {
-        HomeScreen(
-            onNavigate = { url -> session = session.updateActive { it.navigateFromHome(url) } },
-            onTabs = { tabsVisible = true },
-            recents = recordVersion.let { recordStore.recentSites() },
-            favourites = recordVersion.let { recordStore.favourites() },
-            onRemoveFavourite = { url ->
-                if (recordStore.removeFavourite(url)) recordVersion += 1
-            },
-            modifier = browserModifier,
-        )
-        if (tabsVisible) {
-            BrowserTabSwitcher(
-                session = session,
-                controllers = controllers,
-                generations = generations,
-                onSessionChange = { session = it },
-                onDismiss = { tabsVisible = false },
+        Column(browserModifier) {
+            HomeScreen(
+                onNavigate = { url -> session = session.updateActive { it.navigateFromHome(url) } },
+                recents = recordVersion.let { recordStore.recentSites() },
+                favourites = recordVersion.let { recordStore.favourites() },
+                onRemoveFavourite = { url ->
+                    if (recordStore.removeFavourite(url)) recordVersion += 1
+                },
+                modifier = Modifier.weight(1f),
+            )
+            BrowserNavigationShell(
+                canGoBack = false,
+                canGoForward = false,
+                canReload = false,
+                onBack = {},
+                onForward = {},
+                onReload = {},
+                onHome = {},
+                onTabs = { tabsVisible = true },
+                onSettings = { settingsVisible = true },
+                onInspector = { inspectorVisible = true },
             )
         }
-        return
-    }
-    val dispatchSiteItem: (NavigationItem) -> Unit = { item ->
+    } else {
+        val dispatchSiteItem: (NavigationItem) -> Unit = { item ->
         val mode = state.mode as? BrowserMode.Integrated
         val resolved = mode?.let { ActionResolver.resolve(item.action, it.configuration.site, state.displayedUrl) }
         when (resolved) {
@@ -251,7 +254,7 @@ internal fun BrowserScreen(
             ResolvedAction.OpenMenu -> siteMenuExpanded = true
             null -> Unit
         }
-    }
+        }
     RegularBrowser(
         state = state,
         controller = controller,
@@ -351,6 +354,7 @@ internal fun BrowserScreen(
                 }
             },
         )
+    }
     }
     if (tabsVisible) {
         BrowserTabSwitcher(
@@ -675,9 +679,10 @@ internal fun RegularBrowser(
             val chrome = SiteSkinChromeModel.from(integrated.configuration, state.displayedUrl)
             SiteSkinBottomNavigation(chrome.bottomNavigation, onSiteSelect)
         } else {
-            BrowserNavigationDock(
+            BrowserNavigationShell(
                 canGoBack = state.canGoBack,
                 canGoForward = state.canGoForward,
+                canReload = state.displayedUrl.isNotBlank(),
                 onBack = controller::goBack,
                 onForward = controller::goForward,
                 onReload = controller::reload,
@@ -687,9 +692,6 @@ internal fun RegularBrowser(
                 onInspector = onInspector,
                 isFavourite = isFavourite,
                 onToggleFavourite = onToggleFavourite,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = WeboraSpacing.GUTTER, vertical = WeboraSpacing.SMALL),
             )
         }
     }

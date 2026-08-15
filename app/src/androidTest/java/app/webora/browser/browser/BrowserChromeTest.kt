@@ -3,12 +3,18 @@ package app.webora.browser.browser
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertHeightIsAtLeast
+import androidx.compose.ui.test.assertWidthIsAtLeast
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextReplacement
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.Modifier
 import app.webora.browser.design.WeboraTheme
 import dev.siteskin.core.origin.SiteOrigin
 import org.junit.Assert.assertEquals
@@ -41,6 +47,7 @@ class BrowserChromeTest {
     @Test fun dockPreservesCommandsAndHistoryEnabledStates() {
         var reload = false
         var home = false
+        var tabs = false
         var settings = false
         compose.setContent {
             WeboraTheme {
@@ -49,8 +56,8 @@ class BrowserChromeTest {
                     onAddressChanged = {}, onSubmit = {},
                 )
                 BrowserNavigationDock(
-                    canGoBack = false, canGoForward = true, onBack = {}, onForward = {},
-                    onReload = { reload = true }, onHome = { home = true }, onTabs = {},
+                    canGoBack = false, canGoForward = true, canReload = true, onBack = {}, onForward = {},
+                    onReload = { reload = true }, onHome = { home = true }, onTabs = { tabs = true },
                     onSettings = { settings = true }, onInspector = {},
                 )
             }
@@ -60,16 +67,52 @@ class BrowserChromeTest {
         compose.onNodeWithContentDescription("Forward").assertIsEnabled()
         compose.onNodeWithContentDescription("Reload").performClick()
         compose.onNodeWithContentDescription("Home").performClick()
+        compose.onNodeWithContentDescription("Tabs").performClick()
         compose.onNodeWithContentDescription("More").performClick()
         compose.onNodeWithText("Settings").performClick()
-        assertTrue(reload && home && settings)
+        assertTrue(reload && home && tabs && settings)
+    }
+
+    @Test fun dockDisablesUnavailableReloadAndKeepsEveryTargetAccessible() {
+        compose.setContent {
+            BrowserNavigationDock(
+                canGoBack = false, canGoForward = false, canReload = false,
+                onBack = {}, onForward = {}, onReload = {}, onHome = {}, onTabs = {},
+                onSettings = {}, onInspector = {},
+            )
+        }
+
+        listOf("Back", "Forward", "Reload", "Home", "Tabs", "More").forEach { label ->
+            compose.onNodeWithContentDescription(label)
+                .assertWidthIsAtLeast(48.dp)
+                .assertHeightIsAtLeast(48.dp)
+        }
+        compose.onNodeWithContentDescription("Reload").assertIsNotEnabled()
+        compose.onNodeWithContentDescription("Tabs").assertIsEnabled()
+    }
+
+    @Test fun sharedShellContainsEveryTargetAtCompactWidth() {
+        compose.setContent {
+            Box(Modifier.width(320.dp)) {
+                BrowserNavigationShell(
+                    false, false, false, {}, {}, {}, {}, {}, {}, {},
+                )
+            }
+        }
+
+        val shell = compose.onNodeWithTag(BROWSER_NAVIGATION_SHELL_TAG).fetchSemanticsNode().boundsInRoot
+        listOf("Back", "Forward", "Reload", "Home", "Tabs", "More").forEach { label ->
+            val control = compose.onNodeWithContentDescription(label).assertIsDisplayed().fetchSemanticsNode()
+            assertTrue("$label starts before the shell", control.boundsInRoot.left >= shell.left)
+            assertTrue("$label ends after the shell", control.boundsInRoot.right <= shell.right)
+        }
     }
 
     @Test fun browserOwnedFavouriteActionReflectsStateAndInvokesOnlyBrowserCallback() {
         var toggled = false
         compose.setContent {
             BrowserNavigationDock(
-                canGoBack = false, canGoForward = false, onBack = {}, onForward = {},
+                canGoBack = false, canGoForward = false, canReload = true, onBack = {}, onForward = {},
                 onReload = {}, onHome = {}, onTabs = {}, onSettings = {}, onInspector = {},
                 isFavourite = true, onToggleFavourite = { toggled = true },
             )

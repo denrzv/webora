@@ -136,7 +136,7 @@ browser navigation, tabs, history and the transition between regular and integra
 
 - [x] `BROWSE-006` Multi-tab browsing and session model — independent tab history/mode, create/close/
   switch, browser-owned tab switcher and bounded session restoration
-- [ ] `UX-011` Persistent browser-owned navigation shell — reuse the existing Back/Forward/Reload/
+- [x] `UX-011` Persistent browser-owned navigation shell — reuse the existing Back/Forward/Reload/
   Home/More dock across Home and regular browsing, add tabs, and respect Android navigation insets
 - [x] `BROWSE-007` Recents, history and favourites — replace the current Home placeholders with local,
   privacy-preserving browser data and integrate it with clear-browsing-data behaviour

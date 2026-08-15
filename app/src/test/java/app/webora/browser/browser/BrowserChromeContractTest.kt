@@ -56,6 +56,21 @@ class BrowserChromeContractTest {
         )
     }
 
+    @Test
+    fun `regular dock has a fixed browser-owned command contract`() {
+        val source = source("app/webora/browser/browser/BrowserChrome.kt").readText()
+        val dock = source
+            .substringAfter("internal fun BrowserNavigationDock(")
+            .substringBefore("@Composable\nprivate fun BrowserOverflowMenu")
+
+        val controls = listOf("ic_back", "ic_forward", "ic_reload", "ic_home", "ic_tabs", "ic_more")
+        assertTrue(controls.zipWithNext().all { (first, second) -> dock.indexOf(first) < dock.indexOf(second) })
+        assertTrue(dock.contains("canReload: Boolean"))
+        assertFalse(dock.contains("SiteSkinConfiguration"))
+        assertFalse(dock.contains("NavigationItem"))
+        assertFalse(dock.contains("configuration"))
+    }
+
     private fun hasSeparateIdentity(source: String): Boolean =
         source.contains("BasicTextField(") &&
             source.contains("BrowserSecurityIdentity(") &&
@@ -64,8 +79,22 @@ class BrowserChromeContractTest {
     private fun chromeFramesPage(source: String): Boolean {
         val chrome = source.indexOf("BrowserChrome(")
         val page = source.indexOf("testTag(BROWSER_CONTENT_TAG)")
-        val dock = source.indexOf("BrowserNavigationDock(", page)
+        val dock = source.indexOf("BrowserNavigationShell(", page)
         return chrome >= 0 && page > chrome && dock > page
+    }
+
+    @Test
+    fun `Home and regular mode share one shell inside one safe drawing boundary`() {
+        val screen = source("app/webora/browser/browser/BrowserScreen.kt").readText()
+        val home = screen
+            .substringAfter("if (state.mode == BrowserMode.Home)")
+            .substringBefore("\n    } else {")
+
+        assertTrue(home.contains("BrowserNavigationShell("))
+        assertTrue(screen.substringAfter("internal fun RegularBrowser(").contains("BrowserNavigationShell("))
+        assertTrue(screen.countSubstring("windowInsetsPadding(WindowInsets.safeDrawing)") == 1)
+        assertFalse(home.contains("SiteSkinConfiguration"))
+        assertFalse(home.contains("configuration ="))
     }
 
     private fun source(relative: String): File = File(
@@ -75,6 +104,8 @@ class BrowserChromeContractTest {
             .single { it.invariantSeparatorsPath.endsWith("/src/main/java") },
         relative,
     )
+
+    private fun String.countSubstring(value: String): Int = windowed(value.length).count { it == value }
 
     private companion object {
         const val SOURCE_ROOT_PROPERTY = "webora.app.src"
