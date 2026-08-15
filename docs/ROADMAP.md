@@ -144,12 +144,16 @@ browser navigation, tabs, history and the transition between regular and integra
   explicit, preserve browser-owned escape/security controls, and prevent SiteSkin chrome leakage
 - [x] `CI-007` Canonical regular-browsing evidence — add an uncontested ordinary-site frame proving
   that regular chrome, security identity and browser navigation are visible without SiteSkin
-- [ ] `DEMO-004` Browser-first reference walkthrough — document and demonstrate ordinary browsing and
+- [x] `DEMO-004` Browser-first reference walkthrough — document and demonstrate ordinary browsing and
   SiteSkin enhancement as one coherent user journey rather than two unrelated modes
 
 `BROWSE-006` is the foundation for `UX-011`; `BROWSE-007` can proceed once the tab/session model is
 stable. `UX-012` follows the persistent shell, `CI-007` validates the resulting mode handoff, and
 `DEMO-004` is the final product-facing evidence for M8.
+
+M8 is complete. The [browser-first walkthrough](WALKTHROUGH.md) joins the shipped session, local-data,
+shell and mode-handoff behavior to the four-frame hosted evidence while distinguishing Android,
+browser and bounded site navigation.
 
 ## Descoped
 
