@@ -130,6 +130,7 @@ internal fun BrowserNavigationDock(
     onForward: () -> Unit,
     onReload: () -> Unit,
     onHome: () -> Unit,
+    onTabs: () -> Unit,
     onSettings: () -> Unit,
     onInspector: () -> Unit,
     modifier: Modifier = Modifier,
@@ -147,7 +148,7 @@ internal fun BrowserNavigationDock(
             WeboraIconButton(R.drawable.ic_reload, stringResource(R.string.reload), onReload)
             WeboraIconButton(R.drawable.ic_home, stringResource(R.string.home), onHome)
             WeboraIconButton(R.drawable.ic_more, stringResource(R.string.more), { menuExpanded = true })
-            BrowserOverflowMenu(menuExpanded, { menuExpanded = false }, onSettings, onInspector)
+            BrowserOverflowMenu(menuExpanded, { menuExpanded = false }, onTabs, onSettings, onInspector)
         }
     }
 }
@@ -156,6 +157,7 @@ internal fun BrowserNavigationDock(
 private fun BrowserOverflowMenu(
     expanded: Boolean,
     onDismiss: () -> Unit,
+    onTabs: () -> Unit,
     onSettings: () -> Unit,
     onInspector: () -> Unit,
 ) {
@@ -167,6 +169,7 @@ private fun BrowserOverflowMenu(
                     onDismiss()
                     when (command) {
                         BrowserMenuCommand.PAGE_INFORMATION -> Unit
+                        BrowserMenuCommand.TABS -> onTabs()
                         BrowserMenuCommand.SETTINGS -> onSettings()
                         BrowserMenuCommand.INSPECTOR -> onInspector()
                     }

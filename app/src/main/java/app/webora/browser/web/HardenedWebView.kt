@@ -29,8 +29,9 @@ internal fun HardenedWebView(
     AndroidView(
         modifier = modifier,
         factory = { context ->
-            WebView(context).apply {
-                applyWebViewHardening(this)
+            val existing = controller.attached()
+            (existing ?: WebView(context)).apply {
+                if (existing == null) applyWebViewHardening(this)
                 webViewClient = HardenedWebViewClient(
                     onPageStarted = { view, url ->
                         currentObserver.value(WebViewEvent.PageStarted(view.toObservation(url, true)))
@@ -47,7 +48,7 @@ internal fun HardenedWebView(
                 setDownloadListener { url, _, _, _, _ -> url?.let(onDownload) }
                 controller.attach(this)
                 attachedWebView = this
-                loadUrl(initialUrl)
+                if (existing == null) loadUrl(initialUrl)
             }
         },
     )

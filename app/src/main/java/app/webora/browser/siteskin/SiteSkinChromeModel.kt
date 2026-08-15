@@ -38,6 +38,7 @@ internal data class SiteSkinItemModel(
 
 internal enum class BrowserMenuCommand {
     PAGE_INFORMATION,
+    TABS,
     SETTINGS,
 
     /** Debug-only. Offered by [browserMenuCommands], never by the enum's own membership. */
@@ -70,6 +71,7 @@ internal fun browserMenuCommands(
     inspectorAvailable: Boolean = SITESKIN_INSPECTOR_AVAILABLE,
 ): List<BrowserMenuCommand> = buildList {
     add(BrowserMenuCommand.PAGE_INFORMATION)
+    add(BrowserMenuCommand.TABS)
     add(BrowserMenuCommand.SETTINGS)
     if (inspectorAvailable) add(BrowserMenuCommand.INSPECTOR)
 }

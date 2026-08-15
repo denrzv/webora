@@ -1,5 +1,6 @@
 package app.webora.browser.browser
 
+import android.os.Bundle
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -35,6 +36,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
@@ -110,11 +113,25 @@ internal fun BrowserScreen(
     onShare: (String) -> Boolean = { false },
 ) {
     val browserModifier = modifier.windowInsetsPadding(WindowInsets.safeDrawing)
-    val controller = remember { BrowserWebViewController() }
-    var state by remember { mutableStateOf(BrowserState()) }
-    var generation by remember { mutableStateOf(0L) }
-    var pendingConsent by remember { mutableStateOf<SiteSkinCandidate?>(null) }
+    var session by rememberSaveable(stateSaver = browserSessionSaver()) {
+        mutableStateOf(BrowserSession.fresh())
+    }
+    val activeTabId = session.activeId
+    val state = session.activeTab.state
+    val controllers = remember { mutableMapOf<Long, BrowserWebViewController>() }
+    DisposableEffect(controllers) {
+        onDispose {
+            controllers.values.forEach(BrowserWebViewController::destroy)
+            controllers.clear()
+        }
+    }
+    val controller = controllers.getOrPut(activeTabId, ::BrowserWebViewController)
+    val generations = remember { mutableMapOf<Long, Long>() }
+    val generation = generations[activeTabId] ?: 0L
+    var discoveryOwner by remember { mutableStateOf(activeTabId) }
+    var pendingConsent by remember { mutableStateOf<Pair<Long, SiteSkinCandidate>?>(null) }
     var siteMenuExpanded by remember { mutableStateOf(false) }
+    var tabsVisible by remember { mutableStateOf(false) }
     var settingsVisible by remember { mutableStateOf(false) }
     var clearConfirmation by remember { mutableStateOf(false) }
     var inspectorVisible by remember { mutableStateOf(false) }
@@ -150,17 +167,21 @@ internal fun BrowserScreen(
         } ?: BrandAssetTraceSink.None
     }
     val manifestDiscovery = rememberManifestDiscovery(scope, traceSink) { outcome ->
-        val origin = when (val mode = state.mode) {
+        val ownerState = session.tab(discoveryOwner)?.state ?: return@rememberManifestDiscovery
+        val origin = when (val mode = ownerState.mode) {
             BrowserMode.Home -> null
             is BrowserMode.Regular -> mode.origin
             is BrowserMode.Integrated -> mode.origin
         }
         val decision = outcome.origin?.let(consentStore::decision)
-        when (val disposition = candidateDisposition(outcome, origin, generation, decision, siteSkinEnabled)) {
+        val ownerGeneration = generations[discoveryOwner] ?: 0L
+        when (val disposition = candidateDisposition(outcome, origin, ownerGeneration, decision, siteSkinEnabled)) {
             is CandidateDisposition.Activate -> {
-                state = state.activateSiteSkin(disposition.candidate.origin, disposition.candidate.configuration)
+                session = session.update(discoveryOwner) {
+                    it.activateSiteSkin(disposition.candidate.origin, disposition.candidate.configuration)
+                }
             }
-            is CandidateDisposition.Ask -> pendingConsent = disposition.candidate
+            is CandidateDisposition.Ask -> pendingConsent = discoveryOwner to disposition.candidate
             CandidateDisposition.Ignore -> Unit
         }
     }
@@ -183,9 +204,19 @@ internal fun BrowserScreen(
     BrowserBackHandler(enabled = state.canGoBack, controller = controller)
     if (state.mode == BrowserMode.Home) {
         HomeScreen(
-            onNavigate = { state = state.navigateFromHome(it) },
+            onNavigate = { url -> session = session.updateActive { it.navigateFromHome(url) } },
+            onTabs = { tabsVisible = true },
             modifier = browserModifier,
         )
+        if (tabsVisible) {
+            BrowserTabSwitcher(
+                session = session,
+                controllers = controllers,
+                generations = generations,
+                onSessionChange = { session = it },
+                onDismiss = { tabsVisible = false },
+            )
+        }
         return
     }
     val dispatchSiteItem: (NavigationItem) -> Unit = { item ->
@@ -206,8 +237,10 @@ internal fun BrowserScreen(
     RegularBrowser(
         state = state,
         controller = controller,
-        onObservation = { state = state.observe(it) },
-        onHome = { state = BrowserState() },
+        onObservation = { observation ->
+            session = session.update(activeTabId) { it.observe(observation) }
+        },
+        onHome = { session = session.updateActive { BrowserState() } },
         onExternalNavigation = { pendingExternal = it },
         onDownload = { url ->
             val message = if (onDownload(url)) downloadMessages.first else downloadMessages.second
@@ -217,10 +250,13 @@ internal fun BrowserScreen(
         brandAsset = brandAsset,
         onSiteSelect = dispatchSiteItem,
         onPageStarted = { url ->
-            generation += 1
+            val nextGeneration = generation + 1
+            generations[activeTabId] = nextGeneration
+            discoveryOwner = activeTabId
             pendingConsent = null
-            if (siteSkinEnabled) manifestDiscovery.onPageStarted(url, generation)
+            if (siteSkinEnabled) manifestDiscovery.onPageStarted(url, nextGeneration)
         },
+        onTabs = { tabsVisible = true },
         onSettings = { settingsVisible = true },
         onInspector = { inspectorVisible = true },
         modifier = browserModifier,
@@ -241,7 +277,7 @@ internal fun BrowserScreen(
         },
         onDismiss = { pendingExternalUrl = null },
     ) }
-    pendingConsent?.let { candidate -> SiteSkinConsentDialog(
+    pendingConsent?.takeIf { it.first == activeTabId }?.second?.let { candidate -> SiteSkinConsentDialog(
         origin = candidate.origin.canonical,
         model = SiteSkinConsentModel.from(candidate.configuration, isSystemInDarkTheme()),
         onAllow = {
@@ -253,7 +289,9 @@ internal fun BrowserScreen(
                 BrowserMode.Home -> null
             }
             if (siteSkinEnabled && candidate.isCurrent(currentOrigin, generation)) {
-                state = state.activateSiteSkin(candidate.origin, candidate.configuration)
+                session = session.updateActive {
+                    it.activateSiteSkin(candidate.origin, candidate.configuration)
+                }
             }
             pendingConsent = null
         },
@@ -277,10 +315,26 @@ internal fun BrowserScreen(
                 siteMenuExpanded = false
                 when (command) {
                     BrowserMenuCommand.PAGE_INFORMATION -> Unit
+                    BrowserMenuCommand.TABS -> tabsVisible = true
                     BrowserMenuCommand.SETTINGS -> settingsVisible = true
                     BrowserMenuCommand.INSPECTOR -> inspectorVisible = true
                 }
             },
+        )
+    }
+    if (tabsVisible) {
+        BrowserTabSwitcher(
+            session = session,
+            controllers = controllers,
+            generations = generations,
+            onSessionChange = { changed ->
+                session = changed
+                pendingConsent = null
+                pendingExternal = null
+                pendingExternalUrl = null
+                siteMenuExpanded = false
+            },
+            onDismiss = { tabsVisible = false },
         )
     }
     if (settingsVisible) {
@@ -293,7 +347,7 @@ internal fun BrowserScreen(
                 if (!enabled) {
                     manifestDiscovery.cancel()
                     pendingConsent = null
-                    state = state.deactivateSiteSkin()
+                    session = session.updateActive { it.deactivateSiteSkin() }
                 }
             },
             onRemoveDecision = { stored ->
@@ -330,10 +384,10 @@ internal fun BrowserScreen(
                 clearConfirmation = false
                 scope.launch {
                     val cleaner = BrowsingDataCleaner
-                        .android(controller, manifestDiscovery, consentStore, traceRecorder)
+                        .android(controllers.values, manifestDiscovery, consentStore, traceRecorder)
                     val complete = cleaner.clear()
                     storedDecisions = consentStore.decisions()
-                    state = state.deactivateSiteSkin()
+                    session = session.updateActive { it.deactivateSiteSkin() }
                     snackbar.showSnackbar(if (complete) clearedMessage else incompleteMessage)
                 }
             },
@@ -341,6 +395,59 @@ internal fun BrowserScreen(
         )
     }
 }
+
+@Composable
+private fun BrowserTabSwitcher(
+    session: BrowserSession,
+    controllers: MutableMap<Long, BrowserWebViewController>,
+    generations: MutableMap<Long, Long>,
+    onSessionChange: (BrowserSession) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    TabSwitcher(
+        session = session,
+        onSelect = { id -> onSessionChange(session.select(id)); onDismiss() },
+        onCloseTab = { id ->
+            controllers.remove(id)?.destroy()
+            generations.remove(id)
+            onSessionChange(session.close(id))
+        },
+        onNewTab = { onSessionChange(session.createTab()); onDismiss() },
+        onDismiss = onDismiss,
+    )
+}
+
+private fun browserSessionSaver(): Saver<BrowserSession, Bundle> = Saver(
+    save = { session ->
+        val snapshot = BrowserSessionSnapshot.from(session)
+        Bundle().apply {
+            putInt("version", snapshot.version)
+            putLong("active", snapshot.activeId)
+            putLong("next", snapshot.nextId)
+            putLongArray("ids", snapshot.entries.map(BrowserTabSnapshot::id).toLongArray())
+            putStringArrayList("kinds", ArrayList(snapshot.entries.map { it.kind.name }))
+            putStringArrayList("urls", ArrayList(snapshot.entries.map { it.url.orEmpty() }))
+        }
+    },
+    restore = { bundle ->
+        val ids = bundle.getLongArray("ids") ?: longArrayOf()
+        val kinds = bundle.getStringArrayList("kinds").orEmpty()
+        val urls = bundle.getStringArrayList("urls").orEmpty()
+        val entries = ids.indices.mapNotNull { index ->
+            val kind = kinds.getOrNull(index)?.let { runCatching { BrowserTabKind.valueOf(it) }.getOrNull() }
+                ?: return@mapNotNull null
+            BrowserTabSnapshot(ids[index], kind, urls.getOrNull(index)?.ifEmpty { null })
+        }
+        BrowserSessionSnapshot.restore(
+            BrowserSessionSnapshot(
+                bundle.getInt("version"),
+                bundle.getLong("active"),
+                bundle.getLong("next"),
+                entries,
+            ),
+        )
+    },
+)
 
 /** The committed origin, whichever mode the browser is in. Home has none rather than a blank one. */
 private fun BrowserMode.observedOrigin(): SiteOrigin? = when (this) {
@@ -481,6 +588,7 @@ internal fun RegularBrowser(
     brandAsset: BrandAsset?,
     onSiteSelect: (NavigationItem) -> Unit,
     onPageStarted: (String) -> Unit,
+    onTabs: () -> Unit,
     // Neither handler defaults to a no-op. A browser-owned menu command that is offered and does
     // nothing is the same failure the offered list exists to prevent, one layer down.
     onSettings: () -> Unit,
@@ -543,6 +651,7 @@ internal fun RegularBrowser(
                 onForward = controller::goForward,
                 onReload = controller::reload,
                 onHome = onHome,
+                onTabs = onTabs,
                 onSettings = onSettings,
                 onInspector = onInspector,
                 modifier = Modifier

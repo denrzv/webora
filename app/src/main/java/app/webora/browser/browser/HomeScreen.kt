@@ -30,7 +30,7 @@ import app.webora.browser.design.WeboraRadius
 import app.webora.browser.design.WeboraSpacing
 
 @Composable
-internal fun HomeScreen(onNavigate: (String) -> Unit, modifier: Modifier = Modifier) {
+internal fun HomeScreen(onNavigate: (String) -> Unit, onTabs: () -> Unit, modifier: Modifier = Modifier) {
     var address by rememberSaveable { mutableStateOf("") }
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -38,6 +38,13 @@ internal fun HomeScreen(onNavigate: (String) -> Unit, modifier: Modifier = Modif
         verticalArrangement = Arrangement.spacedBy(WeboraSpacing.LARGE),
     ) {
         item { HomeHeader() }
+        item {
+            WeboraButton(
+                label = stringResource(R.string.tabs),
+                onClick = onTabs,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
         item {
             OutlinedTextField(
                 value = address,

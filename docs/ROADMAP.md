@@ -134,7 +134,7 @@ system navigation remains OS-owned — gesture navigation may show only the gest
 three-button navigation may show Back/Home/Recents. Webora does not recreate those controls; it owns
 browser navigation, tabs, history and the transition between regular and integrated chrome.
 
-- [ ] `BROWSE-006` Multi-tab browsing and session model — independent tab history/mode, create/close/
+- [x] `BROWSE-006` Multi-tab browsing and session model — independent tab history/mode, create/close/
   switch, browser-owned tab switcher and bounded session restoration
 - [ ] `UX-011` Persistent browser-owned navigation shell — reuse the existing Back/Forward/Reload/
   Home/More dock across Home and regular browsing, add tabs, and respect Android navigation insets

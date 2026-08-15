@@ -1188,6 +1188,33 @@ one toggleable row for global SiteSkin state and renders each complete `SiteOrig
 wrapping text beside a compact reset action whose accessible description includes that same origin.
 Manifest text, colours, icons, and actions have no path into these surfaces.
 
+### Tabs are browser-owned isolation boundaries (BROWSE-006)
+
+`BrowserSession` is a non-empty ordered set of at most eight independently identified tabs. Create,
+select, close, final-tab replacement and addressed state updates belong to that pure reducer; UI and
+WebView callbacks must carry a tab id rather than updating whichever tab happens to be active when
+they arrive. This is a security boundary: a retained background renderer can navigate after a tab
+switch, and its observation must never replace the selected tab's URL, `BrowserMode`, navigation
+capability or identity chrome.
+
+Each live tab owns one `BrowserWebViewController` and retained hardened `WebView`. Selection
+detaches/reattaches without loading so live back/forward history stays with the tab. Close destroys
+that renderer, and disposing `BrowserScreen` destroys every remainder. Browsing-data clearing fans
+out across all live controllers.
+
+Saved state is deliberately weaker than live state. The versioned snapshot stores only browser tab
+ids/order/selection and either Home or one bounded committed HTTP(S) URL. It never stores a
+`SiteSkinConfiguration`, manifest, page/form content, editable address, error, pending native
+action, asset or WebView bundle. Every restored page starts in regular mode and traverses discovery,
+consent, validation and exact-origin activation again. Malformed, duplicate, unsupported-scheme and
+over-limit input is bounded or dropped; no valid entries becomes one fresh Home tab.
+
+The switcher is the same browser-authored surface from Home, regular and integrated modes. Its
+labels derive only from Home/Page fallbacks or the browser-observed registrable domain—not manifest
+branding or editable address text—and the disabled eight-tab limit is visible rather than an
+eviction or silent refusal. `UX-011` may move the entry point into a persistent shell but must reuse
+this model and must not create a second tab authority.
+
 ### One glyph stood for five failures (NET-004)
 
 `NET-003` makes a browser-generated monogram the correct output of every non-cancellation

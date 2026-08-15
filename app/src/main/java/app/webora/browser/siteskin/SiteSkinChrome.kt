@@ -117,6 +117,7 @@ internal fun SiteSkinMenu(
 @Composable
 internal fun browserMenuLabel(command: BrowserMenuCommand): String = when (command) {
     BrowserMenuCommand.PAGE_INFORMATION -> stringResource(R.string.page_information)
+    BrowserMenuCommand.TABS -> stringResource(R.string.tabs)
     BrowserMenuCommand.SETTINGS -> stringResource(R.string.settings)
     BrowserMenuCommand.INSPECTOR -> stringResource(R.string.inspector_menu_entry)
 }
