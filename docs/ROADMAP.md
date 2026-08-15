@@ -142,18 +142,25 @@ browser navigation, tabs, history and the transition between regular and integra
   privacy-preserving browser data and integrate it with clear-browsing-data behaviour
 - [x] `UX-012` Mode-aware chrome handoff — make Home → regular → SiteSkin → regular transitions
   explicit, preserve browser-owned escape/security controls, and prevent SiteSkin chrome leakage
-- [x] `CI-007` Canonical regular-browsing evidence — add an uncontested ordinary-site frame proving
-  that regular chrome, security identity and browser navigation are visible without SiteSkin
-- [x] `DEMO-004` Browser-first reference walkthrough — document and demonstrate ordinary browsing and
-  SiteSkin enhancement as one coherent user journey rather than two unrelated modes
+- [ ] `BROWSE-008` Back-to-Home fallback — when the active tab has no WebView history, browser Back
+  returns that tab to native Home; visible regular/SiteSkin Back and Android system/predictive Back
+  share the same history → Home → platform-exit contract. Detailed scope: [`backlog/BROWSE-008.md`](backlog/BROWSE-008.md)
+- [~] `CI-007` Canonical regular-browsing evidence — implementation landed, but hosted runs #30 and
+  #31 stop after frames 01–03 because the first-page SiteSkin Back control cannot return to Home;
+  acceptance resumes after `BROWSE-008`
+- [~] `DEMO-004` Browser-first reference walkthrough — implementation/documentation is present, but
+  its final hosted-evidence acceptance remains blocked on the `CI-007` four-frame journey
 
 `BROWSE-006` is the foundation for `UX-011`; `BROWSE-007` can proceed once the tab/session model is
-stable. `UX-012` follows the persistent shell, `CI-007` validates the resulting mode handoff, and
-`DEMO-004` is the final product-facing evidence for M8.
+stable. `UX-012` follows the persistent shell. Hosted evidence exposed `BROWSE-008` after the rest of
+M8 had landed: fix the shared Back contract first, then rerun `CI-007` until two consecutive cold
+hosted runs publish all four frames; that evidence closes `DEMO-004` and M8.
 
-M8 is complete. The [browser-first walkthrough](WALKTHROUGH.md) joins the shipped session, local-data,
-shell and mode-handoff behavior to the four-frame hosted evidence while distinguishing Android,
-browser and bounded site navigation.
+M8 implementation has reached the browser-first walkthrough, but **M8 acceptance is reopened**.
+Runs #30 (`31874095039`) and #31 (`31879413875`) both proved the same product gap rather than an
+emulator failure: frames 01–03 are captured, then `captureRegularBrowsingEvidence()` times out
+because Home is not a WebView history entry and the first-page integrated Back affordance is disabled.
+`BROWSE-008` owns the product fix; `CI-007` owns the confirming four-frame hosted evidence.
 
 ## Descoped
 
