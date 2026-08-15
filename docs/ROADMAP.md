@@ -142,7 +142,7 @@ browser navigation, tabs, history and the transition between regular and integra
   privacy-preserving browser data and integrate it with clear-browsing-data behaviour
 - [x] `UX-012` Mode-aware chrome handoff — make Home → regular → SiteSkin → regular transitions
   explicit, preserve browser-owned escape/security controls, and prevent SiteSkin chrome leakage
-- [ ] `BROWSE-008` Back-to-Home fallback — when the active tab has no WebView history, browser Back
+- [x] `BROWSE-008` Back-to-Home fallback — when the active tab has no WebView history, browser Back
   returns that tab to native Home; visible regular/SiteSkin Back and Android system/predictive Back
   share the same history → Home → platform-exit contract. Detailed scope: [`backlog/BROWSE-008.md`](backlog/BROWSE-008.md)
 - [~] `CI-007` Canonical regular-browsing evidence — implementation landed, but hosted runs #30 and

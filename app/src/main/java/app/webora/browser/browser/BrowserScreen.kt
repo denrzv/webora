@@ -219,7 +219,16 @@ internal fun BrowserScreen(
         }
     }
 
-    BrowserBackHandler(enabled = state.canGoBack, controller = controller)
+    val canNavigateBack = state.mode.canNavigateBack()
+    val navigateBack = {
+        navigateBrowserBack(
+            mode = state.mode,
+            navigateHistory = controller::goBack,
+            navigateHome = { session = session.updateActive { BrowserState() } },
+        )
+        Unit
+    }
+    BrowserBackHandler(enabled = canNavigateBack, onBack = navigateBack)
     if (state.mode == BrowserMode.Home) {
         Column(browserModifier) {
             HomeScreen(
@@ -263,6 +272,8 @@ internal fun BrowserScreen(
     RegularBrowser(
         state = state,
         controller = controller,
+        canNavigateBack = canNavigateBack,
+        onBack = navigateBack,
         onObservation = { observation ->
             session = session.update(activeTabId) { it.observe(observation) }
         },
@@ -620,6 +631,8 @@ private fun ExternalNavigationDialog(
 internal fun RegularBrowser(
     state: BrowserState,
     controller: BrowserWebViewController,
+    canNavigateBack: Boolean,
+    onBack: () -> Unit,
     onObservation: (BrowserObservation) -> Unit,
     onHome: () -> Unit,
     onExternalNavigation: (ExternalNavigation) -> Unit,
@@ -659,8 +672,8 @@ internal fun RegularBrowser(
                 SiteSkinTopBar(
                     model = SiteSkinTopBarModel.from(mode.configuration, asset, identity),
                     colors = colors,
-                    canGoBack = state.canGoBack,
-                    onBack = controller::goBack,
+                    canGoBack = canNavigateBack,
+                    onBack = onBack,
                 )
             }
         }
@@ -693,10 +706,10 @@ internal fun RegularBrowser(
             SiteSkinBottomNavigation(chrome.bottomNavigation, onSiteSelect)
         } else {
             BrowserNavigationShell(
-                canGoBack = state.canGoBack,
+                canGoBack = canNavigateBack,
                 canGoForward = state.canGoForward,
                 canReload = state.displayedUrl.isNotBlank(),
-                onBack = controller::goBack,
+                onBack = onBack,
                 onForward = controller::goForward,
                 onReload = controller::reload,
                 onHome = onHome,
@@ -743,17 +756,12 @@ private fun WebViewEvent.toBrowserObservation(): BrowserObservation = when (this
 }
 
 @Composable
-private fun BrowserBackHandler(enabled: Boolean, controller: BrowserWebViewController) {
+private fun BrowserBackHandler(enabled: Boolean, onBack: () -> Unit) {
     val owner = LocalOnBackPressedDispatcherOwner.current
-    val callback = remember {
+    val currentOnBack = rememberUpdatedState(onBack)
+    val callback = remember(owner) {
         object : OnBackPressedCallback(enabled) {
-            override fun handleOnBackPressed() {
-                if (!controller.goBack()) {
-                    isEnabled = false
-                    owner?.onBackPressedDispatcher?.onBackPressed()
-                    isEnabled = true
-                }
-            }
+            override fun handleOnBackPressed() = currentOnBack.value()
         }
     }
     callback.isEnabled = enabled
