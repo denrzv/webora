@@ -24,12 +24,17 @@ class MainTest {
     @get:Rule val temp = TemporaryFolder()
 
     @Test fun printsOneTilesLineOnSuccess() {
-        val dir = frames("01-home.png", "02-siteskin-consent.png", "03-siteskin-integrated.png")
+        val dir = frames(
+            "01-home.png",
+            "02-siteskin-consent.png",
+            "03-siteskin-integrated.png",
+            "04-regular-browsing.png",
+        )
 
         val result = runMain(dir.toString())
 
         assertEquals(0, result.status)
-        assertEquals(listOf("tiles=3"), result.out.lines().filter { it.isNotBlank() })
+        assertEquals(listOf("tiles=4"), result.out.lines().filter { it.isNotBlank() })
     }
 
     @Test fun reportsNoTileCountWhenCompositionFails() {

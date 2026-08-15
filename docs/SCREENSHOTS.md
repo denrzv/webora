@@ -26,6 +26,7 @@ return full-device screenshots without a local Android phone.
 | `01-home.png` | Fresh Webora Home after onboarding, including Bloom Flowers. |
 | `02-siteskin-consent.png` | Exact `https://denrzv.github.io` consent identity and the attributed manifest preview. |
 | `03-siteskin-integrated.png` | Live page inside native SiteSkin chrome, with browser-owned security identity and navigation. |
+| `04-regular-browsing.png` | Stable ordinary HTTPS page after leaving Bloom, with Webora's regular security identity/navigation and no SiteSkin chrome. |
 
 The PNGs sit at the archive root at full capture resolution. `preview.png` is a convenience for
 judging the journey at a glance, never a replacement for them — anything worth disputing should be
@@ -41,7 +42,7 @@ checked against the full-resolution frame.
 | `artifacts/result.txt` | Instrumentation exit status and number of PNGs collected. |
 | `artifacts/prebuilt-apks.txt` | The two APKs the emulator step found already built, with their sizes. |
 | `artifacts/readiness.txt` | Every readiness sample taken after boot, with its verdict and when it settled. |
-| `…/diagnostics/focus-01-home.txt` etc. | The `mCurrentFocus` lines behind each successful capture. |
+| `…/diagnostics/focus-01-home.txt` etc. | The `mCurrentFocus` lines behind each successful capture, including frame 04. |
 | `…/diagnostics/interference-*.txt` | Present only if a System UI dialog was cleared: what it was, and what was pressed. |
 | `…/diagnostics/window-*.txt` | Present only on a refused capture: the whole `dumpsys window` output at that moment. |
 | `androidTest-results/`, `reports/androidTests/` | The test runner's own XML and HTML. |
@@ -101,6 +102,13 @@ ordinary HTTPS manifest discovery; it does not substitute fixture JSON. A failur
 the selected app commit regressed, the GitHub-hosted emulator failed, or `https://denrzv.github.io`
 or its `/.well-known/siteskin.json` was temporarily unavailable. Check `instrumentation.txt` first,
 then `logcat.txt`, and retry once if the evidence is clearly a transient network/emulator failure.
+
+The fourth frame continues from the proven Bloom integration through browser-owned Back/address UI
+to the IANA-reserved `https://example.com` origin. Its acceptance never depends on that page's title,
+copy, colours, or layout: Webora must expose its browser-authored `example.com` security identity and
+regular navigation shell, every SiteSkin layer must be absent, and the unchanged rendered/ownership
+guard must accept the page region. The workflow and composer count actual frames dynamically; a
+complete current journey therefore reports four screenshots and four contact-sheet tiles.
 
 Since `CI-002` there are three more shapes of red, and each names itself:
 
