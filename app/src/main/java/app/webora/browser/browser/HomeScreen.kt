@@ -30,7 +30,14 @@ import app.webora.browser.design.WeboraRadius
 import app.webora.browser.design.WeboraSpacing
 
 @Composable
-internal fun HomeScreen(onNavigate: (String) -> Unit, onTabs: () -> Unit, modifier: Modifier = Modifier) {
+internal fun HomeScreen(
+    onNavigate: (String) -> Unit,
+    onTabs: () -> Unit,
+    recents: List<BrowsingRecord> = emptyList(),
+    favourites: List<BrowsingRecord> = emptyList(),
+    onRemoveFavourite: (String) -> Unit = {},
+    modifier: Modifier = Modifier,
+) {
     var address by rememberSaveable { mutableStateOf("") }
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -45,26 +52,78 @@ internal fun HomeScreen(onNavigate: (String) -> Unit, onTabs: () -> Unit, modifi
                 modifier = Modifier.fillMaxWidth(),
             )
         }
+        item { HomeAddress(address, { address = it }, onNavigate) }
+        item { BrowsingRecordSection(R.string.home_recent_title, R.string.home_recent_empty, recents, onNavigate) }
         item {
-            OutlinedTextField(
-                value = address,
-                onValueChange = { address = it },
-                label = { Text(stringResource(R.string.address_label)) },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
-                keyboardActions = KeyboardActions(onGo = { resolveAddressInput(address)?.let(onNavigate) }),
-                // `ADR-013` draws the address field as a pill, so it says so. It used to inherit
-                // one from `shapes.extraLarge`, which is also what every `AlertDialog` reads —
-                // `UX-009` is what that shared default did to the consent dialog.
-                shape = RoundedCornerShape(WeboraRadius.PILL),
-                modifier = Modifier.fillMaxWidth(),
+            BrowsingRecordSection(
+                R.string.home_favourites_title,
+                R.string.home_favourites_empty,
+                favourites,
+                onNavigate,
+                onRemoveFavourite,
             )
         }
-        item { EmptyHomeSection(R.string.home_recent_title, R.string.home_recent_empty) }
-        item { EmptyHomeSection(R.string.home_favourites_title, R.string.home_favourites_empty) }
         item { Text(stringResource(R.string.home_suggested_title), style = MaterialTheme.typography.titleLarge) }
         items(defaultSuggestedSites, key = SuggestedSite::url) { site ->
             SuggestedSiteCard(site = site, onNavigate = onNavigate)
+        }
+    }
+}
+
+@Composable
+private fun HomeAddress(value: String, onValueChange: (String) -> Unit, onNavigate: (String) -> Unit) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(stringResource(R.string.address_label)) },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
+        keyboardActions = KeyboardActions(onGo = { resolveAddressInput(value)?.let(onNavigate) }),
+        // This pill is explicit because the shared AlertDialog shape must remain independent.
+        shape = RoundedCornerShape(WeboraRadius.PILL),
+        modifier = Modifier.fillMaxWidth(),
+    )
+}
+
+@Composable
+private fun BrowsingRecordSection(
+    titleRes: Int,
+    emptyRes: Int,
+    records: List<BrowsingRecord>,
+    onNavigate: (String) -> Unit,
+    onRemove: ((String) -> Unit)? = null,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(WeboraSpacing.SMALL)) {
+        Text(stringResource(titleRes), style = MaterialTheme.typography.titleLarge)
+        if (records.isEmpty()) {
+            EmptyHomeSection(emptyRes)
+        } else {
+            records.forEach { record -> BrowsingRecordCard(record, onNavigate, onRemove) }
+        }
+    }
+}
+
+@Composable
+private fun BrowsingRecordCard(
+    record: BrowsingRecord,
+    onNavigate: (String) -> Unit,
+    onRemove: ((String) -> Unit)?,
+) {
+    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors()) {
+        Column(
+            Modifier.padding(WeboraSpacing.LARGE),
+            verticalArrangement = Arrangement.spacedBy(WeboraSpacing.SMALL),
+        ) {
+            Text(record.title, style = MaterialTheme.typography.titleMedium)
+            Text(record.origin, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            WeboraTextButton(onClick = { onNavigate(record.url) }) {
+                Text(stringResource(R.string.home_open_record, record.title))
+            }
+            onRemove?.let { remove ->
+                WeboraTextButton(onClick = { remove(record.url) }) {
+                    Text(stringResource(R.string.remove_favourite_named, record.title))
+                }
+            }
         }
     }
 }
@@ -107,7 +166,7 @@ private fun SuggestedSiteCard(site: SuggestedSite, onNavigate: (String) -> Unit)
 }
 
 @Composable
-private fun EmptyHomeSection(titleRes: Int, messageRes: Int) {
+private fun EmptyHomeSection(messageRes: Int) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(WeboraRadius.LARGE),
@@ -117,7 +176,6 @@ private fun EmptyHomeSection(titleRes: Int, messageRes: Int) {
             modifier = Modifier.padding(WeboraSpacing.LARGE),
             verticalArrangement = Arrangement.spacedBy(WeboraSpacing.BASE),
         ) {
-            Text(stringResource(titleRes), style = MaterialTheme.typography.titleMedium)
             Text(
                 stringResource(messageRes),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,

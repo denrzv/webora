@@ -564,7 +564,7 @@ screens where browser controls appear only after a page happens to be open.
 - Pixel-sized and 200%-font tests retain minimum touch targets and accessible names.
 - `bash scripts/pre-commit-check.sh` passes.
 
-### `BROWSE-007` — Recents, history and favourites
+### `BROWSE-007` — Recents, history and favourites ✅
 
 **Priority:** P1  
 **Depends on:** `BROWSE-006`  

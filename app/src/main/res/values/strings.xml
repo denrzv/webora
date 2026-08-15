@@ -70,7 +70,7 @@
     <string name="reset_site_permission">Reset decision for %1$s</string>
     <string name="reset">Reset</string>
     <string name="clear_browsing_data">Clear browsing data</string>
-    <string name="clear_browsing_data_message">Clear cookies, site storage, caches, form data, history, and saved SiteSkin decisions? Webora settings stay unchanged.</string>
+    <string name="clear_browsing_data_message">Clear cookies, site storage, caches, form data, history, and saved SiteSkin decisions? Favourites and Webora settings stay unchanged.</string>
     <string name="clear_data">Clear data</string>
     <string name="close">Close</string>
     <string name="browsing_data_cleared">Browsing data cleared</string>
@@ -80,6 +80,10 @@
     <string name="home_recent_empty">Sites you visit will appear here.</string>
     <string name="home_favourites_title">Favourites</string>
     <string name="home_favourites_empty">Your saved sites will appear here.</string>
+    <string name="home_open_record">Open %1$s</string>
+    <string name="add_favourite">Add favourite</string>
+    <string name="remove_favourite">Remove favourite</string>
+    <string name="remove_favourite_named">Remove %1$s from favourites</string>
     <string name="home_suggested_title">Suggested integrations</string>
     <string name="home_open_site">Open %1$s</string>
     <string name="suggested_bloom_name">Bloom Flowers</string>

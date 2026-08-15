@@ -144,6 +144,19 @@ internal fun BrowserScreen(
     var brandAsset by remember { mutableStateOf<BrandAsset?>(null) }
     val consentStore = remember(context) { SiteConsentStore(context) }
     val privacyStore = remember(context) { PrivacySettingsStore(context) }
+    val recordStore = remember(context) { BrowsingRecordStore(context) }
+    val completedPages = remember { mutableMapOf<Long, String>() }
+    var recordVersion by remember { mutableIntStateOf(0) }
+    val currentRecordUrl = canonicalBrowsingUrl(state.displayedUrl)
+    val currentIsFavourite = currentRecordUrl?.let(recordStore::isFavourite) == true
+    val toggleFavourite = {
+        currentRecordUrl?.let { url ->
+            val observedTitle = recordStore.history().firstOrNull { it.url == url }?.title
+            if (currentIsFavourite) recordStore.removeFavourite(url) else recordStore.addFavourite(url, observedTitle)
+            recordVersion += 1
+        }
+        Unit
+    }
     var siteSkinEnabled by remember { mutableStateOf(privacyStore.isSiteSkinEnabled()) }
     var storedDecisions by remember { mutableStateOf(consentStore.decisions()) }
     val traceRecorder = remember { inspectorRecorder() }
@@ -206,6 +219,11 @@ internal fun BrowserScreen(
         HomeScreen(
             onNavigate = { url -> session = session.updateActive { it.navigateFromHome(url) } },
             onTabs = { tabsVisible = true },
+            recents = recordVersion.let { recordStore.recentSites() },
+            favourites = recordVersion.let { recordStore.favourites() },
+            onRemoveFavourite = { url ->
+                if (recordStore.removeFavourite(url)) recordVersion += 1
+            },
             modifier = browserModifier,
         )
         if (tabsVisible) {
@@ -250,15 +268,25 @@ internal fun BrowserScreen(
         brandAsset = brandAsset,
         onSiteSelect = dispatchSiteItem,
         onPageStarted = { url ->
+            completedPages.remove(activeTabId)
             val nextGeneration = generation + 1
             generations[activeTabId] = nextGeneration
             discoveryOwner = activeTabId
             pendingConsent = null
             if (siteSkinEnabled) manifestDiscovery.onPageStarted(url, nextGeneration)
         },
+        onPageCompleted = { url, title ->
+            val canonical = canonicalBrowsingUrl(url)
+            if (canonical != null && completedPages[activeTabId] != canonical) {
+                recordStore.recordVisit(canonical, title)
+                completedPages[activeTabId] = canonical
+            }
+        },
         onTabs = { tabsVisible = true },
         onSettings = { settingsVisible = true },
         onInspector = { inspectorVisible = true },
+        isFavourite = currentIsFavourite,
+        onToggleFavourite = toggleFavourite,
         modifier = browserModifier,
     )
     SnackbarHost(snackbar)
@@ -307,6 +335,8 @@ internal fun BrowserScreen(
         val chrome = SiteSkinChromeModel.from(activeMode.configuration, state.displayedUrl)
         SiteSkinMenu(
             model = chrome,
+            isFavourite = currentIsFavourite,
+            onToggleFavourite = toggleFavourite,
             onSiteSelect = { item ->
                 siteMenuExpanded = false
                 dispatchSiteItem(item)
@@ -384,8 +414,9 @@ internal fun BrowserScreen(
                 clearConfirmation = false
                 scope.launch {
                     val cleaner = BrowsingDataCleaner
-                        .android(controllers.values, manifestDiscovery, consentStore, traceRecorder)
+                        .android(controllers.values, manifestDiscovery, consentStore, recordStore, traceRecorder)
                     val complete = cleaner.clear()
+                    recordVersion += 1
                     storedDecisions = consentStore.decisions()
                     session = session.updateActive { it.deactivateSiteSkin() }
                     snackbar.showSnackbar(if (complete) clearedMessage else incompleteMessage)
@@ -588,11 +619,14 @@ internal fun RegularBrowser(
     brandAsset: BrandAsset?,
     onSiteSelect: (NavigationItem) -> Unit,
     onPageStarted: (String) -> Unit,
+    onPageCompleted: (String, String?) -> Unit,
     onTabs: () -> Unit,
     // Neither handler defaults to a no-op. A browser-owned menu command that is offered and does
     // nothing is the same failure the offered list exists to prevent, one layer down.
     onSettings: () -> Unit,
     onInspector: () -> Unit,
+    isFavourite: Boolean = false,
+    onToggleFavourite: () -> Unit = {},
     modifier: Modifier,
 ) {
     Column(modifier = modifier) {
@@ -618,10 +652,7 @@ internal fun RegularBrowser(
             HardenedWebView(
                 initialUrl = state.displayedUrl,
                 controller = controller,
-                onEvent = {
-                    onObservation(it.toBrowserObservation())
-                    if (it is WebViewEvent.PageStarted) onPageStarted(it.observation.url)
-                },
+                onEvent = { handleWebViewEvent(it, onObservation, onPageStarted, onPageCompleted) },
                 onExternalNavigation = onExternalNavigation,
                 onDownload = onDownload,
                 onFileChooser = onFileChooser,
@@ -654,12 +685,25 @@ internal fun RegularBrowser(
                 onTabs = onTabs,
                 onSettings = onSettings,
                 onInspector = onInspector,
+                isFavourite = isFavourite,
+                onToggleFavourite = onToggleFavourite,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = WeboraSpacing.GUTTER, vertical = WeboraSpacing.SMALL),
             )
         }
     }
+}
+
+private fun handleWebViewEvent(
+    event: WebViewEvent,
+    onObservation: (BrowserObservation) -> Unit,
+    onPageStarted: (String) -> Unit,
+    onPageCompleted: (String, String?) -> Unit,
+) {
+    onObservation(event.toBrowserObservation())
+    if (event is WebViewEvent.PageStarted) onPageStarted(event.observation.url)
+    if (event is WebViewEvent.MainFrameCompleted) onPageCompleted(event.observation.url, event.title)
 }
 
 private fun WebViewEvent.toBrowserObservation(): BrowserObservation = when (this) {
@@ -674,6 +718,12 @@ private fun WebViewEvent.toBrowserObservation(): BrowserObservation = when (this
         observation.isLoading,
         observation.canGoBack,
         observation.canGoForward,
+    )
+    is WebViewEvent.MainFrameCompleted -> BrowserObservation.Page(
+        url = observation.url,
+        isLoading = false,
+        canGoBack = observation.canGoBack,
+        canGoForward = observation.canGoForward,
     )
 }
 

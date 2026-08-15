@@ -65,6 +65,22 @@ class BrowserChromeTest {
         assertTrue(reload && home && settings)
     }
 
+    @Test fun browserOwnedFavouriteActionReflectsStateAndInvokesOnlyBrowserCallback() {
+        var toggled = false
+        compose.setContent {
+            BrowserNavigationDock(
+                canGoBack = false, canGoForward = false, onBack = {}, onForward = {},
+                onReload = {}, onHome = {}, onTabs = {}, onSettings = {}, onInspector = {},
+                isFavourite = true, onToggleFavourite = { toggled = true },
+            )
+        }
+
+        compose.onNodeWithContentDescription("More").performClick()
+        compose.onNodeWithText("Remove favourite").performClick()
+
+        assertTrue(toggled)
+    }
+
     @Test fun errorPagePreservesRecoveryActionsAndBoundedIdentity() {
         var retried = false
         var home = false

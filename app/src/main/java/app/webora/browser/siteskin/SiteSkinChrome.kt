@@ -89,6 +89,8 @@ internal fun SiteSkinMenu(
     model: SiteSkinChromeModel,
     onSiteSelect: (NavigationItem) -> Unit,
     onBrowserSelect: (BrowserMenuCommand) -> Unit,
+    isFavourite: Boolean = false,
+    onToggleFavourite: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     ModalDrawerSheet(modifier.testTag(SITESKIN_MENU_TAG)) {
@@ -100,6 +102,11 @@ internal fun SiteSkinMenu(
             HorizontalDivider()
         }
         MenuHeading(stringResource(R.string.siteskin_browser_menu_heading))
+        MenuItem(
+            stringResource(if (isFavourite) R.string.remove_favourite else R.string.add_favourite),
+            null,
+            onToggleFavourite,
+        )
         model.browserMenu.forEach { command ->
             MenuItem(browserMenuLabel(command), null) { onBrowserSelect(command) }
         }
