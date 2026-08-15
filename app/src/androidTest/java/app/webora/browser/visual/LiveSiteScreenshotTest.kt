@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.Rect
 import android.os.SystemClock
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
@@ -83,7 +84,8 @@ class LiveSiteScreenshotTest {
      * content, while these tags are the browser's closed chrome-handoff contract from UX-012.
      */
     private fun captureRegularBrowsingEvidence() {
-        composeRule.onNodeWithTag(SITESKIN_BACK_TAG).performClick()
+        composeRule.onNodeWithTag(SITESKIN_BACK_TAG).assertIsDisplayed().assertIsEnabled()
+            .performClick()
         val addressLabel = string(R.string.address_label)
         val addressInput = hasText(addressLabel) or hasContentDescription(addressLabel)
         waitUntilNodeExists(addressInput)

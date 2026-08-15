@@ -656,6 +656,27 @@ from code while canonical evidence covers only Home, consent and SiteSkin mode.
   frame or diagnostics.
 - `bash scripts/pre-commit-check.sh` passes.
 
+### `CI-008` — Pin the hosted Back-to-Home evidence contract
+
+**Priority:** P0
+**Depends on:** `BROWSE-008`, `CI-007`
+**Goal:** make the canonical journey diagnose the browser-owned Back prerequisite at the action
+seam instead of reporting a later address-field timeout when the prerequisite regresses.
+
+**Scope**
+- Require the integrated Back affordance to be displayed and enabled immediately before the
+  existing visible click.
+- Keep the user-visible Home/address transition and every screenshot acceptance policy unchanged.
+- Treat two cold hosted four-frame runs as downstream `CI-007` rollout evidence, not as evidence a
+  managed-cloud checkout can manufacture locally.
+
+**Acceptance**
+- Android instrumentation compiles with the enabled-state assertion before the existing click.
+- A removal negative control proves the prerequisite check is not decorative.
+- Review and QA confirm that the assertion can only make the journey refuse earlier and cannot
+  permit a previously rejected screenshot.
+- `bash scripts/pre-commit-check.sh` passes.
+
 ### `DEMO-004` — Browser-first reference walkthrough
 
 **Priority:** P2  

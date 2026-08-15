@@ -1384,6 +1384,14 @@ regular security identity and navigation shell exist and integrated identity, bo
 and quick actions are all absent. That layer-set assertion is the evidence that `UX-012` removed the
 prior integration; page title, prose, decoration, and manifest data are never acceptance signals.
 
+### Hosted transition prerequisites fail at their action seam (CI-008)
+
+The canonical journey asserts a browser-owned transition control's displayed and enabled semantics
+immediately before invoking it. A click followed by a destination timeout is not equivalent: it
+hides whether the action was unavailable or whether the resulting transition failed. Such
+prerequisite assertions may only make evidence refuse earlier; they must not inject controller
+state, manufacture Home, weaken capture policy, or replace hosted runtime evidence.
+
 Frame 04 uses the same `ScreenEvidenceGuard` ownership/rendered policy as the integrated page. It
 does not add a screenshot mode, direct controller injection, new dismissal, deadline, pixel
 threshold, or exclusion. The collector and contact-sheet production remain cardinality-independent:

@@ -148,6 +148,9 @@ browser navigation, tabs, history and the transition between regular and integra
 - [~] `CI-007` Canonical regular-browsing evidence — implementation landed, but hosted runs #30 and
   #31 stop after frames 01–03 because the first-page SiteSkin Back control cannot return to Home;
   acceptance resumes after `BROWSE-008`
+- [x] `CI-008` Hosted Back-prerequisite diagnostic — the canonical journey now requires the
+  browser-owned integrated Back control to be displayed and enabled before clicking it, so a
+  regression fails at its cause rather than at the later Home address-field wait
 - [~] `DEMO-004` Browser-first reference walkthrough — implementation/documentation is present, but
   its final hosted-evidence acceptance remains blocked on the `CI-007` four-frame journey
 
