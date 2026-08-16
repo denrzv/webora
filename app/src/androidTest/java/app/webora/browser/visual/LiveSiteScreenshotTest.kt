@@ -20,6 +20,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.platform.io.PlatformTestStorageRegistry
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
+import androidx.test.uiautomator.UiObject2
 import androidx.test.uiautomator.Until
 import app.webora.browser.MainActivity
 import app.webora.browser.R
@@ -126,18 +127,20 @@ class LiveSiteScreenshotTest {
      * already exposed to accessibility. The full product name remains page copy on the detail route;
      * the storefront's clickable text contract is the shorter "Happy Days" label.
      */
-    private fun findStorefrontProductLink() = productLinkSelector().let { selector ->
+    private fun findStorefrontProductLink(): UiObject2? {
+        val selector = productLinkSelector()
         repeat(MAX_PRODUCT_SCROLL_ATTEMPTS) {
             uiDevice.findObject(selector)?.let { candidate ->
                 val bounds = candidate.visibleBounds
-                if (bounds.width() > 0 && bounds.height() > 0) return@let candidate
+                if (bounds.width() > 0 && bounds.height() > 0) return candidate
             }
             scrollStorefrontTowardsProduct()
         }
-        uiDevice.wait(Until.findObject(selector), PRODUCT_LINK_FINAL_WAIT_MILLIS)?.takeIf { candidate ->
-            val bounds = candidate.visibleBounds
-            bounds.width() > 0 && bounds.height() > 0
-        }
+        return uiDevice.wait(Until.findObject(selector), PRODUCT_LINK_FINAL_WAIT_MILLIS)
+            ?.takeIf { candidate ->
+                val bounds = candidate.visibleBounds
+                bounds.width() > 0 && bounds.height() > 0
+            }
     }
 
     private fun scrollStorefrontTowardsProduct() {
