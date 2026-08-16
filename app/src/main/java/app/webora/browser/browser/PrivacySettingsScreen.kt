@@ -3,8 +3,12 @@ package app.webora.browser.browser
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
@@ -21,9 +25,41 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import app.webora.browser.R
 import app.webora.browser.design.WeboraSpacing
 import app.webora.browser.siteskin.StoredSiteConsent
+
+@Composable
+internal fun PrivacySettingsDialog(
+    siteSkinEnabled: Boolean,
+    decisions: List<StoredSiteConsent>,
+    onSiteSkinEnabledChange: (Boolean) -> Unit,
+    onRemoveDecision: (StoredSiteConsent) -> Unit,
+    onClearBrowsingData: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background,
+        ) {
+            PrivacySettingsScreen(
+                siteSkinEnabled = siteSkinEnabled,
+                decisions = decisions,
+                onSiteSkinEnabledChange = onSiteSkinEnabledChange,
+                onRemoveDecision = onRemoveDecision,
+                onClearBrowsingData = onClearBrowsingData,
+                onClose = onDismiss,
+                modifier = Modifier.windowInsetsPadding(WindowInsets.safeDrawing),
+            )
+        }
+    }
+}
 
 @Composable
 internal fun PrivacySettingsScreen(
