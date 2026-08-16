@@ -45,6 +45,17 @@ class ExpressiveBloomJourneyContractTest {
         assertFalse(hasCanonicalFrames(unsafe))
     }
 
+    @Test
+    fun `storefront product interaction matches deployed accessibility text and scrolls into view`() {
+        val source = String(Files.readAllBytes(journeySource()))
+
+        assertTrue(source.contains("PRODUCT_LINK_TEXT = \"Happy Days\""))
+        assertTrue(source.contains("findStorefrontProductLink()"))
+        assertTrue(source.contains("scrollStorefrontTowardsProduct()"))
+        assertTrue(source.contains("By.text(PRODUCT_LINK_TEXT).clickable(true)"))
+        assertFalse(source.contains("By.text(PRODUCT_NAME).clickable(true)"))
+    }
+
     private fun assertExpressiveJourney(source: String) {
         assertTrue(isExpressiveJourney(source))
         assertTrue(hasCanonicalFrames(source))
@@ -69,6 +80,9 @@ class ExpressiveBloomJourneyContractTest {
             "EXPRESSIVE_HEADER_TAG",
             "SITESKIN_DOCK_TAG",
             "PRODUCT_NAME = \"Happy Days Bouquet\"",
+            "PRODUCT_LINK_TEXT = \"Happy Days\"",
+            "findStorefrontProductLink()",
+            "scrollStorefrontTowardsProduct()",
             "SITESKIN_DOCK_BACK_TAG",
             "SITESKIN_DOCK_FORWARD_TAG",
             "SITESKIN_DOCK_HUB_TAG",
