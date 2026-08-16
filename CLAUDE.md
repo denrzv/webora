@@ -1526,3 +1526,21 @@ The implementation and all locally available gates are complete, but CI-009 is n
 two consecutive cold hosted runs of the final commit must publish and pass human inspection of all
 eight frames and their total contact sheet. A managed checkout without a push-capable remote or
 GitHub authentication cannot replace that evidence with compiled instrumentation.
+
+### The integrated SiteSkin dock is one branded browser boundary (UX-017)
+
+Protected integrated mode's five-command dock remains compiled browser policy—Back, Forward, Brand
+Hub, Tabs, More—but its one continuous pill now uses the guarded SiteSkin `secondary`/`onSecondary`
+roles without neutral per-command tiles masking the brand. The center Hub is the sole asset-bearing
+command: a fixed 52 dp browser-owned primary circle renders only the current configuration's existing
+bounded `BrandAsset`, with stable monogram/local-flower fallback. Its pixels are decorative; the
+localized browser action semantics and callback remain on the enclosing control. Back, Forward,
+Tabs, and More still accept only bundled drawables.
+
+Do not add a second asset loader, raw resource lookup, component-specific manifest color, or generic
+command model to extend this treatment. Site rows continue through the closed semantic icon map and
+typed `NavigationItem` dispatch. The weighted WebView region and dock are measured `Column` siblings,
+so the browser reserves the actual dock height; the outer shell consumes `safeDrawing` once. Adding
+DOM padding, a fixed Bloom offset, or a second inset read would violate that ownership and likely
+double-reserve space. Exact-origin/configuration teardown makes the branded dock structurally
+unreachable and the existing asset publication identity guard prevents late identity leakage.

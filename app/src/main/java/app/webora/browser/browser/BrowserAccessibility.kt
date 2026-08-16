@@ -14,6 +14,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -125,6 +127,23 @@ internal fun WeboraIconButton(
             modifier = Modifier.size(WeboraChrome.ICON_SIZE),
         )
     }
+}
+
+/** An icon-only browser control whose decorative content is not a drawable resource. */
+@Composable
+internal fun WeboraIconButton(
+    contentDescription: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    content: @Composable () -> Unit,
+) {
+    IconButton(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier.browserTouchTarget().semantics { this.contentDescription = contentDescription },
+        content = content,
+    )
 }
 
 /** A labelled button, the shape most browser chrome needs. */

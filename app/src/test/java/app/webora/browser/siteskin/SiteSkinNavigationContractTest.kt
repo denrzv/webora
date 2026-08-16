@@ -67,12 +67,31 @@ class SiteSkinNavigationContractTest {
             !source.contains("if (model.security")
 
     private fun fixedDock(source: String): Boolean {
-        val order = listOf("ic_back", "ic_forward", "ic_siteskin_flower", "ic_tabs", "ic_more")
+        val order = listOf("ic_back", "ic_forward", "BrandHubCommand", "ic_tabs", "ic_more")
         val positions = order.map(source::indexOf)
         return source.contains("ExpressiveSiteSkinDock(") &&
             positions.all { it >= 0 } && positions == positions.sorted() &&
-            source.contains("MaterialTheme.colorScheme.surfaceContainer") &&
+            source.contains("BrandHubCommand(brandAsset") &&
+            source.contains("BrandAsset.BitmapAsset") &&
+            !source.contains("MaterialTheme.colorScheme.surfaceContainer") &&
             !source.contains("model.items") && !source.contains("forEach { DockCommand")
+    }
+
+    @Test fun `Bloom semantic icons stay in the closed local vocabulary`() {
+        val expected = mapOf(
+            "home" to app.webora.browser.R.drawable.ic_home,
+            "grid_view" to app.webora.browser.R.drawable.ic_siteskin_catalog,
+            "shopping_cart" to app.webora.browser.R.drawable.ic_siteskin_shopping_cart,
+            "person" to app.webora.browser.R.drawable.ic_siteskin_person,
+            "call" to app.webora.browser.R.drawable.ic_siteskin_call,
+        )
+        expected.forEach { (token, resource) ->
+            org.junit.Assert.assertEquals(resource, siteSkinIconResource(token))
+        }
+        org.junit.Assert.assertEquals(
+            app.webora.browser.R.drawable.ic_siteskin_generic,
+            siteSkinIconResource("remote-resource://hostile"),
+        )
     }
 
     private fun browserOwnedBack(source: String): Boolean {

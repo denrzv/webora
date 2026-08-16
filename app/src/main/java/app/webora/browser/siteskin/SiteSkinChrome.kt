@@ -185,7 +185,7 @@ private fun SiteSkinIcon(name: String?) {
     )
 }
 
-private fun siteSkinIconResource(name: String?): Int =
+internal fun siteSkinIconResource(name: String?): Int =
     SITE_SKIN_ICON_RESOURCES[name] ?: R.drawable.ic_siteskin_generic
 
 private val SITE_SKIN_ICON_RESOURCES = mapOf(
