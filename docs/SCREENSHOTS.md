@@ -5,8 +5,9 @@ return full-device screenshots without a local Android phone.
 
 For the corresponding installed-app journey—including two tabs, a naturally created local browsing
 record, SiteSkin consent, and the return to the retained ordinary tab—see the
-[browser-first walkthrough](WALKTHROUGH.md). The four frames below prove Home, consent, integrated,
-and ordinary surfaces; they do not depict the tab switcher, Recent sites, or Favourites.
+[browser-first walkthrough](WALKTHROUGH.md). The eight frames below prove Home, consent, the
+expressive storefront/product/history/hub story, and ordinary teardown. They do not depict the tab
+switcher, Recent sites, or Favourites.
 
 ## Run it
 
@@ -30,8 +31,12 @@ and ordinary surfaces; they do not depict the tab switcher, Recent sites, or Fav
 | `preview.png` | Every canonical frame in journey order on one sheet, each tile captioned with its own filename. Open this first. |
 | `01-home.png` | Fresh Webora Home after onboarding, including Bloom Flowers. |
 | `02-siteskin-consent.png` | Exact `https://denrzv.github.io` consent identity and the attributed manifest preview. |
-| `03-siteskin-integrated.png` | Live page inside native SiteSkin chrome, with browser-owned security identity and navigation. |
-| `04-regular-browsing.png` | Stable ordinary HTTPS page after leaving Bloom, with Webora's regular security identity/navigation and no SiteSkin chrome. |
+| `03-bloom-storefront.png` | Live expressive Bloom storefront inside the browser-owned identity/header and fixed dock. |
+| `04-happy-days-product.png` | Happy Days product detail reached as a normal same-origin WebView route, with integrated chrome retained. |
+| `05-bloom-storefront-back.png` | Storefront restored through the displayed, enabled browser-owned Back dock command. |
+| `06-happy-days-forward.png` | Product detail restored through the displayed, enabled browser-owned Forward dock command. |
+| `07-siteskin-hub.png` | Native SiteSkin hub with separate browser-authored Site navigation and Webora controls sections. |
+| `08-regular-browsing.png` | Stable ordinary HTTPS page after leaving Bloom, with Webora's regular security identity/navigation and no SiteSkin chrome. |
 
 The PNGs sit at the archive root at full capture resolution. `preview.png` is a convenience for
 judging the journey at a glance, never a replacement for them — anything worth disputing should be
@@ -47,7 +52,7 @@ checked against the full-resolution frame.
 | `artifacts/result.txt` | Instrumentation exit status and number of PNGs collected. |
 | `artifacts/prebuilt-apks.txt` | The two APKs the emulator step found already built, with their sizes. |
 | `artifacts/readiness.txt` | Every readiness sample taken after boot, with its verdict and when it settled. |
-| `…/diagnostics/focus-01-home.txt` etc. | The `mCurrentFocus` lines behind each successful capture, including frame 04. |
+| `…/diagnostics/focus-01-home.txt` etc. | The `mCurrentFocus` lines behind each successful capture, including frame 08. |
 | `…/diagnostics/interference-*.txt` | Present only if a System UI dialog was cleared: what it was, and what was pressed. |
 | `…/diagnostics/window-*.txt` | Present only on a refused capture: the whole `dumpsys window` output at that moment. |
 | `androidTest-results/`, `reports/androidTests/` | The test runner's own XML and HTML. |
@@ -108,12 +113,12 @@ the selected app commit regressed, the GitHub-hosted emulator failed, or `https:
 or its `/.well-known/siteskin.json` was temporarily unavailable. Check `instrumentation.txt` first,
 then `logcat.txt`, and retry once if the evidence is clearly a transient network/emulator failure.
 
-The fourth frame continues from the proven Bloom integration through browser-owned Back/address UI
+The eighth frame continues from the proven Bloom integration through browser-owned Back/address UI
 to the IANA-reserved `https://example.com` origin. Its acceptance never depends on that page's title,
 copy, colours, or layout: Webora must expose its browser-authored `example.com` security identity and
 regular navigation shell, every SiteSkin layer must be absent, and the unchanged rendered/ownership
 guard must accept the page region. The workflow and composer count actual frames dynamically; a
-complete current journey therefore reports four screenshots and four contact-sheet tiles.
+complete current journey therefore reports eight screenshots and eight contact-sheet tiles.
 
 Since `CI-002` there are three more shapes of red, and each names itself:
 
