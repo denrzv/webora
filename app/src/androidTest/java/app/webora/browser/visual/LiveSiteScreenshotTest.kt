@@ -82,11 +82,10 @@ class LiveSiteScreenshotTest {
     }
 
     private fun exerciseExpressiveBloomJourney() {
-        val product = uiDevice.wait(
-            Until.findObject(By.text(PRODUCT_NAME).clickable(true)),
-            LIVE_SITE_TIMEOUT_MILLIS,
-        )
-        requireNotNull(product) { "Bloom did not expose the $PRODUCT_NAME product link" }
+        val product = findStorefrontProductLink()
+        requireNotNull(product) {
+            "Bloom did not expose the clickable $PRODUCT_LINK_TEXT link for $PRODUCT_NAME"
+        }
         product.click()
 
         waitForProductLink(isPresent = false)
@@ -121,8 +120,41 @@ class LiveSiteScreenshotTest {
         returnFromBloomHistoryToHome()
     }
 
+    /**
+     * Finds the real storefront title link as a user would: the deployed page puts Popular Picks
+     * below the first viewport, so the hosted journey must scroll rather than assume the product is
+     * already exposed to accessibility. The full product name remains page copy on the detail route;
+     * the storefront's clickable text contract is the shorter "Happy Days" label.
+     */
+    private fun findStorefrontProductLink() = productLinkSelector().let { selector ->
+        repeat(MAX_PRODUCT_SCROLL_ATTEMPTS) {
+            uiDevice.findObject(selector)?.let { candidate ->
+                val bounds = candidate.visibleBounds
+                if (bounds.width() > 0 && bounds.height() > 0) return@let candidate
+            }
+            scrollStorefrontTowardsProduct()
+        }
+        uiDevice.wait(Until.findObject(selector), PRODUCT_LINK_FINAL_WAIT_MILLIS)?.takeIf { candidate ->
+            val bounds = candidate.visibleBounds
+            bounds.width() > 0 && bounds.height() > 0
+        }
+    }
+
+    private fun scrollStorefrontTowardsProduct() {
+        val width = uiDevice.displayWidth
+        val height = uiDevice.displayHeight
+        uiDevice.swipe(
+            width / 2,
+            height * 3 / 4,
+            width / 2,
+            height * 2 / 5,
+            PRODUCT_SCROLL_STEPS,
+        )
+        SystemClock.sleep(PRODUCT_SCROLL_SETTLE_MILLIS)
+    }
+
     private fun waitForProductLink(isPresent: Boolean) {
-        val selector = By.text(PRODUCT_NAME).clickable(true)
+        val selector = productLinkSelector()
         val reached = if (isPresent) {
             uiDevice.wait(Until.hasObject(selector), LIVE_SITE_TIMEOUT_MILLIS)
         } else {
@@ -130,6 +162,8 @@ class LiveSiteScreenshotTest {
         }
         require(reached) { "Bloom product link presence did not become $isPresent" }
     }
+
+    private fun productLinkSelector() = By.text(PRODUCT_LINK_TEXT).clickable(true)
 
     private fun requireIntegratedChrome() {
         waitUntilNodeExists(hasTestTag(SITESKIN_SECURITY_TAG))
@@ -316,9 +350,14 @@ class LiveSiteScreenshotTest {
         const val REGULAR_ADDRESS = "example.com"
         const val REGULAR_DOMAIN = "example.com"
         const val PRODUCT_NAME = "Happy Days Bouquet"
+        const val PRODUCT_LINK_TEXT = "Happy Days"
         const val HUB_HOME = "Home"
         val HUB_ITEMS = listOf(HUB_HOME, "Catalog", "Cart", "Profile", "Call")
         const val MAX_HISTORY_RETURNS = 4
+        const val MAX_PRODUCT_SCROLL_ATTEMPTS = 5
+        const val PRODUCT_SCROLL_STEPS = 24
+        const val PRODUCT_SCROLL_SETTLE_MILLIS = 350L
+        const val PRODUCT_LINK_FINAL_WAIT_MILLIS = 5_000L
         const val SCREENSHOT_DIRECTORY = "screenshots"
         const val LIVE_SITE_TIMEOUT_MILLIS = 45_000L
         const val BRAND_ASSET_TIMEOUT_MILLIS = 30_000L
