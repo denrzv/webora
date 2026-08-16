@@ -606,7 +606,7 @@ class SpecCorpusTest {
 
         /** Pinned in denrzv/bloom-flowers too, at .well-known/siteskin.json.sha256. */
         const val BLOOM_FLOWERS_SHA256 =
-            "26c5293a436608dc6f64a8796301c038465524819d628882564fa37531e3850d"
+            "ed0ca884eac5f5c0014454266a16f70487980ce7e60f29184d3b6afcf2d96e1d"
 
         /** PRD acceptance criterion 5. Each needs a fixture of its own. */
         val DENIED_SCHEMES = listOf("javascript", "file", "content", "intent", "data")

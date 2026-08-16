@@ -18,6 +18,9 @@ import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.platform.io.PlatformTestStorageRegistry
+import androidx.test.uiautomator.By
+import androidx.test.uiautomator.UiDevice
+import androidx.test.uiautomator.Until
 import app.webora.browser.MainActivity
 import app.webora.browser.R
 import app.webora.browser.browser.BROWSER_CONTENT_TAG
@@ -26,8 +29,13 @@ import app.webora.browser.browser.BROWSER_SECURITY_TAG
 import app.webora.browser.inspector.BrandAssetStage
 import app.webora.browser.inspector.BrandAssetTrace
 import app.webora.browser.inspector.inspectorRecorder
-import app.webora.browser.siteskin.SITESKIN_BOTTOM_NAV_TAG
 import app.webora.browser.siteskin.SITESKIN_BACK_TAG
+import app.webora.browser.siteskin.EXPRESSIVE_HEADER_TAG
+import app.webora.browser.siteskin.SITESKIN_DOCK_BACK_TAG
+import app.webora.browser.siteskin.SITESKIN_DOCK_FORWARD_TAG
+import app.webora.browser.siteskin.SITESKIN_DOCK_HUB_TAG
+import app.webora.browser.siteskin.SITESKIN_DOCK_TAG
+import app.webora.browser.siteskin.SITESKIN_MENU_TAG
 import app.webora.browser.siteskin.SITESKIN_QUICK_ACTIONS_TAG
 import app.webora.browser.siteskin.SITESKIN_SECURITY_TAG
 import org.junit.Assert.assertEquals
@@ -58,9 +66,10 @@ class LiveSiteScreenshotTest {
 
         composeRule.onNodeWithText(string(R.string.siteskin_allow)).performClick()
         waitUntilNodeExists(hasTestTag(SITESKIN_SECURITY_TAG))
-        waitUntilNodeExists(hasTestTag(SITESKIN_BOTTOM_NAV_TAG))
+        waitUntilNodeExists(hasTestTag(EXPRESSIVE_HEADER_TAG))
+        waitUntilNodeExists(hasTestTag(SITESKIN_DOCK_TAG))
         composeRule.onNodeWithTag(SITESKIN_SECURITY_TAG).assertIsDisplayed()
-        composeRule.onNodeWithTag(SITESKIN_BOTTOM_NAV_TAG).assertIsDisplayed()
+        composeRule.onNodeWithTag(SITESKIN_DOCK_TAG).assertIsDisplayed()
         val brandAsset = awaitBrandAssetDecision()
         guard.recordDiagnostic("brand-asset-03-siteskin-integrated.txt", describe(brandAsset))
         // The only frame with a content requirement. Every assertion above is about the semantics
@@ -75,7 +84,38 @@ class LiveSiteScreenshotTest {
             BrandAssetStage.DECODED,
             brandAsset?.stage,
         )
+        exerciseExpressiveBloomJourney()
         captureRegularBrowsingEvidence()
+    }
+
+    private fun exerciseExpressiveBloomJourney() {
+        val product = uiDevice.wait(Until.findObject(By.text(PRODUCT_NAME)), LIVE_SITE_TIMEOUT_MILLIS)
+        requireNotNull(product) { "Bloom did not expose the $PRODUCT_NAME product link" }
+        product.click()
+
+        waitUntilNodeExists(hasTestTag(SITESKIN_DOCK_BACK_TAG))
+        composeRule.onNodeWithTag(SITESKIN_DOCK_BACK_TAG).assertIsEnabled().performClick()
+        waitUntilNodeExists(hasTestTag(SITESKIN_DOCK_FORWARD_TAG))
+        composeRule.onNodeWithTag(SITESKIN_DOCK_FORWARD_TAG).assertIsEnabled().performClick()
+        composeRule.onNodeWithTag(SITESKIN_SECURITY_TAG).assertIsDisplayed()
+        composeRule.onNodeWithTag(SITESKIN_DOCK_TAG).assertIsDisplayed()
+
+        composeRule.onNodeWithTag(SITESKIN_DOCK_HUB_TAG).performClick()
+        waitUntilNodeExists(hasTestTag(SITESKIN_MENU_TAG))
+        HUB_ITEMS.forEach { label -> composeRule.onNodeWithText(label).assertIsDisplayed() }
+        composeRule.onNodeWithText(HUB_HOME).performClick()
+        returnFromBloomHistoryToHome()
+    }
+
+    private fun returnFromBloomHistoryToHome() {
+        repeat(MAX_HISTORY_RETURNS) {
+            if (composeRule.onAllNodes(hasText(string(R.string.home_suggested_title)))
+                    .fetchSemanticsNodes().isNotEmpty()
+            ) return
+            waitUntilNodeExists(hasTestTag(SITESKIN_BACK_TAG))
+            composeRule.onNodeWithTag(SITESKIN_BACK_TAG).performClick()
+        }
+        waitUntilNodeExists(hasText(string(R.string.home_suggested_title)))
     }
 
     /**
@@ -84,8 +124,6 @@ class LiveSiteScreenshotTest {
      * content, while these tags are the browser's closed chrome-handoff contract from UX-012.
      */
     private fun captureRegularBrowsingEvidence() {
-        composeRule.onNodeWithTag(SITESKIN_BACK_TAG).assertIsDisplayed().assertIsEnabled()
-            .performClick()
         val addressLabel = string(R.string.address_label)
         val addressInput = hasText(addressLabel) or hasContentDescription(addressLabel)
         waitUntilNodeExists(addressInput)
@@ -101,7 +139,9 @@ class LiveSiteScreenshotTest {
             .assertIsDisplayed()
         composeRule.onNodeWithTag(BROWSER_NAVIGATION_SHELL_TAG).assertIsDisplayed()
         composeRule.onNodeWithTag(SITESKIN_SECURITY_TAG).assertDoesNotExist()
-        composeRule.onNodeWithTag(SITESKIN_BOTTOM_NAV_TAG).assertDoesNotExist()
+        composeRule.onNodeWithTag(EXPRESSIVE_HEADER_TAG).assertDoesNotExist()
+        composeRule.onNodeWithTag(SITESKIN_DOCK_TAG).assertDoesNotExist()
+        composeRule.onNodeWithTag(SITESKIN_MENU_TAG).assertDoesNotExist()
         composeRule.onNodeWithTag(SITESKIN_QUICK_ACTIONS_TAG).assertDoesNotExist()
         captureDeviceScreenshot("04-regular-browsing.png", requirePageContent = true)
     }
@@ -231,6 +271,8 @@ class LiveSiteScreenshotTest {
     private val instrumentation
         get() = InstrumentationRegistry.getInstrumentation()
 
+    private val uiDevice by lazy { UiDevice.getInstance(instrumentation) }
+
     private val targetContext
         get() = instrumentation.targetContext
 
@@ -241,6 +283,10 @@ class LiveSiteScreenshotTest {
         const val LIVE_ORIGIN = "https://denrzv.github.io"
         const val REGULAR_ADDRESS = "example.com"
         const val REGULAR_DOMAIN = "example.com"
+        const val PRODUCT_NAME = "Happy Days Bouquet"
+        const val HUB_HOME = "Home"
+        val HUB_ITEMS = listOf(HUB_HOME, "Catalog", "Cart", "Profile", "Call")
+        const val MAX_HISTORY_RETURNS = 4
         const val SCREENSHOT_DIRECTORY = "screenshots"
         const val LIVE_SITE_TIMEOUT_MILLIS = 45_000L
         const val BRAND_ASSET_TIMEOUT_MILLIS = 30_000L

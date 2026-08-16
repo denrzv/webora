@@ -1452,6 +1452,23 @@ projection can dispatch. Regular and Home continue to use `BrowserNavigationShel
 integrated persistent bottom navigation and over-content quick-action launcher are no longer part of
 the protected projection.
 
+### The Bloom live journey is the cross-repository integration contract (DEMO-005)
+
+The canonical instrumentation story now exercises the deployed site as a normal black-box website:
+Home → consent → expressive storefront → Happy Days product → browser Back/Forward → native hub →
+regular origin. Remote page text may locate the accessible product link, but it never proves trust;
+browser-owned expressive identity/dock tags before and after history traversal and their required
+absence after exact-origin departure remain the authority. UiAutomator is instrumentation-only and
+must not be replaced with a production JavaScript bridge or a Webora-specific DOM hook.
+
+The checked-in Bloom fixture, normalized expected result, specification example, route corpus, live
+selectors, and `denrzv/bloom-flowers` source manifest are one coordinated integration artifact. The
+completed M9 vocabulary is Home, Catalog, Cart, Profile plus Call. The pinned byte digest is a
+negative control: a cross-repository vocabulary change must update and validate all representations,
+not merely make a hosted test accept whichever labels happen to be live. CI-009 still owns expanded
+screenshots, contact-sheet totality, and two consecutive cold accepted runs; DEMO-005 owns whether
+the journey and repositories tell the same story.
+
 ### Ordinary browsing is canonical evidence too (CI-007)
 
 The hosted journey does not stop when Bloom Flowers reaches integrated mode. It leaves through the
