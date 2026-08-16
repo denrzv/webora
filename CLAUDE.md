@@ -1493,6 +1493,20 @@ tests pin the current four-frame inventory and order, while the workflow compare
 actual PNGs with the number of tiles it composed. Captions still come only from filenames, and
 diagnostics remain in the separate artifact.
 
+### The regular browser dock uses six equal browser-owned slots (UX-016)
+
+Home and ordinary browsing share one neutral Webora pill whose fixed order remains Back, Forward,
+Reload, Home, Tabs, More. The inner row fills the pill and each command is centered in one equal
+weighted slot; the first and last slots meet the dock edges, producing symmetric outer geometry
+without per-icon padding. The slot wrappers do not replace or shrink `WeboraIconButton`, so the one
+48 dp browser target contract remains the interaction owner.
+
+This distribution is compiled browser policy. Page content, current origin, SiteSkin configuration,
+navigation items, labels, colours, or action counts cannot influence slot count, order, weight,
+enabled state, callbacks, shell padding, or system-inset handling. Protected integrated mode retains
+its separate expressive dock and native hub. Compose geometry evidence pins equal widths and center
+spacing plus both dock edges at 320 dp; presence assertions alone are not evidence for distribution.
+
 ### Expressive evidence is an ordered browser-owned contract (CI-009, pending hosted acceptance)
 
 The M9 journey's canonical inventory is eight chronological frames: native Home and consent;

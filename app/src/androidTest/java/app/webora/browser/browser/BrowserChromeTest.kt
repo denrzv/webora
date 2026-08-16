@@ -108,6 +108,36 @@ class BrowserChromeTest {
         }
     }
 
+    @Test fun compactDockFillsItsPillWithSixEvenSymmetricSlots() {
+        compose.setContent {
+            Box(Modifier.width(320.dp)) {
+                BrowserNavigationShell(false, false, false, {}, {}, {}, {}, {}, {}, {})
+            }
+        }
+
+        val dock = compose.onNodeWithTag(BROWSER_NAVIGATION_DOCK_TAG).fetchSemanticsNode().boundsInRoot
+        val slots = listOf("back", "forward", "reload", "home", "tabs", "more").map { name ->
+            compose.onNodeWithTag("$BROWSER_NAVIGATION_SLOT_TAG_PREFIX$name")
+                .fetchSemanticsNode().boundsInRoot
+        }
+        val tolerance = 1f
+        val expectedWidth = dock.width / slots.size
+
+        slots.forEach { slot ->
+            assertEquals(expectedWidth, slot.width, tolerance)
+        }
+        slots.zipWithNext().forEach { (left, right) ->
+            assertEquals(expectedWidth, right.center.x - left.center.x, tolerance)
+        }
+        assertEquals(dock.left, slots.first().left, tolerance)
+        assertEquals(dock.right, slots.last().right, tolerance)
+        assertEquals(
+            slots.first().center.x - dock.left,
+            dock.right - slots.last().center.x,
+            tolerance,
+        )
+    }
+
     @Test fun browserOwnedFavouriteActionReflectsStateAndInvokesOnlyBrowserCallback() {
         var toggled = false
         compose.setContent {
