@@ -54,10 +54,13 @@ not supplied by a SiteSkin manifest, and are removed by Webora's clear-browsing-
    page rendering.
 2. When Webora offers SiteSkin, verify the consent dialog names the complete
    `https://denrzv.github.io` origin, then choose **Allow**.
-3. Confirm the integrated surface shows Bloom's Home, Flowers, Cart, and Account navigation plus its
-   Call quick action.
-4. Confirm browser-owned escape and identity remain visible: Webora's Back control and the secure
-   `denrzv.github.io` identity are not replaced by Bloom branding.
+3. Confirm the integrated surface shows the curved Bloom header and fixed browser dock. Open the
+   central Bloom control and verify its separately attributed hub contains Home, Catalog, Cart,
+   Profile, and the Call quick action.
+4. Open **Happy Days Bouquet** from Popular Picks. Use the fixed browser Back and Forward controls
+   to traverse the real page history and confirm the integrated identity/dock remain stable.
+5. Confirm browser-owned escape and identity remain visible: Webora's Back/Forward/Tabs/More
+   controls and the secure `denrzv.github.io` identity are not replaced by Bloom branding.
 
 If the live manifest is missing, unavailable, invalid, or not allowed, Webora safely remains a
 regular browser. Do not use the debug Inspector to force the reference result; fix or retry the live
@@ -65,10 +68,10 @@ integration instead.
 
 ### 4. Return deterministically to ordinary browsing
 
-1. Select **Tabs** from the browser section of Bloom's **More** menu.
+1. Select **Tabs** from Bloom's fixed browser dock.
 2. Select the retained `example.com` tab.
 3. Confirm Webora restores that tab's ordinary security identity and regular navigation shell.
-   Bloom's bottom navigation and quick action must be absent.
+   Bloom's expressive header, dock, hub navigation, and quick action must be absent.
 4. Optionally return Home and open the Favourite created in step 1 to finish through the local-data
    path as well.
 
@@ -84,10 +87,11 @@ The current canonical Pixel 6 journey contains four guarded frames:
 |---|---|
 | `01-home.png` | Browser-owned Home before entering the reference integration. |
 | `02-siteskin-consent.png` | Explicit consent for the complete Bloom origin and a bounded preview. |
-| `03-siteskin-integrated.png` | Bloom's consented SiteSkin navigation alongside fixed browser identity and escape. |
+| `03-siteskin-integrated.png` | Bloom's expressive header/dock alongside fixed browser identity and escape. |
 | `04-regular-browsing.png` | Regular `example.com` identity/navigation after leaving Bloom, with all SiteSkin chrome absent. |
 
-Together, frames 03 and 04 prove the integrated-to-regular layer handoff. The hosted journey reaches
+Together, frames 03 and 04 prove the integrated-to-regular layer handoff. Between those captures,
+the hosted journey visits Happy Days, exercises Back/Forward, and checks the native hub. It reaches
 frame 04 through visible browser Back/address controls rather than the two-tab route above. It does
 **not** capture the tab switcher, Recent sites, or Favourites. Those are interactive checks in this
 walkthrough, backed by the shipped M8 behavior rather than silently claimed as pixels in the contact

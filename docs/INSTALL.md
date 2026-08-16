@@ -83,7 +83,7 @@ switches back to regular chrome. No developer-only control or hidden gesture is 
 3. The browser then asks whether to apply the site's branding, showing the site's full origin. This
    is a per-site decision and you can decline it permanently.
 4. Allow it. The top bar takes the site's colours, logo, title and subtitle; a bottom navigation bar
-   appears with Home, Flowers, Cart and Account, plus a Call quick action.
+   appears with Home, Catalog, Cart and Profile, plus a Call quick action.
 5. Tap through the tabs — the active tab tracks the page you are on.
 
 **What to notice, because it is the point of the design:** the site's registrable domain and the TLS

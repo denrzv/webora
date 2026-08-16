@@ -188,7 +188,7 @@ appearance field to the SiteSkin manifest.
 - [x] `UX-015` Branded browser dock & SiteSkin navigation hub — replace the persistent site bottom
   navbar with a fixed browser-owned Back/Forward/brand-hub/Tabs/More dock; project validated site
   navigation and quick actions into a native hub. GitHub: #86.
-- [ ] `DEMO-005` Expressive Bloom Flowers integrated showcase — integrate the Android surfaces with
+- [x] `DEMO-005` Expressive Bloom Flowers integrated showcase — integrate the Android surfaces with
   `denrzv/bloom-flowers#3` (`BLOOM-001` storefront refresh) and `denrzv/bloom-flowers#4`
   (`BLOOM-002` Happy Days product journey). GitHub: #87.
 - [ ] `CI-009` Expressive SiteSkin visual acceptance — expand the hosted journey/contact sheet to

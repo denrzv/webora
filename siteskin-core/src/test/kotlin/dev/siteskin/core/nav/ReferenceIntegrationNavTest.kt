@@ -58,8 +58,8 @@ class ReferenceIntegrationNavTest {
         "/catalog/roses" to "catalog",
         "/cart" to "cart",
         "/cart/" to "cart",
-        "/account" to "account",
-        "/account/orders" to "account",
+        "/account" to "profile",
+        "/account/orders" to "profile",
     )
 
     @Test
@@ -122,9 +122,9 @@ class ReferenceIntegrationNavTest {
         assertEquals(
             listOf(
                 "home:Home:home:internal_url",
-                "catalog:Flowers:flower:internal_url",
+                "catalog:Catalog:grid_view:internal_url",
                 "cart:Cart:shopping_cart:internal_url",
-                "account:Account:person:internal_url",
+                "profile:Profile:person:internal_url",
                 "call-shop:Call:call:phone",
             ),
             presentation,
