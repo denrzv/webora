@@ -30,6 +30,19 @@ class SiteSkinNavigationContractTest {
         assertFalse(regularBrowser.contains("SiteSkinQuickActions("))
     }
 
+    @Test fun `browser sheet cannot consume SiteSkin presentation or action models`() {
+        val source = source("app/webora/browser/siteskin/SiteSkinChrome.kt").readText()
+        val sheet = source.substringAfter("internal fun IntegratedBrowserMenuSheet(")
+            .substringBefore("internal fun browserMenuLabel(")
+
+        assertTrue(sheet.contains("ModalBottomSheet("))
+        assertTrue(sheet.contains("MaterialTheme.colorScheme"))
+        assertFalse(sheet.contains("SiteSkinChromeModel"))
+        assertFalse(sheet.contains("SiteSkinColorScheme"))
+        assertFalse(sheet.contains("SiteSkinItemModel"))
+        assertFalse(sheet.contains("presentation.colors"))
+    }
+
     @Test
     fun `integrated back remains browser owned and cannot be suppressed by manifest styling`() {
         val source = source("app/webora/browser/siteskin/SiteSkinTopBar.kt").readText()
@@ -71,7 +84,7 @@ class SiteSkinNavigationContractTest {
         val positions = order.map(source::indexOf)
         return source.contains("ExpressiveSiteSkinDock(") &&
             positions.all { it >= 0 } && positions == positions.sorted() &&
-            source.contains("BrandHubCommand(brandAsset") &&
+            source.contains("asset = brandAsset") &&
             source.contains("BrandAsset.BitmapAsset") &&
             !source.contains("MaterialTheme.colorScheme.surfaceContainer") &&
             !source.contains("model.items") && !source.contains("forEach { DockCommand")

@@ -42,14 +42,13 @@ class SiteSkinChromeTest {
         compose.onAllNodesWithText("Label 0").assertCountEquals(0)
     }
 
-    @Test fun menuAlwaysSeparatesBrowserOwnedCommands() {
-        val model = model(nav = 0, quick = 0, menu = 2)
-        compose.setContent { SiteSkinMenu(model, {}, {}) }
+    @Test fun actionBouquetUsesOnlyFivePrioritisedSiteItems() {
+        val model = model(nav = 3, quick = 3, menu = 3)
 
-        compose.onNodeWithText("Site navigation").assertIsDisplayed()
-        compose.onNodeWithText("Webora controls").assertIsDisplayed()
-        compose.onNodeWithText("Page information").assertIsDisplayed()
-        compose.onNodeWithText("Settings").assertIsDisplayed()
+        assertEquals(
+            listOf("nav-0", "nav-1", "nav-2", "quick-0", "quick-1"),
+            model.actionBouquet().map { it.id },
+        )
     }
 
     private fun model(

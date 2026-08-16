@@ -1,57 +1,75 @@
 package app.webora.browser.siteskin
 
-import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.test.SemanticsMatcher
-import androidx.compose.ui.test.assert
+import androidx.activity.ComponentActivity
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.test.espresso.Espresso.pressBack
 import app.webora.browser.design.WeboraTheme
-import dev.siteskin.core.SiteSkinValidationOutcome
-import dev.siteskin.core.SiteSkinValidator
-import dev.siteskin.core.model.NavigationItem
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 
 class SiteSkinNavigationHubTest {
-    @get:Rule val compose = createComposeRule()
+    @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
-    @Test fun routeStateDoesNotLeakOntoActionsOrBrowserCommands() {
-        val selected = mutableListOf<NavigationItem>()
-        val configuration = SiteSkinValidator.validate(MANIFEST.byteInputStream(), SITE_URL)
-            .let { (it as SiteSkinValidationOutcome.Accepted).configuration }
-        val model = SiteSkinChromeModel.from(configuration, "$SITE_URL/catalog")
+    @Test fun browserSheetContainsNoSiteActionsAndDismissesBeforeSelection() {
+        var dismissed = false
+        var selected: BrowserMenuCommand? = null
         compose.setContent {
             WeboraTheme {
-                SiteSkinMenu(model, { selected += it }, {})
+                IntegratedBrowserMenuSheet(
+                    commands = browserMenuCommands(),
+                    isFavourite = false,
+                    onToggleFavourite = {},
+                    onSelect = { command ->
+                        check(dismissed)
+                        selected = command
+                    },
+                    onDismiss = { dismissed = true },
+                )
             }
         }
 
-        compose.onNodeWithText("Site navigation").assertIsDisplayed()
-        compose.onNodeWithText("Quick actions").assertIsDisplayed()
-        compose.onNodeWithText("Webora controls").assertIsDisplayed()
-        compose.onNodeWithText("Catalog").assert(
-            SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Selected"),
-        ).performClick()
-        compose.onNodeWithText("Call").assert(
-            SemanticsMatcher.keyNotDefined(SemanticsProperties.StateDescription),
-        )
-        compose.onNodeWithText("Settings").assert(
-            SemanticsMatcher.keyNotDefined(SemanticsProperties.StateDescription),
-        )
-        assertEquals("catalog", selected.single().id)
+        compose.onNodeWithText(WEBORA_CONTROLS).assertIsDisplayed()
+        compose.onNodeWithText("Catalog").assertDoesNotExist()
+        compose.onNodeWithText("Call").assertDoesNotExist()
+        compose.onNodeWithText(SETTINGS).performClick()
+        assertEquals(BrowserMenuCommand.SETTINGS, selected)
+    }
+
+    @Test fun systemBackDismissesBrowserSheetExactlyOnce() {
+        var open by mutableStateOf(true)
+        var dismissals = 0
+        compose.setContent {
+            WeboraTheme {
+                if (open) {
+                    IntegratedBrowserMenuSheet(
+                        commands = browserMenuCommands(),
+                        isFavourite = false,
+                        onToggleFavourite = {},
+                        onSelect = {},
+                        onDismiss = {
+                            dismissals += 1
+                            open = false
+                        },
+                    )
+                }
+            }
+        }
+
+        pressBack()
+
+        compose.onNodeWithText(WEBORA_CONTROLS).assertDoesNotExist()
+        assertEquals(1, dismissals)
     }
 
     private companion object {
-        const val SITE_URL = "https://shop.example"
-        val MANIFEST = """
-            {"schemaVersion":"1.0","site":{"id":"shop","name":"Shop"},
-            "bottomNavigation":[
-              {"id":"home","label":"Home","action":{"type":"home"},"match":"/"},
-              {"id":"catalog","label":"Catalog","action":{"type":"refresh"},"match":"/catalog"}],
-            "quickActions":[{"id":"call","label":"Call","action":{"type":"refresh"}}]}
-        """.trimIndent()
+        const val WEBORA_CONTROLS = "Webora controls"
+        const val SETTINGS = "Settings"
     }
 }
