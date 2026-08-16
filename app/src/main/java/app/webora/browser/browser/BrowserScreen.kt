@@ -389,7 +389,7 @@ internal fun BrowserScreen(
         )
     }
     if (settingsVisible) {
-        PrivacySettingsScreen(
+        PrivacySettingsDialog(
             siteSkinEnabled = siteSkinEnabled,
             decisions = storedDecisions,
             onSiteSkinEnabledChange = { enabled ->
@@ -406,8 +406,7 @@ internal fun BrowserScreen(
                 storedDecisions = consentStore.decisions()
             },
             onClearBrowsingData = { clearConfirmation = true },
-            onClose = { settingsVisible = false },
-            modifier = browserModifier,
+            onDismiss = { settingsVisible = false },
         )
     }
     SiteSkinInspectorHost(

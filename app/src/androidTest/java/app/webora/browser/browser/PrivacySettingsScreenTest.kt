@@ -1,11 +1,16 @@
 package app.webora.browser.browser
 
+import androidx.activity.ComponentActivity
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsOn
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.test.espresso.Espresso.pressBack
 import app.webora.browser.siteskin.SiteConsentDecision
 import app.webora.browser.siteskin.StoredSiteConsent
 import dev.siteskin.core.origin.SiteOrigin
@@ -15,7 +20,7 @@ import org.junit.Rule
 import org.junit.Test
 
 class PrivacySettingsScreenTest {
-    @get:Rule val compose = createComposeRule()
+    @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
     @Test fun globalToggleAndClearActionAreBrowserOwnedControls() {
         var clearRequested = false
@@ -30,9 +35,55 @@ class PrivacySettingsScreenTest {
             )
         }
 
-        compose.onNodeWithText("Privacy settings").assertIsDisplayed()
+        compose.onNodeWithText(PRIVACY_TITLE).assertIsDisplayed()
         compose.onNodeWithText("Clear browsing data").performClick()
         assertTrue(clearRequested)
+    }
+
+    @Test fun closeDismissesPrivacyDialog() {
+        var open by mutableStateOf(true)
+        compose.setContent {
+            if (open) {
+                PrivacySettingsDialog(
+                    siteSkinEnabled = true,
+                    decisions = emptyList(),
+                    onSiteSkinEnabledChange = {},
+                    onRemoveDecision = {},
+                    onClearBrowsingData = {},
+                    onDismiss = { open = false },
+                )
+            }
+        }
+
+        compose.onNodeWithText(PRIVACY_TITLE).assertIsDisplayed()
+        compose.onNodeWithText(CLOSE_LABEL).performClick()
+
+        compose.onNodeWithText(PRIVACY_TITLE).assertDoesNotExist()
+    }
+
+    @Test fun systemBackDismissesPrivacyDialog() {
+        var dismissals = 0
+        var open by mutableStateOf(true)
+        compose.setContent {
+            if (open) {
+                PrivacySettingsDialog(
+                    siteSkinEnabled = true,
+                    decisions = emptyList(),
+                    onSiteSkinEnabledChange = {},
+                    onRemoveDecision = {},
+                    onClearBrowsingData = {},
+                    onDismiss = {
+                        dismissals += 1
+                        open = false
+                    },
+                )
+            }
+        }
+
+        pressBack()
+
+        compose.onNodeWithText(PRIVACY_TITLE).assertDoesNotExist()
+        assertEquals(1, dismissals)
     }
 
     @Test fun clearDialogRequiresExplicitConfirmation() {
@@ -86,5 +137,10 @@ class PrivacySettingsScreenTest {
             .performClick()
 
         assertEquals(stored, removed)
+    }
+
+    private companion object {
+        const val PRIVACY_TITLE = "Privacy settings"
+        const val CLOSE_LABEL = "Close"
     }
 }
