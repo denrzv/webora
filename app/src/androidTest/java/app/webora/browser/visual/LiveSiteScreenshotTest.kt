@@ -65,22 +65,15 @@ class LiveSiteScreenshotTest {
         captureDeviceScreenshot("02-siteskin-consent.png")
 
         composeRule.onNodeWithText(string(R.string.siteskin_allow)).performClick()
-        waitUntilNodeExists(hasTestTag(SITESKIN_SECURITY_TAG))
-        waitUntilNodeExists(hasTestTag(EXPRESSIVE_HEADER_TAG))
-        waitUntilNodeExists(hasTestTag(SITESKIN_DOCK_TAG))
-        composeRule.onNodeWithTag(SITESKIN_SECURITY_TAG).assertIsDisplayed()
-        composeRule.onNodeWithTag(SITESKIN_DOCK_TAG).assertIsDisplayed()
+        requireIntegratedChrome()
         val brandAsset = awaitBrandAssetDecision()
-        guard.recordDiagnostic("brand-asset-03-siteskin-integrated.txt", describe(brandAsset))
-        // The only frame with a content requirement. Every assertion above is about the semantics
-        // tree, and a region can have bounds with nothing painted into them — which is exactly the
-        // frame run 9 published: SiteSkin chrome over an empty page, on a green job.
-        captureDeviceScreenshot("03-siteskin-integrated.png", requirePageContent = true)
+        guard.recordDiagnostic("brand-asset-03-bloom-storefront.txt", describe(brandAsset))
+        captureDeviceScreenshot("03-bloom-storefront.png", requirePageContent = true)
         // Asserted after the capture on purpose: a run that fails here must still publish the frame
         // that shows what it looked like, and asserting first would destroy the evidence.
         assertEquals(
-            "the reference integration's logo did not reach the 40 dp slot; see " +
-                "diagnostics/brand-asset-03-siteskin-integrated.txt",
+                "the reference integration's logo did not reach the 40 dp slot; see " +
+                "diagnostics/brand-asset-03-bloom-storefront.txt",
             BrandAssetStage.DECODED,
             brandAsset?.stage,
         )
@@ -89,22 +82,62 @@ class LiveSiteScreenshotTest {
     }
 
     private fun exerciseExpressiveBloomJourney() {
-        val product = uiDevice.wait(Until.findObject(By.text(PRODUCT_NAME)), LIVE_SITE_TIMEOUT_MILLIS)
+        val product = uiDevice.wait(
+            Until.findObject(By.text(PRODUCT_NAME).clickable(true)),
+            LIVE_SITE_TIMEOUT_MILLIS,
+        )
         requireNotNull(product) { "Bloom did not expose the $PRODUCT_NAME product link" }
         product.click()
 
+        waitForProductLink(isPresent = false)
+        requireIntegratedChrome()
         waitUntilNodeExists(hasTestTag(SITESKIN_DOCK_BACK_TAG))
-        composeRule.onNodeWithTag(SITESKIN_DOCK_BACK_TAG).assertIsEnabled().performClick()
-        waitUntilNodeExists(hasTestTag(SITESKIN_DOCK_FORWARD_TAG))
-        composeRule.onNodeWithTag(SITESKIN_DOCK_FORWARD_TAG).assertIsEnabled().performClick()
-        composeRule.onNodeWithTag(SITESKIN_SECURITY_TAG).assertIsDisplayed()
-        composeRule.onNodeWithTag(SITESKIN_DOCK_TAG).assertIsDisplayed()
+        captureDeviceScreenshot("04-happy-days-product.png", requirePageContent = true)
+        composeRule.onNodeWithTag(SITESKIN_DOCK_BACK_TAG)
+            .assertIsDisplayed()
+            .assertIsEnabled()
+            .performClick()
 
-        composeRule.onNodeWithTag(SITESKIN_DOCK_HUB_TAG).performClick()
+        waitForProductLink(isPresent = true)
+        requireIntegratedChrome()
+        waitUntilNodeExists(hasTestTag(SITESKIN_DOCK_FORWARD_TAG))
+        captureDeviceScreenshot("05-bloom-storefront-back.png", requirePageContent = true)
+        composeRule.onNodeWithTag(SITESKIN_DOCK_FORWARD_TAG)
+            .assertIsDisplayed()
+            .assertIsEnabled()
+            .performClick()
+
+        waitForProductLink(isPresent = false)
+        requireIntegratedChrome()
+        captureDeviceScreenshot("06-happy-days-forward.png", requirePageContent = true)
+
+        composeRule.onNodeWithTag(SITESKIN_DOCK_HUB_TAG).assertIsDisplayed().performClick()
         waitUntilNodeExists(hasTestTag(SITESKIN_MENU_TAG))
+        composeRule.onNodeWithText(string(R.string.siteskin_site_menu_heading)).assertIsDisplayed()
+        composeRule.onNodeWithText(string(R.string.siteskin_browser_menu_heading)).assertIsDisplayed()
         HUB_ITEMS.forEach { label -> composeRule.onNodeWithText(label).assertIsDisplayed() }
+        captureDeviceScreenshot("07-siteskin-hub.png", requirePageContent = true)
         composeRule.onNodeWithText(HUB_HOME).performClick()
         returnFromBloomHistoryToHome()
+    }
+
+    private fun waitForProductLink(isPresent: Boolean) {
+        val selector = By.text(PRODUCT_NAME).clickable(true)
+        val reached = if (isPresent) {
+            uiDevice.wait(Until.hasObject(selector), LIVE_SITE_TIMEOUT_MILLIS)
+        } else {
+            uiDevice.wait(Until.gone(selector), LIVE_SITE_TIMEOUT_MILLIS)
+        }
+        require(reached) { "Bloom product link presence did not become $isPresent" }
+    }
+
+    private fun requireIntegratedChrome() {
+        waitUntilNodeExists(hasTestTag(SITESKIN_SECURITY_TAG))
+        waitUntilNodeExists(hasTestTag(EXPRESSIVE_HEADER_TAG))
+        waitUntilNodeExists(hasTestTag(SITESKIN_DOCK_TAG))
+        composeRule.onNodeWithTag(SITESKIN_SECURITY_TAG).assertIsDisplayed()
+        composeRule.onNodeWithTag(EXPRESSIVE_HEADER_TAG).assertIsDisplayed()
+        composeRule.onNodeWithTag(SITESKIN_DOCK_TAG).assertIsDisplayed()
     }
 
     private fun returnFromBloomHistoryToHome() {
@@ -143,7 +176,7 @@ class LiveSiteScreenshotTest {
         composeRule.onNodeWithTag(SITESKIN_DOCK_TAG).assertDoesNotExist()
         composeRule.onNodeWithTag(SITESKIN_MENU_TAG).assertDoesNotExist()
         composeRule.onNodeWithTag(SITESKIN_QUICK_ACTIONS_TAG).assertDoesNotExist()
-        captureDeviceScreenshot("04-regular-browsing.png", requirePageContent = true)
+        captureDeviceScreenshot("08-regular-browsing.png", requirePageContent = true)
     }
 
     /**
@@ -200,9 +233,8 @@ class LiveSiteScreenshotTest {
     }
 
     /**
-     * @param requirePageContent whether this frame's evidence includes a rendered page. Frame 01 is
-     *   Home, which has no renderer and therefore no page rectangle; frame 02's evidence is the
-     *   consent dialog and its canonical origin, not the dimmed page behind it.
+     * @param requirePageContent whether this frame's evidence includes a rendered page. Home has no
+     *   renderer; consent evidences the dialog and canonical origin rather than the dimmed page.
      */
     private fun captureDeviceScreenshot(name: String, requirePageContent: Boolean = false) {
         composeRule.waitForIdle()

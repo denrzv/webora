@@ -81,18 +81,22 @@ owns the visible chrome.
 
 ## What the hosted screenshots prove
 
-The current canonical Pixel 6 journey contains four guarded frames:
+The canonical Pixel 6 journey contains eight guarded frames:
 
 | Frame | What it demonstrates |
 |---|---|
 | `01-home.png` | Browser-owned Home before entering the reference integration. |
 | `02-siteskin-consent.png` | Explicit consent for the complete Bloom origin and a bounded preview. |
-| `03-siteskin-integrated.png` | Bloom's expressive header/dock alongside fixed browser identity and escape. |
-| `04-regular-browsing.png` | Regular `example.com` identity/navigation after leaving Bloom, with all SiteSkin chrome absent. |
+| `03-bloom-storefront.png` | The live expressive storefront inside fixed browser identity and dock surfaces. |
+| `04-happy-days-product.png` | Happy Days product detail reached through ordinary accessible WebView navigation. |
+| `05-bloom-storefront-back.png` | The storefront restored by the displayed, enabled browser-owned Back command. |
+| `06-happy-days-forward.png` | Product detail restored by the displayed, enabled browser-owned Forward command. |
+| `07-siteskin-hub.png` | The native hub's separate Site navigation and Webora controls sections over the rendered site. |
+| `08-regular-browsing.png` | Regular `example.com` identity/navigation after leaving Bloom, with all SiteSkin chrome absent. |
 
-Together, frames 03 and 04 prove the integrated-to-regular layer handoff. Between those captures,
-the hosted journey visits Happy Days, exercises Back/Forward, and checks the native hub. It reaches
-frame 04 through visible browser Back/address controls rather than the two-tab route above. It does
+Together, frames 03–08 prove the expressive product/history/hub story and integrated-to-regular
+layer handoff. The journey reaches frame 08 through visible browser Back/address controls rather
+than the two-tab route above. It does
 **not** capture the tab switcher, Recent sites, or Favourites. Those are interactive checks in this
 walkthrough, backed by the shipped M8 behavior rather than silently claimed as pixels in the contact
 sheet.

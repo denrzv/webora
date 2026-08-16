@@ -1492,3 +1492,23 @@ threshold, or exclusion. The collector and contact-sheet production remain cardi
 tests pin the current four-frame inventory and order, while the workflow compares the number of
 actual PNGs with the number of tiles it composed. Captions still come only from filenames, and
 diagnostics remain in the separate artifact.
+
+### Expressive evidence is an ordered browser-owned contract (CI-009, pending hosted acceptance)
+
+The M9 journey's canonical inventory is eight chronological frames: native Home and consent;
+rendered Bloom storefront and Happy Days product; storefront restored by browser Back; product
+restored by browser Forward; the native SiteSkin hub; and ordinary `example.com` after exact-origin
+teardown. Zero-padded filenames supply contact-sheet order and captions. JVM tests pin that complete
+inventory while production collection/composition remain cardinality-independent.
+
+Remote accessible text can locate and synchronize a normal web link, but cannot authorize a frame.
+Product/history captures wait for the clickable Happy Days link to disappear or return so persistent
+chrome and stale pixels cannot masquerade as the destination. Acceptance still requires closed
+browser identity/header/dock tags, displayed/enabled browser actions, native hub tag and browser
+section headings, final regular-layer mutual exclusion, and the unchanged full-device ownership,
+rendered-content, and candidate-verdict path.
+
+The implementation and all locally available gates are complete, but CI-009 is not accepted yet:
+two consecutive cold hosted runs of the final commit must publish and pass human inspection of all
+eight frames and their total contact sheet. A managed checkout without a push-capable remote or
+GitHub authentication cannot replace that evidence with compiled instrumentation.

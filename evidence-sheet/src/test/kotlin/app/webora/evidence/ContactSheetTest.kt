@@ -24,22 +24,26 @@ class ContactSheetTest {
 
     @Test fun composesOneTilePerFrameInFilenameOrder() {
         val dir = frames(
-            "03-siteskin-integrated.png",
+            "07-siteskin-hub.png",
             "01-home.png",
-            "04-regular-browsing.png",
+            "05-bloom-storefront-back.png",
+            "03-bloom-storefront.png",
+            "08-regular-browsing.png",
             "02-siteskin-consent.png",
+            "06-happy-days-forward.png",
+            "04-happy-days-product.png",
         )
 
-        assertEquals(4, composeContactSheet(dir))
+        assertEquals(8, composeContactSheet(dir))
 
         val sheet = ImageIO.read(dir.resolve(PREVIEW_FILE_NAME).toFile())
-        assertEquals(expectedSheetWidth(4), sheet.width)
+        assertEquals(expectedSheetWidth(8), sheet.width)
         // Discovery is sorted, not argument- or filesystem-ordered: the tile drawn from the frame
         // whose marker colour is unique to 01- must be the leftmost one.
-        assertEquals(markers.getValue("01-home.png"), tileMarkerColor(sheet, 0))
-        assertEquals(markers.getValue("02-siteskin-consent.png"), tileMarkerColor(sheet, 1))
-        assertEquals(markers.getValue("03-siteskin-integrated.png"), tileMarkerColor(sheet, 2))
-        assertEquals(markers.getValue("04-regular-browsing.png"), tileMarkerColor(sheet, 3))
+        canonicalFrames.forEachIndexed { index, name ->
+            assertEquals(markers.getValue(name), tileMarkerColor(sheet, index))
+            assertTrue("label band $index has no ink", labelInkPixels(sheet, index) > 0)
+        }
     }
 
     /**
@@ -122,7 +126,7 @@ class ContactSheetTest {
      */
     @Test fun refusesAnUndecodablePng() {
         val dir = frames("01-home.png", "02-siteskin-consent.png")
-        dir.resolve("03-siteskin-integrated.png").toFile().writeText("not a PNG at all")
+        dir.resolve("03-bloom-storefront.png").toFile().writeText("not a PNG at all")
 
         val failure = runCatching { composeContactSheet(dir) }.exceptionOrNull()
 
@@ -152,7 +156,7 @@ class ContactSheetTest {
         assertEquals(2, composeContactSheet(dir))
         assertTrue(dir.resolve(PREVIEW_FILE_NAME).toFile().exists())
 
-        dir.resolve("03-siteskin-integrated.png").toFile().writeText("not a PNG at all")
+        dir.resolve("03-bloom-storefront.png").toFile().writeText("not a PNG at all")
         val failure = runCatching { composeContactSheet(dir) }.exceptionOrNull()
 
         assertTrue("expected a failure, got none", failure is ContactSheetFailure)
@@ -203,8 +207,23 @@ class ContactSheetTest {
         "01-home.png" to Color.RED,
         "02-siteskin-consent.png" to Color.GREEN,
         "02-siteskin-consent-renamed.png" to Color.GREEN,
-        "03-siteskin-integrated.png" to Color.BLUE,
-        "04-regular-browsing.png" to Color.MAGENTA,
+        "03-bloom-storefront.png" to Color.BLUE,
+        "04-happy-days-product.png" to Color.MAGENTA,
+        "05-bloom-storefront-back.png" to Color.CYAN,
+        "06-happy-days-forward.png" to Color.ORANGE,
+        "07-siteskin-hub.png" to Color.PINK,
+        "08-regular-browsing.png" to Color.YELLOW,
+    )
+
+    private val canonicalFrames = listOf(
+        "01-home.png",
+        "02-siteskin-consent.png",
+        "03-bloom-storefront.png",
+        "04-happy-days-product.png",
+        "05-bloom-storefront-back.png",
+        "06-happy-days-forward.png",
+        "07-siteskin-hub.png",
+        "08-regular-browsing.png",
     )
 
     private var folderSequence = 0
