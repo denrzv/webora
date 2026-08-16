@@ -2,8 +2,11 @@ package app.webora.browser.browser
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -143,15 +146,12 @@ internal fun BrowserNavigationDock(
         color = MaterialTheme.colorScheme.surfaceVariant,
         contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
         shape = RoundedCornerShape(WeboraRadius.PILL),
-        modifier = modifier.height(WeboraChrome.DOCK_HEIGHT),
+        modifier = modifier.height(WeboraChrome.DOCK_HEIGHT).testTag(BROWSER_NAVIGATION_DOCK_TAG),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            WeboraIconButton(R.drawable.ic_back, stringResource(R.string.back), onBack, enabled = canGoBack)
-            WeboraIconButton(R.drawable.ic_forward, stringResource(R.string.forward), onForward, enabled = canGoForward)
-            WeboraIconButton(R.drawable.ic_reload, stringResource(R.string.reload), onReload, enabled = canReload)
-            WeboraIconButton(R.drawable.ic_home, stringResource(R.string.home), onHome)
-            WeboraIconButton(R.drawable.ic_tabs, stringResource(R.string.tabs), onTabs)
-            WeboraIconButton(R.drawable.ic_more, stringResource(R.string.more), { menuExpanded = true })
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            BrowserNavigationCommands(
+                canGoBack, canGoForward, canReload, onBack, onForward, onReload, onHome, onTabs,
+            ) { menuExpanded = true }
             BrowserOverflowMenu(
                 menuExpanded,
                 { menuExpanded = false },
@@ -162,6 +162,57 @@ internal fun BrowserNavigationDock(
                 onToggleFavourite,
             )
         }
+    }
+}
+
+@Composable
+@Suppress("LongParameterList")
+private fun RowScope.BrowserNavigationCommands(
+    canGoBack: Boolean,
+    canGoForward: Boolean,
+    canReload: Boolean,
+    onBack: () -> Unit,
+    onForward: () -> Unit,
+    onReload: () -> Unit,
+    onHome: () -> Unit,
+    onTabs: () -> Unit,
+    onMore: () -> Unit,
+) {
+    BrowserNavigationSlot("back") {
+        WeboraIconButton(R.drawable.ic_back, stringResource(R.string.back), onBack, enabled = canGoBack)
+    }
+    BrowserNavigationSlot("forward") {
+        WeboraIconButton(
+            R.drawable.ic_forward,
+            stringResource(R.string.forward),
+            onForward,
+            enabled = canGoForward,
+        )
+    }
+    BrowserNavigationSlot("reload") {
+        WeboraIconButton(R.drawable.ic_reload, stringResource(R.string.reload), onReload, enabled = canReload)
+    }
+    BrowserNavigationSlot("home") {
+        WeboraIconButton(R.drawable.ic_home, stringResource(R.string.home), onHome)
+    }
+    BrowserNavigationSlot("tabs") {
+        WeboraIconButton(R.drawable.ic_tabs, stringResource(R.string.tabs), onTabs)
+    }
+    BrowserNavigationSlot("more") {
+        WeboraIconButton(R.drawable.ic_more, stringResource(R.string.more), onMore)
+    }
+}
+
+@Composable
+private fun RowScope.BrowserNavigationSlot(name: String, content: @Composable () -> Unit) {
+    Box(
+        modifier = Modifier
+            .weight(1f)
+            .fillMaxHeight()
+            .testTag("$BROWSER_NAVIGATION_SLOT_TAG_PREFIX$name"),
+        contentAlignment = Alignment.Center,
+    ) {
+        content()
     }
 }
 
@@ -192,6 +243,8 @@ internal fun BrowserNavigationShell(
 }
 
 internal const val BROWSER_NAVIGATION_SHELL_TAG = "browser_navigation_shell"
+internal const val BROWSER_NAVIGATION_DOCK_TAG = "browser_navigation_dock"
+internal const val BROWSER_NAVIGATION_SLOT_TAG_PREFIX = "browser_navigation_slot_"
 
 @Composable
 private fun BrowserOverflowMenu(
