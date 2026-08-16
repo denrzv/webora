@@ -717,6 +717,9 @@ internal fun RegularBrowser(
                 onOpenHub = onOpenSiteHub,
                 onTabs = onTabs,
                 onMore = onOpenSiteHub,
+                brandAsset = brandAsset ?: BrandAsset.Monogram(
+                    brandMonogram(integrated.configuration.site.shortName, integrated.configuration.site.name),
+                ),
             )
         } else {
             BrowserNavigationShell(
