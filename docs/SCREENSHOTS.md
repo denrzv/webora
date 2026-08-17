@@ -1,159 +1,147 @@
 # Android screenshots from GitHub Actions
 
-Webora can exercise the deployed Bloom Flowers integration on a GitHub-hosted Pixel 6 emulator and
-return full-device screenshots without a local Android phone.
+Webora exercises the deployed Bloom Flowers integration on a GitHub-hosted Pixel 6 emulator and
+returns a concise visual showcase without giving up the deeper live-site regression journey.
 
-For the corresponding installed-app journey—including two tabs, a naturally created local browsing
-record, SiteSkin consent, and the return to the retained ordinary tab—see the
-[browser-first walkthrough](WALKTHROUGH.md). The eight frames below prove Home, consent, the
-expressive storefront/product/history/hub story, and ordinary teardown. They do not depict the tab
-switcher, Recent sites, or Favourites.
+The hosted run has two layers:
+
+1. `LiveSiteScreenshotTest` publishes six canonical screenshots for human review.
+2. `LiveSiteNavigationSmokeTest` runs afterwards in the same emulator and exercises product
+   navigation, browser Back/Forward, the native SiteSkin action bouquet and exact-origin teardown.
+   It deliberately publishes no screenshots.
+
+`LiveSiteHostedSuite` owns their order: showcase first, smoke second. A smoke failure therefore makes
+the workflow red without turning the screenshot artifact into a transcript of every diagnostic step.
 
 ## Run it
 
 1. Open the Webora repository on GitHub.
 2. Select **Actions** → **Android screenshots**.
 3. Select **Run workflow**, choose the branch containing the commit to inspect, and confirm.
-4. Open the resulting **Bloom Flowers on Pixel 6 API 33** job. A cold emulator normally takes
-   several minutes; the job has a 40-minute timeout.
-5. Read the job summary: it states the commit, the run id, how many screenshots were captured, and
-   the names of both artifacts.
-6. Under **Artifacts**, download `webora-screenshots-<commit-sha>` and open `preview.png`.
+4. Open **Bloom Flowers on Pixel 6 API 33**. A cold emulator normally takes several minutes; the job
+   has a 40-minute timeout.
+5. Read the job summary for the commit, run id and screenshot count.
+6. Download `webora-screenshots-<commit-sha>` and open `preview.png` first.
 
-## Two artifacts, and which one you want
+## Canonical six-frame showcase
 
-`DEVX-002` split the evidence in two. The one you normally want contains nothing but images.
-
-**`webora-screenshots-<commit-sha>`** — for looking at:
+The screenshots artifact contains only the contact sheet plus these full-resolution frames:
 
 | File | Expected evidence |
 |---|---|
-| `preview.png` | Every canonical frame in journey order on one sheet, each tile captioned with its own filename. Open this first. |
-| `01-home.png` | Fresh Webora Home after onboarding, including Bloom Flowers. |
-| `02-siteskin-consent.png` | Exact `https://denrzv.github.io` consent identity and the attributed manifest preview. |
-| `03-bloom-storefront.png` | Live expressive Bloom storefront inside the browser-owned identity/header and fixed dock. |
-| `04-happy-days-product.png` | Happy Days product detail reached as a normal same-origin WebView route, with integrated chrome retained. |
-| `05-bloom-storefront-back.png` | Storefront restored through the displayed, enabled browser-owned Back dock command. |
-| `06-happy-days-forward.png` | Product detail restored through the displayed, enabled browser-owned Forward dock command. |
-| `07-siteskin-hub.png` | Native SiteSkin hub with separate browser-authored Site navigation and Webora controls sections. |
-| `08-regular-browsing.png` | Stable ordinary HTTPS page after leaving Bloom, with Webora's regular security identity/navigation and no SiteSkin chrome. |
+| `preview.png` | All six canonical frames in filename order, each captioned with its own filename. |
+| `01-home.png` | Native Webora Home before entering the reference integration. |
+| `02-siteskin-consent.png` | Explicit consent for the complete `https://denrzv.github.io` origin. |
+| `03-bloom-storefront.png` | Live Bloom storefront inside integrated browser-owned identity/header/dock chrome. |
+| `04-bloom-actions.png` | The central branded flower/action control opened, with Home, Catalog, Cart, Profile and Call visible as native SiteSkin actions. |
+| `05-bloom-profile.png` | Profile selected from the action bouquet and the Bloom Account page rendered while integrated chrome remains active. |
+| `06-google-regular.png` | Ordinary Google browsing under regular Webora security/navigation chrome, with every SiteSkin layer absent. |
 
-The PNGs sit at the archive root at full capture resolution. `preview.png` is a convenience for
-judging the journey at a glance, never a replacement for them — anything worth disputing should be
-checked against the full-resolution frame.
+The Google frame is deliberately judged only through browser-owned state. The test enters
+`https://www.google.com/ncr`, requires Webora's secure `google.com` identity and regular navigation
+shell, and requires integrated SiteSkin chrome to be absent. Google page text, layout, locale,
+consent UI and other remote content never authorize the frame.
 
-**`webora-screenshot-diagnostics-<commit-sha>`** — for when something went wrong:
+Every WebView frame still passes the existing full-device ownership and rendered-page guards. The
+native SiteSkin action bouquet is excluded from the rendered-page pixel threshold, so opening the
+browser-owned overlay cannot make a blank WebView pass.
+
+## Deep navigation smoke coverage
+
+After the six screenshots have been captured, `LiveSiteNavigationSmokeTest` starts from browser-owned
+Home and reopens the deployed Bloom integration. Consent may already be persisted from the showcase;
+the smoke accepts the dialog only when it is actually present.
+
+The smoke then verifies, without writing screenshot files:
+
+- the below-fold clickable `Happy Days` storefront link can be reached by bounded user-equivalent
+  scrolling;
+- the Happy Days product route opens under integrated chrome;
+- displayed/enabled browser-owned Back restores the storefront;
+- displayed/enabled browser-owned Forward restores the product route;
+- the central brand control opens the native action bouquet and exposes Home, Catalog, Cart, Profile
+  and Call;
+- browser-owned navigation can return the active tab to native Webora Home;
+- ordinary `example.com` browsing restores regular security/navigation chrome and removes all
+  SiteSkin layers.
+
+This split is intentional: the screenshots tell the product story, while the smoke test keeps the
+more diagnostic history/mode-transition regression coverage that previously required extra frames.
+
+## Evidence and diagnostics artifacts
+
+`webora-screenshots-<commit-sha>` is for visual review. It contains only `preview.png` and the six
+full-resolution frames.
+
+`webora-screenshot-diagnostics-<commit-sha>` is for investigation. Important entries include:
 
 | File | Contents |
 |---|---|
-| `artifacts/run.txt` | The commit and run id the evidence belongs to. |
-| `artifacts/instrumentation.txt` | Focused connected-test output. |
-| `artifacts/logcat.txt` | Emulator logcat for diagnosing WebView, network, crash or ANR failures. |
+| `artifacts/run.txt` | Commit and workflow run id. |
+| `artifacts/instrumentation.txt` | Output for the complete hosted suite: showcase plus smoke. |
+| `artifacts/logcat.txt` | Emulator logcat for WebView/network/crash/ANR diagnosis. |
 | `artifacts/result.txt` | Instrumentation exit status and number of PNGs collected. |
-| `artifacts/prebuilt-apks.txt` | The two APKs the emulator step found already built, with their sizes. |
-| `artifacts/readiness.txt` | Every readiness sample taken after boot, with its verdict and when it settled. |
-| `…/diagnostics/focus-01-home.txt` etc. | The `mCurrentFocus` lines behind each successful capture, including frame 08. |
-| `…/diagnostics/interference-*.txt` | Present only if a System UI dialog was cleared: what it was, and what was pressed. |
-| `…/diagnostics/window-*.txt` | Present only on a refused capture: the whole `dumpsys window` output at that moment. |
-| `androidTest-results/`, `reports/androidTests/` | The test runner's own XML and HTML. |
+| `artifacts/prebuilt-apks.txt` | Prebuilt app/test APK paths and sizes. |
+| `artifacts/readiness.txt` | Every emulator readiness sample and the settle verdict. |
+| `…/diagnostics/focus-*.txt` | Focus evidence behind each successful screenshot. |
+| `…/diagnostics/rendered-*.txt` | Rendered-page measurements, written on success as well as refusal. |
+| `…/diagnostics/interference-*.txt` | Recorded System UI ANR dismissal, when the narrow allow-list applies. |
+| `…/diagnostics/window-*.txt` | Full window state for a refused capture. |
+| `androidTest-results/`, `reports/androidTests/` | Android test runner XML/HTML, including smoke failures. |
 
-The `diagnostics/` files are written through Android test storage, so they arrive under
-`connected_android_test_additional_output/` rather than beside the other diagnostics.
+Missing diagnostics fail artifact upload; missing screenshots only warn so that a run which dies before
+its first frame can still publish the information needed to understand why.
 
-The two upload steps are deliberately not symmetrical. Missing diagnostics fail the run
-(`if-no-files-found: error`); missing screenshots only warn. A run that dies before capturing
-anything is the run someone most needs to read, and it must not also fail on having no pictures to
-publish.
+## Contact-sheet integrity
 
-**The contact sheet must account for every frame.** The composer is total or it throws — an
-unreadable frame is never skipped — and the workflow then compares the number of tiles it drew
-against the number of screenshots the run collected. A disagreement fails the run instead of
-publishing the sheet, because a sheet one tile short still reads as a complete journey to whoever
-opens it. Tile captions come only from the frame's own filename: nothing from the page under test or
-its manifest can caption Webora's own evidence.
+The composer is total or it throws. It never silently skips an unreadable PNG, and an existing stale
+`preview.png` is not treated as an input frame. The workflow compares the actual PNG count with the
+number of tiles the composer reports and refuses publication when they disagree.
 
-The workflow runs only when manually requested. It does not consume private-repository Actions
-minutes on every push, does not publish screenshots as a Release, and retains both artifacts for
-seven days.
+For the current canonical story a complete accepted run therefore reports:
 
-## What the pipeline may clear off the screen, and what it never touches
+```text
+test_status=0
+png_count=6
+```
 
-A screenshot is supposed to show what a person would see. The first green run showed something
-else: three frames covered by Android's `System UI isn't responding` dialog, with every semantic
-assertion passing underneath. `CI-002` fixed the cause and then made the contaminated frame
-impossible to publish.
+and the composer reports:
 
-- **The cause.** Both APKs are now built in an ordinary workflow step *before* the emulator starts.
-  Previously the emulator booted and then sat through an 8½-minute Gradle build on the same 4-vCPU
-  runner; ANR timers are wall-clock, so System UI was starved into one. `android-screenshot-ci.sh`
-  refuses to run if either APK is missing, so that build cannot quietly move back inside.
-- **Readiness.** `sys.boot_completed=1` means the boot broadcast fired, not that the device is worth
-  photographing. `scripts/android-emulator-ready.sh` polls four conditions — boot broadcast, boot
-  animation not running, PackageManager answering, something owning the display — and requires them
-  on three consecutive samples under a deadline. Every sample lands in `readiness.txt`. This is not
-  belt-and-braces: in run `31513527146` the first sample was ready, the next three read
-  `mCurrentFocus=null`, and the device only settled 33 seconds in. One sample, or a short fixed
-  `sleep`, would have started the journey while nothing owned the display.
-- **The one dismissal.** Before each capture the test reads the focused window and refuses to
-  photograph anything Webora does not own. Exactly one obstruction may be cleared:
-  `Application Not Responding: com.android.systemui`, by pressing `Wait`, at most twice, and it is
-  recorded in `diagnostics/interference-*.txt` when it happens.
-- **What is never dismissed.** A Webora crash dialog, a Webora ANR, a System UI *crash*, an ANR in
-  any other process, a permission prompt, or any window nobody could identify. Each of those fails
-  the run with the observed window. The allow-list is one process name in
-  `ScreenEvidencePolicy.DISMISSABLE_ANR_PROCESS`, and `ScreenEvidencePolicyTest` turns red if it is
-  widened — a generic "close whatever is on top" loop would clear a Webora failure and photograph
-  the screen behind it, which is precisely the outcome these screenshots exist to detect.
+```text
+tiles=6
+```
+
+A green six-frame contact sheet alone is not sufficient: `test_status=0` also means the separate
+navigation smoke test completed successfully.
+
+## Emulator and capture safety
+
+Both APKs are built before the emulator launches. `scripts/android-screenshot-ci.sh` refuses to run
+when either prebuilt APK is missing, preventing Gradle compilation from moving back into the live
+emulator window and recreating the host-contention failure that originally produced System UI ANRs.
+
+`sys.boot_completed=1` is not sufficient readiness. `scripts/android-emulator-ready.sh` also checks
+boot animation, PackageManager, focused-window ownership and aggregate guest CPU quietness, requiring
+three consecutive ready samples. Every sample is stored in `artifacts/readiness.txt`.
+
+Before every frame, `ScreenEvidenceGuard` requires Webora to own the focused screen. Its only narrowly
+allowed interference action is waiting through a System UI ANR; Webora crashes/ANRs, System UI crashes,
+permission prompts and unknown foreground windows fail closed and preserve diagnostics instead of
+being dismissed for the sake of a green screenshot.
+
+Every WebView screenshot also requires measured page pixels in the renderer rectangle. Browser-owned
+overlays inside that rectangle are excluded from the measurement so chrome cannot make an empty page
+look rendered.
 
 ## What a failure means
 
-This is deliberately a live integration test. It uses the compiled Home suggestion and Webora's
-ordinary HTTPS manifest discovery; it does not substitute fixture JSON. A failure can therefore mean
-the selected app commit regressed, the GitHub-hosted emulator failed, or `https://denrzv.github.io`
-or its `/.well-known/siteskin.json` was temporarily unavailable. Check `instrumentation.txt` first,
-then `logcat.txt`, and retry once if the evidence is clearly a transient network/emulator failure.
+This remains a live cross-repository integration test. A red run can mean the selected Webora commit
+regressed, the deployed Bloom reference site changed, Google/example.com could not be reached, or the
+hosted emulator itself failed. Read `artifacts/instrumentation.txt` first, then readiness/logcat and the
+frame-specific diagnostics.
 
-The eighth frame continues from the proven Bloom integration through browser-owned Back/address UI
-to the IANA-reserved `https://example.com` origin. Its acceptance never depends on that page's title,
-copy, colours, or layout: Webora must expose its browser-authored `example.com` security identity and
-regular navigation shell, every SiteSkin layer must be absent, and the unchanged rendered/ownership
-guard must accept the page region. The workflow and composer count actual frames dynamically; a
-complete current journey therefore reports eight screenshots and eight contact-sheet tiles.
+A failure after six screenshots may be a **smoke-test failure**, not a visual-capture failure. That is
+expected under the split: the six showcase frames are retained for review, while the overall workflow
+stays red because deeper product/history/handoff behavior did not satisfy its contract.
 
-Since `CI-002` there are three more shapes of red, and each names itself:
-
-| Failure | Where to look | What it means |
-|---|---|---|
-| `MISSING prebuilt APK` | `prebuilt-apks.txt` | The pre-build step regressed. Do not "fix" it by building inside the emulator step; that is the contention this ticket removed. |
-| `The emulator never settled` | `readiness.txt` | Every sample and its verdict is there. A run of `package-manager-silent` is a slow runner; `no-focused-window` throughout is a device that never presented anything. |
-| `Refusing to capture <frame>` | `diagnostics/window-<frame>.txt` | Something Webora does not own was on screen. The message names it. If it is a Webora crash or ANR, that is the product failing and the screenshot job is doing its job. |
-| `Refusing to capture <frame>: the page region never rendered` | `diagnostics/rendered-<frame>.txt` | `CI-003`. The screen was Webora's, and the page area had nothing drawn in it. Every sample is recorded with its differing fraction, modal colour and elapsed time — a run of near-zero fractions is a page that never started drawing, a rising series is one that ran out of time. |
-
-**`rendered-<frame>.txt` is written on success too**, carrying the fraction that passed and how long
-it took. A passing check that records nothing cannot be told apart from one that barely passed for
-the wrong reason, which is exactly how a blank frame survived run 10: browser-owned chrome inside the
-measured region cleared the threshold and there was no measurement to notice it by.
-
-Screenshots are written through AndroidX `PlatformTestStorage`, so the Android Gradle Plugin copies
-them from the device into its connected-test additional-output directory before test teardown removes
-app-specific storage. The CI helper then copies the three PNGs into `review/`, which becomes the
-screenshots artifact. Diagnostics stage separately in `artifacts/`; the two directories share no
-ancestor, so neither can leak into the other through an upload path expression.
-
-The job fails if no PNG is collected, even when Gradle happened to return success. It uploads
-whatever diagnostics exist with `if: always()`, so a red job should still have a diagnostics artifact
-unless the runner failed before artifact upload itself.
-
-**A stale artifact looks exactly like a current one.** Artifact names carry the commit SHA for
-precisely this reason: `webora-screenshots-<sha>` is evidence about *that* commit and nothing else.
-Before concluding that a defect is still present, check the SHA on the artifact you opened against
-the commit you mean to judge — the archive keeps seven days of runs, and the older ones predate
-whatever has been fixed since.
-
-## Why this uses the debug APK
-
-The screenshot journey needs instrumentation and the SiteSkin Integration Inspector is useful for
-diagnosis. It therefore installs the repository's pinned-debug-key `app.webora.browser.debug` build,
-not the separately signed production release variant and not the cleartext-enabled `debugRelease`
-local-testing variant. The user-visible SiteSkin, consent, HTTPS and origin-boundary paths remain the
-production implementations.
+Artifacts are evidence for exactly the commit SHA in their name and are retained for seven days.
