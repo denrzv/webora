@@ -3,6 +3,7 @@ package app.webora.browser.browser
 import androidx.compose.ui.graphics.Color
 import app.webora.browser.design.WeboraColorScheme
 import app.webora.browser.design.WeboraColors
+import app.webora.browser.design.materialColorScheme
 import java.io.File
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
@@ -122,10 +123,23 @@ class TabSwitcherContractTest {
         assertTrue(TAB_SELECT_TAG == "select_tab_")
         assertTrue(TAB_CLOSE_TAG == "close_tab_")
 
+        // Assert the *application*, not the constant. `BrowserTabSummary.kt` declares all four in
+        // that same file, so `source.contains(TAB_SELECT_TAG)` is satisfied by the declaration and
+        // would pass over a switcher that had dropped both row tags entirely.
         val source = switcher()
-        listOf("testTag(TAB_LIST_TAG)", "testTag(NEW_TAB_TAG)", TAB_SELECT_TAG, TAB_CLOSE_TAG).forEach { tag ->
-            assertTrue("$tag must still be applied in the switcher", source.contains(tag))
+        val applications = listOf(
+            "testTag(TAB_LIST_TAG)",
+            "testTag(NEW_TAB_TAG)",
+            """testTag("${'$'}TAB_SELECT_TAG${'$'}{summary.id}")""",
+            """testTag("${'$'}TAB_CLOSE_TAG${'$'}{summary.id}")""",
+        )
+        applications.forEach { application ->
+            assertTrue("$application must still be applied in the switcher", source.contains(application))
         }
+        assertFalse(
+            "negative control: a bare declaration must not satisfy the application check",
+            applications.all { """const val TAB_SELECT_TAG = "select_tab_"""".contains(it) },
+        )
     }
 
     @Test
@@ -175,11 +189,24 @@ class TabSwitcherContractTest {
         relative,
     )
 
-    /** The four role reads `TabRow` performs, named once so the test and the surface cannot drift. */
-    private fun WeboraColorScheme.selectedContainer(): Color = primary
-    private fun WeboraColorScheme.selectedContent(): Color = onPrimary
-    private fun WeboraColorScheme.unselectedContainer(): Color = chrome
-    private fun WeboraColorScheme.unselectedContent(): Color = ink
+    /**
+     * The four role reads `TabRow` performs — **through the same mapping the composable reads.**
+     *
+     * The first version of these named Webora roles (`primary`, `chrome`) while the surface names
+     * Material roles off `MaterialTheme.colorScheme`, with `materialColorScheme` the mapping between
+     * them and nothing consulting it. A helper whose doc comment claims the code cannot drift, over
+     * code that can, is the `WeboraIconButton` KDoc hole in a different file.
+     *
+     * The regression that separates the two versions is a remap of Material's own role, not of the
+     * Webora one: setting `primary = scheme.chrome` in `materialColorScheme` makes the selected row's
+     * container equal to the unselected row's in **both** projections. Run as a control — the fixed
+     * helpers fail, the original helpers pass, because `WeboraColorScheme.primary` still differs from
+     * `chrome` no matter what Material's `primary` was pointed at.
+     */
+    private fun WeboraColorScheme.selectedContainer(): Color = materialColorScheme(this).primary
+    private fun WeboraColorScheme.selectedContent(): Color = materialColorScheme(this).onPrimary
+    private fun WeboraColorScheme.unselectedContainer(): Color = materialColorScheme(this).surfaceVariant
+    private fun WeboraColorScheme.unselectedContent(): Color = materialColorScheme(this).onSurface
 
     private companion object {
         const val SOURCE_ROOT_PROPERTY = "webora.app.src"
