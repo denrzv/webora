@@ -95,9 +95,13 @@ class ExpressiveBloomJourneyContractTest {
         val SHOWCASE_MARKERS = listOf(
             "SITESKIN_DOCK_HUB_TAG",
             "SITESKIN_ACTION_BOUQUET_TAG",
-            "SITESKIN_ACTION_TAG_PREFIX",
+            // `CI-009`'s #110 moved the tag prefix behind `BloomReferenceContract`, and this list
+            // still required the literal it replaced — so `main` was red before `BROWSE-010` began.
+            // The markers follow the mechanism rather than the spelling: the showcase must still
+            // address site actions by tag, and must still select the profile action specifically.
+            "BloomReferenceContract.actionTag(",
             "PROFILE_PAGE_HEADING = \"Account\"",
-            "${'$'}{SITESKIN_ACTION_TAG_PREFIX}profile",
+            "BloomReferenceContract.PROFILE_ACTION_ID",
             "REGULAR_ADDRESS = \"https://www.google.com/ncr\"",
             "REGULAR_DOMAIN = \"google.com\"",
             "EXPRESSIVE_HEADER_TAG).assertDoesNotExist()",

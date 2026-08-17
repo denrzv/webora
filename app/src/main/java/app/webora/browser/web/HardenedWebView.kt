@@ -6,6 +6,7 @@ import android.webkit.WebChromeClient
 import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
@@ -23,6 +24,7 @@ import app.webora.browser.browser.ExternalNavigation
 @Composable
 internal fun HardenedWebView(
     initialUrl: String,
+    isLoading: Boolean,
     controller: BrowserWebViewController,
     onEvent: (WebViewEvent) -> Unit,
     onExternalNavigation: (ExternalNavigation) -> Unit,
@@ -43,27 +45,18 @@ internal fun HardenedWebView(
             val owner = controller.tabId
             (existing ?: WebView(context)).apply {
                 if (existing == null) applyWebViewHardening(this)
-                webViewClient = HardenedWebViewClient(
-                    onPageStarted = { view, url ->
-                        currentObserver.value(WebViewEvent.PageStarted(owner, view.toObservation(url, true)))
-                    },
-                    onPageChanged = { view, url, isLoading ->
-                        currentObserver.value(WebViewEvent.PageChanged(owner, view.toObservation(url, isLoading)))
-                    },
-                    onMainFrameCompleted = { view, url, title ->
-                        currentObserver.value(
-                            WebViewEvent.MainFrameCompleted(owner, view.toObservation(url, false), title),
-                        )
-                    },
-                    onMainFrameFailed = { url, kind ->
-                        currentObserver.value(WebViewEvent.MainFrameFailed(owner, url, kind))
-                    },
-                    onExternalNavigation = onExternalNavigation,
-                )
+                webViewClient = reportingClient(controller, owner, currentObserver, onExternalNavigation)
                 webChromeClient = UploadWebChromeClient(onFileChooser)
                 setDownloadListener { url, _, _, _, _ -> url?.let(onDownload) }
                 controller.attach(this)
-                if (existing == null) loadUrl(initialUrl)
+                when (val action = rendererMountAction(controller.hostedUrl, initialUrl, isLoading)) {
+                    is RendererMountAction.Load -> controller.navigate(action.url)
+                    RendererMountAction.Settle ->
+                        currentObserver.value(
+                            WebViewEvent.PageChanged(owner, toObservation(initialUrl, false)),
+                        )
+                    RendererMountAction.Ready -> Unit
+                }
             }
         },
     )
@@ -73,6 +66,42 @@ internal fun HardenedWebView(
         onDispose(controller::detachFromParent)
     }
 }
+
+/**
+ * The renderer's client, reporting every observation twice: to the tab's event stream, and to the
+ * controller as the URL this renderer is now known to be on.
+ *
+ * `controller.observed` sits beside each report and **never inside `onMainFrameFailed`**. A failed
+ * navigation leaves the browser's last request standing, which is what keeps an error tab from
+ * re-issuing the failing load every time it is selected again — `BROWSE-009`'s acceptance criterion
+ * 2, reachable here because `BROWSE-010` gave the mount a reason to compare.
+ *
+ * `owner` is passed in rather than read from the controller per callback: the same value today, and
+ * an invitation to make it dynamic tomorrow, which is the shape `BROWSE-009`'s defect had.
+ */
+private fun reportingClient(
+    controller: BrowserWebViewController,
+    owner: Long,
+    observer: State<(WebViewEvent) -> Unit>,
+    onExternalNavigation: (ExternalNavigation) -> Unit,
+): HardenedWebViewClient = HardenedWebViewClient(
+    onPageStarted = { view, url ->
+        controller.observed(url)
+        observer.value(WebViewEvent.PageStarted(owner, view.toObservation(url, true)))
+    },
+    onPageChanged = { view, url, loading ->
+        controller.observed(url)
+        observer.value(WebViewEvent.PageChanged(owner, view.toObservation(url, loading)))
+    },
+    onMainFrameCompleted = { view, url, title ->
+        controller.observed(url)
+        observer.value(WebViewEvent.MainFrameCompleted(owner, view.toObservation(url, false), title))
+    },
+    onMainFrameFailed = { url, kind ->
+        observer.value(WebViewEvent.MainFrameFailed(owner, url, kind))
+    },
+    onExternalNavigation = onExternalNavigation,
+)
 
 private class UploadWebChromeClient(
     private val requestFile: (String, (String?) -> Unit) -> Unit,

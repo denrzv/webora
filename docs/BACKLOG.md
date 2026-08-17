@@ -1012,3 +1012,46 @@ happens when a change is justified by reasoning and then blessed by a run that n
 - Page → Home → new address renders the new address, with loading terminating.
 - Tab switching still performs no reload; the instrumented isolation cases stay green.
 - `bash scripts/pre-commit-check.sh` passes.
+
+---
+
+### `BROWSE-011` — Back after a Home round trip reaches a page the tab forgot
+
+**Priority:** P2
+**Depends on:** `BROWSE-008`, `BROWSE-010`
+**Goal:** decide whether returning a tab to Home makes the next navigation a history root, and make
+the renderer's back stack and `BROWSE-008`'s Back ordering agree either way.
+
+**Found by:** `BROWSE-010`'s research, while answering that ticket's own criterion 6. Recorded here
+rather than fixed there, deliberately.
+
+**The disagreement.** `WebView.loadUrl` appends to the renderer's back stack. After X → Home → Y the
+renderer holds `[X, Y]`, while `onHome` reset the tab to `BrowserState()` so its browser state knows
+only Y. `BROWSE-008` orders Back as *live renderer history → native Home → platform exit*, and the
+renderer reports `canGoBack = true`, so Back from Y reaches X — a page the user cleared by going
+Home. In a conventional browser Home is the new-tab page and Back from the first navigation returns
+to it.
+
+**Why `BROWSE-010` did not change it.** Three reasons, all of which still hold:
+
+1. **It was unreachable, and `BROWSE-010` did not make it worse.** Y never loaded at all, so there
+   was no "Back from Y". That fix *exposes* a pre-existing disagreement between renderer history and
+   `BROWSE-008`'s ordering; it does not create one.
+2. **Every remedy is device-verifiable only.** `WebView.clearHistory()` is documented to be
+   unreliable until the current page has committed, so an implementation needs a "clear after the
+   next commit" state machine whose correctness is a framework-timing fact no JVM gate can settle.
+   `NET-004` records what happens when a change is justified by reasoning and then blessed by a run
+   that never exercised it.
+3. **It is a navigation-contract decision.** Whether Home is a history root belongs beside
+   `BROWSE-008`'s ordering and its existing instrumented Back cases, not in the renderer host.
+
+**Scope**
+- Decide explicitly: Home is a history root, or renderer history legitimately outlives a Home visit.
+- If it is a root, implement the reset where the Back contract lives, not by destroying the renderer
+  — `BROWSE-006` retains it for live history across tab switches.
+- Extend the instrumented Back cases to cover X → Home → Y → Back, on a device.
+
+**Acceptance**
+- The chosen contract is written down with its reasoning, and Back after a Home round trip matches it.
+- Tab switching still performs no reload and loses no live history.
+- `bash scripts/pre-commit-check.sh` passes.

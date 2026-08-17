@@ -721,6 +721,7 @@ internal fun RegularBrowser(
             key(controller.tabId) {
                 HardenedWebView(
                     initialUrl = state.displayedUrl,
+                    isLoading = state.isLoading,
                     controller = controller,
                     onEvent = onRendererEvent,
                     onExternalNavigation = onExternalNavigation,
