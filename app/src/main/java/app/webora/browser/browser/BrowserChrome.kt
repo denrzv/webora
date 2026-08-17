@@ -102,16 +102,7 @@ private fun AddressPill(value: String, onValueChange: (String) -> Unit, onSubmit
 @Composable
 internal fun BrowserSecurityIdentity(security: SecurityPresentation) {
     val secure = security.transportSecurity == TransportSecurity.SECURE
-    // Exhaustive with no `else`, so a fifth transport state is a compile error here rather than a
-    // silent fall-through to whichever label the `else` happened to name.
-    val transport = stringResource(
-        when (security.transportSecurity) {
-            TransportSecurity.SECURE -> R.string.security_secure
-            TransportSecurity.NOT_SECURE -> R.string.security_not_secure
-            TransportSecurity.UNKNOWN -> R.string.security_unknown
-            TransportSecurity.TLS_ERROR -> R.string.security_tls_error
-        },
-    )
+    val transport = transportLabel(security.transportSecurity)
     val description = stringResource(R.string.security_description, transport, security.registrableDomain)
     Surface(
         color = MaterialTheme.colorScheme.primaryContainer,

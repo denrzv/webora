@@ -11,6 +11,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertWidthIsAtLeast
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertWidthIsEqualTo
@@ -73,7 +74,7 @@ class SiteSkinTopBarTest {
         assertEquals(1, backCount)
     }
 
-    @Test fun compactLargeTextKeepsOwnedBrandIdentityAndBackSeparate() {
+    @Test fun compactLargeTextKeepsBrowserIdentityInsideTheBrandRow() {
         listOf(false to false, true to false, true to true).forEach { (darkTheme, reducedMotion) ->
             compose.setContent {
                 val density = LocalDensity.current
@@ -106,7 +107,11 @@ class SiteSkinTopBarTest {
                     "it: $fixture $identity",
                 identity.right <= fixture.right,
             )
-            assertTrue("identity must have width at 200% font scale: $identity", identity.width > 0f)
+            // A real floor, not `> 0f`: that passed on a chip showing one character and an
+            // ellipsis, which is close to the bare-shield layout this ticket deliberately rejected.
+            // 160 dp is what the chip resolves to here (cap-bound, with 164 dp available), so 140
+            // leaves margin while failing if the cap or the row budget is meaningfully shrunk.
+            compose.onNodeWithTag(SITESKIN_SECURITY_TAG).assertWidthIsAtLeast(SECURITY_CHIP_FLOOR)
         }
     }
 
@@ -148,6 +153,8 @@ class SiteSkinTopBarTest {
         presentation: ExpressiveSiteSkinPresentation = presentation(false, false),
         transport: TransportSecurity = TransportSecurity.SECURE,
     ) = SiteSkinTopBar(model(asset, transport), presentation, canGoBack, onBack)
+
+    private val SECURITY_CHIP_FLOOR = 140.dp
 
     private fun presentation(darkTheme: Boolean, reducedMotion: Boolean) =
         ExpressiveSiteSkinPresentation.from(CONFIGURATION, darkTheme, reducedMotion)

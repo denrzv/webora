@@ -1055,3 +1055,40 @@ to it.
 - The chosen contract is written down with its reasoning, and Back after a Home round trip matches it.
 - Tab switching still performs no reload and loses no live history.
 - `bash scripts/pre-commit-check.sh` passes.
+
+---
+
+### `UX-023` — The integrated brand row cannot hold four things at 200% font scale
+
+**Priority:** P2
+**Depends on:** `UX-021`
+**Goal:** make the integrated header responsive, so browser identity and the site's title both
+survive large font scale instead of one starving the other.
+
+**Found by:** `UX-021`'s review, which proposed raising `SECURITY_CHIP_MAX_WIDTH` so a typical
+registrable domain survives 200% scale. Measuring the row showed the cap is not the binding
+constraint, so the finding's *symptom* was real and its *fix* was not.
+
+**The arithmetic.** On a 320 dp host the brand row has 280 dp after the 20 dp expressive gutters. Back
+(48), the logo (40) and three gaps (28) take 116, leaving **164 dp for the title and the trust chip
+together**. `example.co.uk` in the chip needs about 117 dp at 100% scale — under the 160 dp cap, so
+the cap never binds — and about 198 dp at 200%, where available width binds at 164 first. Raising the
+cap to 200 dp therefore widens the chip by 4 dp and takes the title from 4 dp to 0.
+
+So the cap is inert at both ends of the scale, and tuning it trades the site's name for roughly one
+more character of domain. One row cannot hold Back, a logo, a manifest-supplied title and a full
+domain at 200%; that is a layout problem, not a constant.
+
+**Scope**
+- Decide what the integrated header does at large font scale: wrap the identity chip to its own row,
+  drop the subtitle first, or reduce the logo slot — browser identity may never be what yields.
+- Keep `ADR-006`'s guarantee that the registrable domain is *visible*, not merely announced; a
+  truncation to a few characters is closer to the bare-shield layout `UX-021` rejected.
+- Keep the ordering guarantee: the chip is declared after the weighted title and carries no weight,
+  so a manifest cannot push it out of the header.
+
+**Acceptance**
+- At 200% font scale on a 320 dp host, a 13-character registrable domain renders without ellipsis and
+  the title is still present.
+- The instrumented floor from `UX-021` survives or is raised, never lowered.
+- `bash scripts/pre-commit-check.sh` passes.

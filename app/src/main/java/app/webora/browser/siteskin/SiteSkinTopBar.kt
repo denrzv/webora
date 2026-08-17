@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.sp
 import app.webora.browser.R
 import app.webora.browser.browser.SecurityPresentation
 import app.webora.browser.browser.TransportSecurity
+import app.webora.browser.browser.transportLabel
 import app.webora.browser.browser.WeboraIconButton
 import app.webora.browser.design.WeboraColors
 import app.webora.browser.design.WeboraRadius
@@ -150,24 +151,6 @@ private fun BrandLogo(asset: BrandAsset, colors: SiteSkinColorScheme) {
  * The glyph and the domain both carry the state, so meaning never rests on colour alone, and the
  * `when` is exhaustive so a fifth transport state is a compile error rather than a silent neutral.
  */
-/**
- * The browser-authored word for each transport state.
- *
- * Exhaustive with no `else`, so a fifth state is a compile error rather than a silent fall-through
- * to whichever label the `else` happened to name — on a surface where the wrong label is a false
- * security claim. The same four strings serve regular chrome, so one guarantee cannot be worded two
- * ways depending on which mode the user is in.
- */
-@Composable
-private fun transportLabel(transport: TransportSecurity): String = stringResource(
-    when (transport) {
-        TransportSecurity.SECURE -> R.string.security_secure
-        TransportSecurity.NOT_SECURE -> R.string.security_not_secure
-        TransportSecurity.UNKNOWN -> R.string.security_unknown
-        TransportSecurity.TLS_ERROR -> R.string.security_tls_error
-    },
-)
-
 @Composable
 private fun SiteSkinSecurityChip(security: SecurityPresentation) {
     val secure = security.transportSecurity == TransportSecurity.SECURE
@@ -226,5 +209,19 @@ private val SECURITY_SHIELD_SIZE = 16.dp
  * Bounds the chip so a long registrable domain cannot consume the row it shares with the title.
  * The domain ellipsizes inside this; the shield never does, because it is laid out first within the
  * chip and the chip is laid out before the title yields.
+ *
+ * **This number is not what truncates the domain at large font scale, and raising it does not fix
+ * that.** `UX-021`'s review proposed raising it so a typical domain survives 200% scale; measuring
+ * the row shows the cap is not the binding constraint at either end of the scale. On a 320 dp host
+ * the brand row has 280 dp, of which Back, the logo and three gaps take 116 — leaving 164 dp for the
+ * title and this chip together. At 100% scale `example.co.uk` needs about 117 dp including the
+ * shield and padding, so the cap never binds. At 200% it needs about 198 dp, so *available width*
+ * binds at 164 first. Raising the cap to 200 dp therefore widens the chip by 4 dp and takes the
+ * title from 4 dp to 0 — trading the site's name away for roughly one more character of domain.
+ *
+ * The real constraint is that one row cannot hold Back, a logo, a manifest title and a full domain
+ * at 200% scale. That is a responsive-layout problem, recorded as `UX-023`, not a constant to tune.
+ * What the review was right about is that the old `width > 0f` assertion could not tell a chip
+ * showing one character from a healthy one; the instrumented floor now can.
  */
 private val SECURITY_CHIP_MAX_WIDTH = 160.dp

@@ -2,6 +2,7 @@ package app.webora.browser.browser
 
 import app.webora.browser.design.WeboraChrome
 import java.io.File
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -70,6 +71,31 @@ class BrowserChromeContractTest {
         assertFalse(dock.contains("NavigationItem"))
         assertFalse(dock.contains("configuration"))
     }
+
+    @Test
+    fun `the transport label mapping has one owner`() {
+        // UX-021 shipped this `when` twice, verbatim, in regular chrome and the integrated chip,
+        // while its own documentation claimed one guarantee could not be worded two ways. Sharing
+        // the four strings was never enough: a fifth state produced two compile errors that could
+        // be resolved differently, and a re-pointed branch drifted with nothing failing. Assert the
+        // mechanism — exactly one file maps the enum to resources.
+        val owners = listOf(
+            "app/webora/browser/browser/TransportLabel.kt",
+            "app/webora/browser/browser/BrowserChrome.kt",
+            "app/webora/browser/siteskin/SiteSkinTopBar.kt",
+        ).filter { mapsTransport(source(it).readText()) }
+
+        assertEquals(listOf("app/webora/browser/browser/TransportLabel.kt"), owners)
+        assertTrue(
+            "negative control: a second inline mapping must be detected",
+            mapsTransport("when (t) { TransportSecurity.SECURE -> R.string.security_secure }"),
+        )
+    }
+
+    private fun mapsTransport(source: String): Boolean =
+        source.lines()
+            .filterNot { it.trimStart().startsWith("*") || it.trimStart().startsWith("//") }
+            .any { it.contains("TransportSecurity.SECURE ->") }
 
     private fun hasSeparateIdentity(source: String): Boolean =
         source.contains("BasicTextField(") &&
