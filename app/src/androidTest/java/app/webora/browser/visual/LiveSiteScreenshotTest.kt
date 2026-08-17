@@ -30,7 +30,6 @@ import app.webora.browser.inspector.BrandAssetTrace
 import app.webora.browser.inspector.inspectorRecorder
 import app.webora.browser.siteskin.EXPRESSIVE_HEADER_TAG
 import app.webora.browser.siteskin.SITESKIN_ACTION_BOUQUET_TAG
-import app.webora.browser.siteskin.SITESKIN_ACTION_TAG_PREFIX
 import app.webora.browser.siteskin.SITESKIN_BACK_TAG
 import app.webora.browser.siteskin.SITESKIN_DOCK_HUB_TAG
 import app.webora.browser.siteskin.SITESKIN_DOCK_TAG
@@ -85,14 +84,16 @@ class LiveSiteScreenshotTest {
     private fun captureBloomActionBouquet() {
         composeRule.onNodeWithTag(SITESKIN_DOCK_HUB_TAG).assertIsDisplayed().performClick()
         waitUntilNodeExists(hasTestTag(SITESKIN_ACTION_BOUQUET_TAG))
-        HUB_ITEM_IDS.forEach { id ->
-            composeRule.onNodeWithTag("$SITESKIN_ACTION_TAG_PREFIX$id").assertIsDisplayed()
+        BloomReferenceContract.ACTION_IDS.forEach { id ->
+            composeRule.onNodeWithTag(BloomReferenceContract.actionTag(id)).assertIsDisplayed()
         }
         captureDeviceScreenshot("04-bloom-actions.png", requirePageContent = true)
     }
 
     private fun captureBloomProfile() {
-        composeRule.onNodeWithTag("${SITESKIN_ACTION_TAG_PREFIX}profile")
+        composeRule.onNodeWithTag(
+            BloomReferenceContract.actionTag(BloomReferenceContract.PROFILE_ACTION_ID),
+        )
             .assertIsDisplayed()
             .performClick()
         waitUntilNodeAbsent(hasTestTag(SITESKIN_ACTION_BOUQUET_TAG))
@@ -260,7 +261,6 @@ class LiveSiteScreenshotTest {
         const val PROFILE_PAGE_HEADING = "Account"
         const val REGULAR_ADDRESS = "https://www.google.com/ncr"
         const val REGULAR_DOMAIN = "google.com"
-        val HUB_ITEM_IDS = listOf("home", "catalog", "cart", "profile", "call")
         const val MAX_HISTORY_RETURNS = 5
         const val NAVIGATION_SETTLE_MILLIS = 350L
         const val SCREENSHOT_DIRECTORY = "screenshots"
