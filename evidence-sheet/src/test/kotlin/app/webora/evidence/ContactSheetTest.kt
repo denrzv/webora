@@ -24,33 +24,24 @@ class ContactSheetTest {
 
     @Test fun composesOneTilePerFrameInFilenameOrder() {
         val dir = frames(
-            "07-siteskin-hub.png",
+            "04-bloom-actions.png",
             "01-home.png",
-            "05-bloom-storefront-back.png",
+            "06-google-regular.png",
             "03-bloom-storefront.png",
-            "08-regular-browsing.png",
             "02-siteskin-consent.png",
-            "06-happy-days-forward.png",
-            "04-happy-days-product.png",
+            "05-bloom-profile.png",
         )
 
-        assertEquals(8, composeContactSheet(dir))
+        assertEquals(6, composeContactSheet(dir))
 
         val sheet = ImageIO.read(dir.resolve(PREVIEW_FILE_NAME).toFile())
-        assertEquals(expectedSheetWidth(8), sheet.width)
-        // Discovery is sorted, not argument- or filesystem-ordered: the tile drawn from the frame
-        // whose marker colour is unique to 01- must be the leftmost one.
+        assertEquals(expectedSheetWidth(6), sheet.width)
         canonicalFrames.forEachIndexed { index, name ->
             assertEquals(markers.getValue(name), tileMarkerColor(sheet, index))
             assertTrue("label band $index has no ink", labelInkPixels(sheet, index) > 0)
         }
     }
 
-    /**
-     * A host with no usable font still writes a structurally perfect PNG — with invisible labels.
-     * Counting ink in the label band is the only assertion that separates "wrote a file" from
-     * "drew the text", and an unlabelled contact sheet cannot tell a reviewer what they are seeing.
-     */
     @Test fun labelsAreDrawnAndNotBlank() {
         val dir = frames("01-home.png", "02-siteskin-consent.png")
 
@@ -65,13 +56,11 @@ class ContactSheetTest {
         }
     }
 
-    /** The caption comes from the tile's own file, so the two cannot drift apart. */
     @Test fun labelComesFromTheFileItDraws() {
         val first = frames("01-home.png", "02-siteskin-consent.png")
         composeContactSheet(first)
         val before = ImageIO.read(first.resolve(PREVIEW_FILE_NAME).toFile())
 
-        // Same pixels, same position, different name. Only the second label may change.
         val second = frames("01-home.png", "02-siteskin-consent-renamed.png")
         composeContactSheet(second)
         val after = ImageIO.read(second.resolve(PREVIEW_FILE_NAME).toFile())
@@ -89,12 +78,6 @@ class ContactSheetTest {
         assertFalse(dir.resolve(PREVIEW_FILE_NAME).toFile().exists())
     }
 
-    /**
-     * The message names the path it resolved to, not the path it was handed. Run 8 failed with
-     * `Not a directory: review` — a relative argument the `run` task had resolved against the
-     * module directory rather than the repository root — and the bare name is what made a
-     * one-line cause take a whole hosted run to find.
-     */
     @Test fun refusesAMissingDirectoryAndNamesTheResolvedPath() {
         val missing = temp.root.toPath().resolve("never-created")
 
@@ -120,10 +103,6 @@ class ContactSheetTest {
         )
     }
 
-    /**
-     * The frame is there and is named like evidence, but it is not an image. Skipping it would
-     * publish a sheet one tile short of the journey it claims to show, so it is fatal.
-     */
     @Test fun refusesAnUndecodablePng() {
         val dir = frames("01-home.png", "02-siteskin-consent.png")
         dir.resolve("03-bloom-storefront.png").toFile().writeText("not a PNG at all")
@@ -134,7 +113,6 @@ class ContactSheetTest {
         assertFalse(dir.resolve(PREVIEW_FILE_NAME).toFile().exists())
     }
 
-    /** The sheet is written beside its inputs, so it must never become one of them. */
     @Test fun excludesAnExistingPreviewFromItsOwnInput() {
         val dir = frames("01-home.png", "02-siteskin-consent.png")
 
@@ -146,11 +124,6 @@ class ContactSheetTest {
         assertEquals(expectedSheetWidth(2), sheet.width)
     }
 
-    /**
-     * A refusal must not leave the previous sheet behind. The screenshots upload runs with
-     * `if: always()`, so a surviving `preview.png` would be published beside frames it does not
-     * describe — a picture of a journey that did not happen, on a run that already went red.
-     */
     @Test fun aFailedCompositionLeavesNoStaleSheet() {
         val dir = frames("01-home.png", "02-siteskin-consent.png")
         assertEquals(2, composeContactSheet(dir))
@@ -166,7 +139,6 @@ class ContactSheetTest {
         )
     }
 
-    /** A long caption stays inside its own tile rather than colliding with the next one. */
     @Test fun labelsAreClippedToTheirOwnTile() {
         val longName = "01-" + "wide".repeat(30) + ".png"
         val dir = temp.newFolder("clip").toPath()
@@ -178,7 +150,6 @@ class ContactSheetTest {
         val sheet = ImageIO.read(dir.resolve(PREVIEW_FILE_NAME).toFile())
         val background = sheet.getRGB(1, 1)
         val bandTop = sheet.height - PADDING - LABEL_BAND
-        // The gutter between the two label columns must stay clean.
         var gutterInk = 0
         for (y in bandTop until bandTop + LABEL_BAND) {
             for (x in tileColumnLeft(0) + TILE_WIDTH until tileColumnLeft(1)) {
@@ -188,7 +159,6 @@ class ContactSheetTest {
         assertEquals("a caption overran its tile into the gutter", 0, gutterInk)
     }
 
-    /** Evidence is never stretched to fit a slot. */
     @Test fun preservesAspectRatio() {
         val dir = temp.newFolder("aspect").toPath()
         writeFrame(dir.resolve("01-home.png"), width = 1080, height = 2400, marker = Color.RED)
@@ -200,30 +170,23 @@ class ContactSheetTest {
         assertEquals(PADDING + expectedTileHeight + LABEL_BAND + PADDING, sheet.height)
     }
 
-    // -- helpers ---------------------------------------------------------------------------------
-
-    /** Distinct fill colours so a tile can be traced back to the frame it was drawn from. */
     private val markers = mapOf(
         "01-home.png" to Color.RED,
         "02-siteskin-consent.png" to Color.GREEN,
         "02-siteskin-consent-renamed.png" to Color.GREEN,
         "03-bloom-storefront.png" to Color.BLUE,
-        "04-happy-days-product.png" to Color.MAGENTA,
-        "05-bloom-storefront-back.png" to Color.CYAN,
-        "06-happy-days-forward.png" to Color.ORANGE,
-        "07-siteskin-hub.png" to Color.PINK,
-        "08-regular-browsing.png" to Color.YELLOW,
+        "04-bloom-actions.png" to Color.MAGENTA,
+        "05-bloom-profile.png" to Color.CYAN,
+        "06-google-regular.png" to Color.ORANGE,
     )
 
     private val canonicalFrames = listOf(
         "01-home.png",
         "02-siteskin-consent.png",
         "03-bloom-storefront.png",
-        "04-happy-days-product.png",
-        "05-bloom-storefront-back.png",
-        "06-happy-days-forward.png",
-        "07-siteskin-hub.png",
-        "08-regular-browsing.png",
+        "04-bloom-actions.png",
+        "05-bloom-profile.png",
+        "06-google-regular.png",
     )
 
     private var folderSequence = 0
@@ -249,14 +212,9 @@ class ContactSheetTest {
 
     private fun tileColumnLeft(index: Int) = PADDING + index * (TILE_WIDTH + PADDING)
 
-    /** A pixel from the middle of a tile's image area, which is a flat marker colour. */
     private fun tileMarkerColor(sheet: BufferedImage, index: Int): Color =
         Color(sheet.getRGB(tileColumnLeft(index) + TILE_WIDTH / 2, PADDING + TILE_WIDTH / 2))
 
-    /**
-     * Pixels in a tile's label band that differ from the sheet background. The band sits directly
-     * under that tile's image, so its top is the tallest tile's bottom edge.
-     */
     private fun labelInkPixels(sheet: BufferedImage, index: Int): Int {
         val bandTop = sheet.height - PADDING - LABEL_BAND
         val background = sheet.getRGB(1, 1)

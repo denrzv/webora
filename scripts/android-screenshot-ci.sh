@@ -5,27 +5,18 @@
 # ordinary step BEFORE the emulator is launched, because the first green screenshot
 # run (31491580516) spent 8m39s executing 72 Gradle tasks while a freshly booted
 # emulator sat on the same 4-vCPU runner, and Android's ANR timers are wall-clock.
-# The `System UI isn't responding` dialog over those screenshots was the predictable
-# result of that arrangement, not an emulator defect.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-# Two disjoint staging directories, not one directory with a negated upload glob.
-# `review/` becomes the human-facing artifact and holds nothing but images; `artifacts/`
-# becomes the diagnostics artifact and holds no images. Neither can leak into the other
-# through a YAML path expression, which is the way this split would otherwise break
-# quietly — a duplicated PNG in the diagnostics bundle looks like nothing is wrong.
+# Two disjoint staging directories: `review/` is the human-facing six-frame showcase;
+# `artifacts/` holds diagnostics for both the showcase and the non-visual navigation smoke test.
 REVIEW_DIR="review"
 
 DEBUG_APK="app/build/outputs/apk/debug/app-debug.apk"
 TEST_APK="app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk"
-SCREENSHOT_TEST_CLASS="app.webora.browser.visual.LiveSiteScreenshotTest"
+HOSTED_TEST_SUITE="app.webora.browser.visual.LiveSiteHostedSuite"
 
-# Both APKs must already exist. Without this check a regressed pre-build step is
-# invisible: `connectedDebugAndroidTest` would simply build them again, inside the
-# emulator step, restoring the contention this whole ticket removes — and it would
-# still go green.
 require_prebuilt_apks() {
   local apk missing=0
   for apk in "${DEBUG_APK}" "${TEST_APK}"; do
@@ -51,8 +42,6 @@ main() {
   fi
   cat artifacts/prebuilt-apks.txt
 
-  # The emulator action returns once `sys.boot_completed=1`. That is where the screenshots
-  # used to start going wrong, so the run does not proceed on it alone.
   if ! bash scripts/android-emulator-ready.sh; then
     adb logcat -d > artifacts/logcat.txt || true
     echo "The emulator never settled; see artifacts/readiness.txt for every sample taken." >&2
@@ -61,7 +50,7 @@ main() {
 
   set +e
   ./gradlew :app:connectedDebugAndroidTest \
-    "-Pandroid.testInstrumentationRunnerArguments.class=${SCREENSHOT_TEST_CLASS}" 2>&1 \
+    "-Pandroid.testInstrumentationRunnerArguments.class=${HOSTED_TEST_SUITE}" 2>&1 \
     | tee artifacts/instrumentation.txt
   local test_status=${PIPESTATUS[0]}
 
@@ -92,8 +81,6 @@ main() {
   exit "$test_status"
 }
 
-# Sourcing this file defines the functions and runs nothing, so the precondition can
-# be exercised without an emulator.
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   main "$@"
 fi

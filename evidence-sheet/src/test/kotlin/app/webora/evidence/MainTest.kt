@@ -28,17 +28,15 @@ class MainTest {
             "01-home.png",
             "02-siteskin-consent.png",
             "03-bloom-storefront.png",
-            "04-happy-days-product.png",
-            "05-bloom-storefront-back.png",
-            "06-happy-days-forward.png",
-            "07-siteskin-hub.png",
-            "08-regular-browsing.png",
+            "04-bloom-actions.png",
+            "05-bloom-profile.png",
+            "06-google-regular.png",
         )
 
         val result = runMain(dir.toString())
 
         assertEquals(0, result.status)
-        assertEquals(listOf("tiles=8"), result.out.lines().filter { it.isNotBlank() })
+        assertEquals(listOf("tiles=6"), result.out.lines().filter { it.isNotBlank() })
     }
 
     @Test fun reportsNoTileCountWhenCompositionFails() {
@@ -68,15 +66,8 @@ class MainTest {
         assertFalse(result.out.contains("tiles="))
     }
 
-    // -- helpers ---------------------------------------------------------------------------------
-
     private class Result(val status: Int, val out: String, val err: String)
 
-    /**
-     * Drives the entry point in-process with captured streams. Spawning a JVM would test the Gradle
-     * `application` wiring rather than this code, and would make the assertion on stdout depend on
-     * whatever else a launcher decides to print.
-     */
     private fun runMain(vararg args: String): Result {
         val out = ByteArrayOutputStream()
         val err = ByteArrayOutputStream()
