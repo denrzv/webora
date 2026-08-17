@@ -139,9 +139,13 @@ internal fun WebViewEvent.toBrowserObservation(): BrowserObservation = when (thi
         observation.canGoBack,
         observation.canGoForward,
     )
-    is WebViewEvent.MainFrameCompleted -> BrowserObservation.Page(
+    // Its own observation case, not `Page(isLoading = false)`. These two events are the same shape
+    // and different facts: `onPageFinished` fires `PageChanged` for every navigation and only then
+    // fires this one, suppressed for a URL that already failed. Collapsing them here is what let a
+    // failed page look like a completed one to everything downstream — including `UX-021`'s secure
+    // claim, which is earned by this event and by no other.
+    is WebViewEvent.MainFrameCompleted -> BrowserObservation.MainFrameCompleted(
         url = observation.url,
-        isLoading = false,
         canGoBack = observation.canGoBack,
         canGoForward = observation.canGoForward,
     )

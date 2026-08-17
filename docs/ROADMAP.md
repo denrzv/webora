@@ -115,6 +115,14 @@ Product-polish track:
   selectable rows with a sibling icon close control, and the selected state becomes a colour role
   that survives the dark projection — which the obvious `surfaceVariant`/`primaryContainer` pairing
   does not, since both map from values that are identical in `WeboraColors.DARK`
+- [x] `UX-021` Compact inline trust shield — integrated chrome's full-width `Secure · domain` row
+  becomes a compact browser-owned chip beside the site title, and the signal behind it stops being
+  `origin.scheme == "https"`. `TransportSecurity` grows to four browser-observed states written only
+  by `routeRendererEvent`, so `SECURE` is earned by a successful main-frame completion rather than by
+  a URL — a certificate that was rejected no longer reports secure. The registrable domain stays
+  *inside* the chip: issue #104's layout drops it, and with the hub showing no origin either that
+  would leave a coloured glyph as the only signal contradicting a manifest-supplied title and logo,
+  which is exactly what `ADR-006` exists to prevent. `ADR-006` is cited unchanged, not amended
 - [ ] `DEMO-003` Bloom Flowers visual fidelity & protocol showcase — exercise the polished icon and
   action vocabulary in the live reference integration
 

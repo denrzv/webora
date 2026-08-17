@@ -106,7 +106,20 @@ class BrowserIconContractTest {
 
     private companion object {
         const val RESOURCE_ROOT_PROPERTY = "webora.app.res"
-        const val BUDGET = 18
+        /**
+         * Raised 18 → 20 by `UX-021`, deliberately, with `UX-005` as precedent.
+         *
+         * The two shields are the cost of a decision recorded in that ticket's plan: `ic_lock` and
+         * `ic_warning` keep their meaning in regular chrome, where the glyph supports the words
+         * `Secure · example.com`, while the integrated header's mark stands beside a
+         * manifest-supplied title and has to read as the browser's own. Reusing the lock would have
+         * been free and would have made one glyph do two jobs on two surfaces with different
+         * amounts of supporting text.
+         *
+         * A raise is a decision someone makes on purpose. The alternative — quietly bumping this
+         * number whenever a surface wants a new picture — is what the budget exists to prevent.
+         */
+        const val BUDGET = 20
         const val STROKE_WIDTH = """android:strokeWidth="1.9""""
         const val FILL_ATTRIBUTE = "android:fillColor"
         const val PATH_DATA = "android:pathData"
@@ -140,6 +153,8 @@ class BrowserIconContractTest {
             "ic_siteskin_call",
             "ic_siteskin_share",
             "ic_siteskin_generic",
+            "ic_shield_secure",
+            "ic_shield_unverified",
         )
 
         val FORBIDDEN_ICON_LOOKUPS = listOf("getIdentifier(", "Uri.parse(", "File(", "URL(")

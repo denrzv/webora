@@ -21,9 +21,12 @@
     <string name="inspector_menu_entry">SiteSkin inspector</string>
     <string name="security_secure">Secure</string>
     <string name="security_not_secure">Not secure</string>
+    <!-- Four states, not two. `UX-021` made transport a browser-observed value, and a page that is
+         still loading has not earned "Secure" or been found insecure — it is neither, and saying
+         either would be a claim nothing observed. -->
+    <string name="security_unknown">Not verified</string>
+    <string name="security_tls_error">Certificate error</string>
     <string name="security_identity">%1$s · %2$s</string>
-    <string name="siteskin_tls_secure">Secure</string>
-    <string name="siteskin_tls_not_secure">Not secure</string>
     <!-- Browser-owned identity copy, shared by regular and integrated chrome: the same
          guarantee should not depend on which mode the user happens to be in. -->
     <string name="security_description">%1$s connection to %2$s</string>
@@ -100,9 +103,6 @@
     <string name="onboarding_skip">Skip</string>
     <string name="onboarding_next">Next</string>
     <string name="onboarding_start">Start browsing</string>
-    <!-- Decorative glyphs. Kept in resources so the literal rule has no exemption to erode, and
-         marked untranslatable because they are iconography rather than copy. -->
-    <string name="siteskin_security_separator" translatable="false">" \u00B7 "</string>
     <string name="browser_loading">Loading page</string>
     <string name="browser_loaded">Page loaded</string>
     <string name="browser_load_failed">Page could not be loaded</string>

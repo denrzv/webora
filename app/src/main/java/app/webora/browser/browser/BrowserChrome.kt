@@ -53,7 +53,7 @@ internal fun BrowserChrome(
     onSubmit: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val security = securityPresentation(state.mode)
+    val security = securityPresentation(state.mode, state.transport)
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -102,7 +102,7 @@ private fun AddressPill(value: String, onValueChange: (String) -> Unit, onSubmit
 @Composable
 internal fun BrowserSecurityIdentity(security: SecurityPresentation) {
     val secure = security.transportSecurity == TransportSecurity.SECURE
-    val transport = stringResource(if (secure) R.string.security_secure else R.string.security_not_secure)
+    val transport = transportLabel(security.transportSecurity)
     val description = stringResource(R.string.security_description, transport, security.registrableDomain)
     Surface(
         color = MaterialTheme.colorScheme.primaryContainer,

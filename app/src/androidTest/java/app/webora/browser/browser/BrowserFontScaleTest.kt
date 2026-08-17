@@ -89,6 +89,9 @@ class BrowserFontScaleTest {
                         displayedUrl = "https://example.com",
                         addressText = "https://example.com",
                         canGoBack = true,
+                        // `UX-021`: the committed scheme no longer implies the label. A confirmed
+                        // secure page is the widest of the four, so it stays the font-scale case.
+                        transport = TransportSecurity.SECURE,
                     ),
                     onAddressChanged = {}, onSubmit = {},
                 )

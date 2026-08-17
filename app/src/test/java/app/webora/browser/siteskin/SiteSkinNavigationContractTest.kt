@@ -67,16 +67,29 @@ class SiteSkinNavigationContractTest {
             "negative control: SiteSkin-coloured conditional identity must be rejected",
             expressiveIdentity(
                 "ExpressiveSiteSkinHeader(presentation) { if (model.subtitle != null) " +
-                    "SecurityIdentity(model.security, presentation.colors) }",
+                    "SiteSkinSecurityChip(model.security, presentation.colors) }",
             ),
         )
     }
 
+    /**
+     * `UX-014`'s ownership rule, re-pointed by `UX-021` at the surface that now carries it.
+     *
+     * The rule is unchanged — the header holds a security identity, it is browser-coloured, and no
+     * manifest value gates or paints it. What changed is the shape it names: the full-width
+     * `SecurityIdentity` row on `surfaceContainer` became `SiteSkinSecurityChip` on
+     * `primaryContainer`, because `secure`/`notSecure` are measured only against `container` and
+     * `surfaceContainer` maps to `chrome`.
+     *
+     * `surfaceContainer` is deliberately no longer required here. `BrowserBack` still uses it and
+     * `browserOwnedBack` still checks that; requiring it in *this* predicate would now be asserting
+     * one surface's ground while claiming to describe another's.
+     */
     private fun expressiveIdentity(source: String): Boolean =
         source.contains("ExpressiveSiteSkinHeader(") &&
-            source.contains("SecurityIdentity(model.security)") &&
-            source.contains("MaterialTheme.colorScheme.surfaceContainer") &&
-            !source.contains("SecurityIdentity(model.security, presentation.colors)") &&
+            source.contains("SiteSkinSecurityChip(model.security)") &&
+            source.contains("MaterialTheme.colorScheme.primaryContainer") &&
+            !source.contains("SiteSkinSecurityChip(model.security, presentation") &&
             !source.contains("if (model.security")
 
     private fun fixedDock(source: String): Boolean {

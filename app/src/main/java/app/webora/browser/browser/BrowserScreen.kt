@@ -685,7 +685,7 @@ internal fun RegularBrowser(
     Column(modifier = modifier) {
         val integrated = state.mode as? BrowserMode.Integrated
         val handoff = state.mode.chromeHandoff()
-        val security = securityPresentation(state.mode)
+        val security = securityPresentation(state.mode, state.transport)
         when (handoff.top) {
             TopChrome.NONE -> Unit
             TopChrome.REGULAR -> BrowserChrome(

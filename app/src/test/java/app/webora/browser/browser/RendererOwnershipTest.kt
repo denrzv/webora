@@ -180,6 +180,77 @@ class RendererOwnershipTest {
         assertEquals("https://two.example/", forgotten.completedPage(2))
     }
 
+    @Test
+    fun `a background tab's transport confirmation cannot make the selected tab look secure`() {
+        // `UX-021` puts a security *claim* behind this routing. `BROWSE-009` already recorded that a
+        // cross-tab write corrupts `SecurityPresentation`; before transport state existed, the
+        // damage was the domain being wrong. Now a background HTTPS completion arriving after a tab
+        // switch could paint a green shield over the selected tab — one origin's trust mark on
+        // another origin's page, which is `HARDEN-002`'s impersonation surface reached with no
+        // manifest at all.
+        val session = twoTabs()
+        val background = session.tabs.first().id
+        val selected = session.activeId
+
+        val routing = routeRendererEvent(
+            session,
+            RendererPageBook(),
+            completed(background, "https://background.example/"),
+        )
+
+        assertEquals(TransportSecurity.SECURE, routing.session.tab(background)?.state?.transport)
+        assertEquals(TransportSecurity.UNKNOWN, routing.session.tab(selected)?.state?.transport)
+    }
+
+    @Test
+    fun `a background tab's certificate failure cannot clear the selected tab's confirmed transport`() {
+        // The same rule in the other direction: the selected tab is legitimately secure, and a
+        // failure belonging to a background renderer must not take that away from it.
+        val session = twoTabs()
+        val background = session.tabs.first().id
+        val selected = session.activeId
+        val secured = routeRendererEvent(
+            session,
+            RendererPageBook(),
+            completed(selected, "https://selected.example/"),
+        ).session
+
+        val routing = routeRendererEvent(
+            secured,
+            RendererPageBook(),
+            WebViewEvent.MainFrameFailed(background, "https://background.example/", LoadErrorKind.TLS),
+        )
+
+        assertEquals(TransportSecurity.TLS_ERROR, routing.session.tab(background)?.state?.transport)
+        assertEquals(TransportSecurity.SECURE, routing.session.tab(selected)?.state?.transport)
+    }
+
+    @Test
+    fun `a page change is not a completion, so it cannot earn secure on its own`() {
+        // The distinction `toBrowserObservation` used to collapse. `onPageFinished` fires
+        // `PageChanged` for every navigation — including one that failed — and only then fires
+        // `MainFrameCompleted`, suppressed for a URL that already failed. If these two map to one
+        // observation again, this is the assertion that notices.
+        val session = twoTabs()
+        val selected = session.activeId
+
+        val changed = routeRendererEvent(
+            session,
+            RendererPageBook(),
+            WebViewEvent.PageChanged(selected, observation("https://shop.example/", isLoading = false)),
+        )
+
+        assertEquals(TransportSecurity.UNKNOWN, changed.session.tab(selected)?.state?.transport)
+
+        val completed = routeRendererEvent(
+            changed.session,
+            changed.book,
+            completed(selected, "https://shop.example/"),
+        )
+
+        assertEquals(TransportSecurity.SECURE, completed.session.tab(selected)?.state?.transport)
+    }
+
     private fun twoTabs(): BrowserSession = BrowserSession.fresh().createTab()
 
     private fun completed(tabId: Long, url: String) =

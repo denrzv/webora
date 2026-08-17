@@ -117,9 +117,16 @@ class LiveSiteScreenshotTest {
         waitUntilNodeExists(hasTestTag(BROWSER_SECURITY_TAG))
         waitUntilNodeExists(hasTestTag(BROWSER_NAVIGATION_SHELL_TAG))
         composeRule.onNodeWithTag(BROWSER_SECURITY_TAG).assertIsDisplayed()
+        // `UX-021` made this a wait rather than a point assertion. The chip appears as soon as an
+        // origin is committed, but `Secure` is now earned by a successful main-frame completion, so
+        // the identity node can legitimately exist reading `Not verified` for a moment. Waiting for
+        // the confirmed text is synchronising on a state the app reaches on its own — `NET-004`'s
+        // rule — and it makes the frame stronger evidence: it can no longer be captured while the
+        // browser has confirmed nothing.
         val secure = string(R.string.security_secure)
-        composeRule.onNodeWithText(string(R.string.security_identity, secure, REGULAR_DOMAIN))
-            .assertIsDisplayed()
+        val secureIdentity = string(R.string.security_identity, secure, REGULAR_DOMAIN)
+        waitUntilNodeExists(hasText(secureIdentity))
+        composeRule.onNodeWithText(secureIdentity).assertIsDisplayed()
         composeRule.onNodeWithTag(BROWSER_NAVIGATION_SHELL_TAG).assertIsDisplayed()
         composeRule.onNodeWithTag(SITESKIN_SECURITY_TAG).assertDoesNotExist()
         composeRule.onNodeWithTag(EXPRESSIVE_HEADER_TAG).assertDoesNotExist()
