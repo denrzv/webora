@@ -1544,3 +1544,53 @@ so the browser reserves the actual dock height; the outer shell consumes `safeDr
 DOM padding, a fixed Bloom offset, or a second inset read would violate that ownership and likely
 double-reserve space. Exact-origin/configuration teardown makes the branded dock structurally
 unreachable and the existing asset publication identity guard prevents late identity leakage.
+
+### Two modal shapes, and the pair that separates a selected row (UX-020)
+
+Browser-owned modals come in exactly two shapes, and which one a surface takes is decided by its
+content, not by which was easier to reach for. A **confirmation** — a sentence and two decisions — is
+an `AlertDialog`: first-use consent, clear browsing data, external URL, external navigation. A **list
+surface** — items with a per-item action — is `UX-018`'s full-window `Dialog(usePlatformDefaultWidth
+= false)` over an opaque `Surface`, with a headline, tonal rows, one full-width primary action and a
+text dismiss. Privacy settings and the tab switcher are both the second, and they are now built the
+same way.
+
+The tab switcher was the last surface predating that split, and what it looked like is the argument
+for having one: an `AlertDialog` whose body was **two filled `WeboraButton`s per tab** — eighteen
+filled buttons at the eight-tab limit inside a 280 dp box — with the accessibility sentence
+`Tab 1 of 8, shop.example` used as the *visible* label and no visual selected state at all, only a
+`selected` semantics property no sighted user can read.
+
+**A selected row is a colour role, and the obvious pair is the wrong one.** `surfaceVariant` against
+`primaryContainer` reads as the natural unselected/selected pairing. It is invisible in dark theme:
+`materialColorScheme` maps them from `chrome` and `container`, and those are the same value
+(`0xFF1F2C2C`) in `WeboraColors.DARK`. A state built from them passes every light-theme check and
+disappears in the other projection. `primary`/`onPrimary` separates in both and is already in
+`WeboraColorSchemeTest`'s measured table, so it introduces no unmeasured colour. Never an alpha
+multiplier, for `UX-003`'s reason.
+
+**A colour assertion must read the mapping the composable reads.** The first version of
+`TabSwitcherContractTest`'s helpers named *Webora* roles while `TabRow` names *Material* ones, under a
+doc comment claiming the two could not drift — `materialColorScheme` was the mapping between them and
+nothing consulted it. The control that exposes it is a remap of Material's own role
+(`primary = scheme.chrome`), which fails the fixed helpers and **passes** the original ones. Note the
+review's first-written control — re-pointing `surfaceVariant` at `container` — does *not* collapse the
+pair, because the selected role is a saturated accent; that was found by running it, and the finding
+survived its own wrong example.
+
+**`Surface(onClick = …)` marks its node `mergeDescendants`, so the close control is a sibling.** A
+close button nested inside the select affordance resolves to the same semantics node, and
+`TAB_SELECT_TAG`/`TAB_CLOSE_TAG` are an instrumented contract — the non-clickable layout `Row` is what
+holds them apart. Asserted structurally in the JVM gate and driven for one tab id instrumentally.
+
+**The accessibility sentence moves, it does not disappear.** `tab_description` stops being the visible
+label and becomes the row's `contentDescription`, so the pixels stop repeating "Tab 1 of 8," on every
+line while screen-reader output is unchanged. The close control is icon-only and therefore named only
+by its `contentDescription`, which `WeboraIconButton`'s signature makes a compile-time requirement.
+
+**A tag check must assert the application, not the constant.** `BrowserTabSummary.kt` declares all
+four tags in the file the scan reads, so `source.contains(TAB_SELECT_TAG)` is satisfied by the
+declaration and would pass over a switcher that had dropped both row tags. Assert
+`testTag("$TAB_SELECT_TAG${summary.id}")`. And `$` inside a Kotlin raw string is a template with no
+`\$` escape — the first regexes here compiled to `\s` + `elect_tab_` and matched nothing in either
+direction, which a negative control catches and reading does not.
