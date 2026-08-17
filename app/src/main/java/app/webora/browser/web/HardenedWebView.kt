@@ -49,12 +49,10 @@ internal fun HardenedWebView(
                 webChromeClient = UploadWebChromeClient(onFileChooser)
                 setDownloadListener { url, _, _, _, _ -> url?.let(onDownload) }
                 controller.attach(this)
+                // `navigate` writes no Compose state — it records the URL and calls `loadUrl` — so
+                // it is safe here, and it has to be here: the load needs the renderer just attached.
                 when (val action = rendererMountAction(controller.hostedUrl, initialUrl, isLoading)) {
                     is RendererMountAction.Load -> controller.navigate(action.url)
-                    RendererMountAction.Settle ->
-                        currentObserver.value(
-                            WebViewEvent.PageChanged(owner, toObservation(initialUrl, false)),
-                        )
                     RendererMountAction.Ready -> Unit
                 }
             }

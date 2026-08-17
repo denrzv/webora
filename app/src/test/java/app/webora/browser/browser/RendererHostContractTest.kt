@@ -170,14 +170,16 @@ class RendererHostContractTest {
         const val SOURCE_ROOT_PROPERTY = "webora.app.src"
 
         /**
-         * The four renderer callbacks — `PageStarted`, `PageChanged`, `MainFrameCompleted`,
-         * `MainFrameFailed` — plus `BROWSE-010`'s mount-time `Settle`, which reports completion for
-         * a page already on screen when the tab still believes it is loading.
+         * `PageStarted`, `PageChanged`, `MainFrameCompleted`, `MainFrameFailed` — the four framework
+         * callbacks, and nothing else.
          *
-         * The count is what makes this assertion an inventory rather than a spot check: an event
-         * emitted *without* `owner` leaves the count short and fails, so raising the constant can
-         * only be done by adding an emission that does carry it.
+         * `BROWSE-010` briefly made this 5 by emitting a synthetic completion at mount time, and its
+         * own review removed that: every event here originates in a framework callback, and a host
+         * that reports a page finished because it inferred so is asserting something the browser
+         * never observed. The count is what makes this an inventory rather than a spot check — an
+         * event emitted *without* `owner` leaves it short — so a fifth emission is a decision, not
+         * an accident.
          */
-        const val EMITTED_EVENTS = 5
+        const val EMITTED_EVENTS = 4
     }
 }

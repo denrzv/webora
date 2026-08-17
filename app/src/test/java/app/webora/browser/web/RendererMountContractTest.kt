@@ -13,7 +13,7 @@ import org.junit.Test
  * the decision assumes they are. Each assertion carries an intentionally-broken counter-example,
  * because a structural scan that stops matching passes forever.
  */
-class RendererHostContractTest {
+class RendererMountContractTest {
 
     @Test
     fun `the host asks the decision rather than testing for a new renderer`() {

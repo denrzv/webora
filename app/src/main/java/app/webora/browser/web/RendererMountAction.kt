@@ -3,18 +3,22 @@ package app.webora.browser.web
 /**
  * What a renderer host must do when it mounts a renderer that may already have a page.
  *
- * Three cases, not a `Boolean`, because "the renderer is already there" is not always "nothing to
- * do": a tab that reached Home and navigated back to the *same* URL has `isLoading = true` set by
- * `navigateFromHome` and no navigation will ever arrive to clear it. Returning a bare
- * `needsLoad: Boolean` would fix the page and leave a narrower version of the same permanent
- * spinner.
+ * A tab that reached Home and navigated back to the *same* URL is the case that keeps this from
+ * being "does `hosted` differ from `target`": nothing differs, and `navigateFromHome` has already set
+ * `isLoading = true` with no navigation coming to clear it. That tab is waiting for a page, so it
+ * gets one.
+ *
+ * The first version of this reported a **synthetic completion** for the page already on screen
+ * instead. Two things were wrong with it and either was enough. It asserted an observation the
+ * browser never made — every other `WebViewEvent` originates in a framework callback, and this one
+ * would have been the host inferring that a page finished; a tab switched away from *mid-load* has
+ * exactly this shape and would have been told its still-loading page was complete. And it wrote
+ * Compose state from inside `AndroidView`'s `factory`, which runs during composition. Issuing a real
+ * load costs one request in a case the user just asked to navigate, and buys genuine callbacks.
  */
 internal sealed interface RendererMountAction {
-    /** Issue this navigation. The renderer has no page, or not this tab's page. */
+    /** Issue this navigation. The renderer has no page, not this tab's page, or the tab is waiting. */
     data class Load(val url: String) : RendererMountAction
-
-    /** The page is already on screen but the tab still believes it is loading. Report completion. */
-    data object Settle : RendererMountAction
 
     /** The renderer already holds the tab's page and the tab knows it. This is the tab-switch case. */
     data object Ready : RendererMountAction
@@ -50,7 +54,6 @@ internal fun rendererMountAction(
     isLoading: Boolean,
 ): RendererMountAction = when {
     target.isEmpty() -> RendererMountAction.Ready
-    hosted != target -> RendererMountAction.Load(target)
-    isLoading -> RendererMountAction.Settle
+    hosted != target || isLoading -> RendererMountAction.Load(target)
     else -> RendererMountAction.Ready
 }

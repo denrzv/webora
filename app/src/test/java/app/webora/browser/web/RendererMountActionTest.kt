@@ -61,11 +61,15 @@ class RendererMountActionTest {
         )
     }
 
-    @Test fun `a home round trip to the same address settles instead of loading`() {
-        // The page is already on screen, so re-issuing it would be a wasted load — but the tab's
-        // isLoading was set by navigateFromHome and no callback will arrive to clear it. Returning a
-        // bare Boolean here would fix the page and leave a narrower version of the same spinner.
-        assertEquals(RendererMountAction.Settle, rendererMountAction(hosted = PAGE, target = PAGE, isLoading = true))
+    @Test fun `a waiting tab loads even when the renderer already holds the page`() {
+        // Home -> the same address again. Nothing differs, but navigateFromHome set isLoading and no
+        // callback is coming to clear it, so the tab is waiting for a page that will never arrive.
+        // The first version of this reported a synthetic completion instead; a tab switched away
+        // from mid-load has the same shape and would have been told its loading page was finished.
+        assertEquals(
+            RendererMountAction.Load(PAGE),
+            rendererMountAction(hosted = PAGE, target = PAGE, isLoading = true),
+        )
     }
 
     @Test fun `evaluating again after a load is silent`() {
