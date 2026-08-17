@@ -2,30 +2,15 @@ package app.webora.browser.evidence
 
 import java.nio.file.Files
 import java.nio.file.Path
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ExpressiveBloomJourneyContractTest {
     @Test
-    fun `live journey pins the expressive product history and hub story`() {
-        assertExpressiveJourney(String(Files.readAllBytes(journeySource())))
-    }
-
-    @Test
-    fun `retired persistent site navigation cannot authorize the M9 journey`() {
-        val unsafe = """
-            waitUntilNodeExists(hasTestTag(SITESKIN_BOTTOM_NAV_TAG))
-            captureRegularBrowsingEvidence()
-        """.trimIndent()
-
-        assertFalse(isExpressiveJourney(unsafe))
-    }
-
-    @Test
-    fun `canonical frames are complete guarded and chronologically ordered`() {
-        val source = String(Files.readAllBytes(journeySource()))
+    fun `canonical visual story is six showcase frames in order`() {
+        val source = source(SCREENSHOT_SOURCE)
 
         assertEquals(CANONICAL_FRAMES, capturedFrames(source))
         CANONICAL_FRAMES.drop(2).forEach { frame ->
@@ -34,6 +19,35 @@ class ExpressiveBloomJourneyContractTest {
                 source.contains("captureDeviceScreenshot(\"$frame\", requirePageContent = true)"),
             )
         }
+        SHOWCASE_MARKERS.forEach { marker -> assertTrue("missing showcase marker: $marker", source.contains(marker)) }
+    }
+
+    @Test
+    fun `showcase does not carry the diagnostic product history traversal`() {
+        val source = source(SCREENSHOT_SOURCE)
+
+        assertFalse(source.contains("PRODUCT_LINK_TEXT"))
+        assertFalse(source.contains("SITESKIN_DOCK_BACK_TAG"))
+        assertFalse(source.contains("SITESKIN_DOCK_FORWARD_TAG"))
+        assertFalse(source.contains("waitForProductLink"))
+    }
+
+    @Test
+    fun `navigation smoke retains product back forward hub and regular handoff`() {
+        val source = source(SMOKE_SOURCE)
+
+        SMOKE_MARKERS.forEach { marker -> assertTrue("missing smoke marker: $marker", source.contains(marker)) }
+        assertFalse("smoke coverage must not publish visual evidence", source.contains("captureDeviceScreenshot("))
+    }
+
+    @Test
+    fun `hosted suite runs showcase before smoke`() {
+        val source = source(SUITE_SOURCE)
+        val screenshot = source.indexOf("LiveSiteScreenshotTest::class")
+        val smoke = source.indexOf("LiveSiteNavigationSmokeTest::class")
+
+        assertTrue(screenshot >= 0)
+        assertTrue(smoke > screenshot)
     }
 
     @Test
@@ -42,59 +56,12 @@ class ExpressiveBloomJourneyContractTest {
             "captureDeviceScreenshot(\"$frame\")"
         }
 
-        assertFalse(hasCanonicalFrames(unsafe))
+        assertFalse(capturedFrames(unsafe) == CANONICAL_FRAMES)
     }
 
     @Test
-    fun `storefront product interaction matches deployed accessibility text and scrolls into view`() {
-        val source = String(Files.readAllBytes(journeySource()))
-
-        assertTrue(source.contains("PRODUCT_LINK_TEXT = \"Happy Days\""))
-        assertTrue(source.contains("findStorefrontProductLink()"))
-        assertTrue(source.contains("scrollStorefrontTowardsProduct()"))
-        assertTrue(source.contains("By.text(PRODUCT_LINK_TEXT).clickable(true)"))
-        assertFalse(source.contains("By.text(PRODUCT_NAME).clickable(true)"))
-    }
-
-    private fun assertExpressiveJourney(source: String) {
-        assertTrue(isExpressiveJourney(source))
-        assertTrue(hasCanonicalFrames(source))
-        assertFalse(source.contains("waitUntilNodeExists(hasTestTag(SITESKIN_BOTTOM_NAV_TAG))"))
-    }
-
-    private fun isExpressiveJourney(source: String): Boolean = REQUIRED_MARKERS.all(source::contains)
-
-    private fun hasCanonicalFrames(source: String): Boolean =
-        capturedFrames(source) == CANONICAL_FRAMES
-
-    private fun capturedFrames(source: String): List<String> = CAPTURE.findAll(source)
-        .map { match -> match.groupValues[1] }
-        .toList()
-
-    private fun journeySource(): Path = Path.of(
-        "src/androidTest/java/app/webora/browser/visual/LiveSiteScreenshotTest.kt",
-    )
-
-    private companion object {
-        val REQUIRED_MARKERS = listOf(
-            "EXPRESSIVE_HEADER_TAG",
-            "SITESKIN_DOCK_TAG",
-            "PRODUCT_NAME = \"Happy Days Bouquet\"",
-            "PRODUCT_LINK_TEXT = \"Happy Days\"",
-            "findStorefrontProductLink()",
-            "scrollStorefrontTowardsProduct()",
-            "SITESKIN_DOCK_BACK_TAG",
-            "SITESKIN_DOCK_FORWARD_TAG",
-            "SITESKIN_DOCK_HUB_TAG",
-            "HUB_ITEM_IDS",
-            "EXPRESSIVE_HEADER_TAG).assertDoesNotExist()",
-            "SITESKIN_DOCK_TAG).assertDoesNotExist()",
-            "SITESKIN_ACTION_BOUQUET_TAG",
-            "SITESKIN_ACTION_TAG_PREFIX",
-            "waitForProductLink(isPresent = false)",
-            "waitForProductLink(isPresent = true)",
-        )
-        val CANONICAL_FRAMES = listOf(
+    fun `retired eight frame product artifact cannot masquerade as the showcase`() {
+        val unsafe = listOf(
             "01-home.png",
             "02-siteskin-consent.png",
             "03-bloom-storefront.png",
@@ -103,6 +70,61 @@ class ExpressiveBloomJourneyContractTest {
             "06-happy-days-forward.png",
             "07-siteskin-hub.png",
             "08-regular-browsing.png",
+        ).joinToString("\n") { frame -> "captureDeviceScreenshot(\"$frame\")" }
+
+        assertFalse(capturedFrames(unsafe) == CANONICAL_FRAMES)
+    }
+
+    private fun source(path: Path): String = String(Files.readAllBytes(path))
+
+    private fun capturedFrames(source: String): List<String> = CAPTURE.findAll(source)
+        .map { match -> match.groupValues[1] }
+        .toList()
+
+    private companion object {
+        val SCREENSHOT_SOURCE = Path.of(
+            "src/androidTest/java/app/webora/browser/visual/LiveSiteScreenshotTest.kt",
+        )
+        val SMOKE_SOURCE = Path.of(
+            "src/androidTest/java/app/webora/browser/visual/LiveSiteNavigationSmokeTest.kt",
+        )
+        val SUITE_SOURCE = Path.of(
+            "src/androidTest/java/app/webora/browser/visual/LiveSiteHostedSuite.kt",
+        )
+
+        val SHOWCASE_MARKERS = listOf(
+            "SITESKIN_DOCK_HUB_TAG",
+            "SITESKIN_ACTION_BOUQUET_TAG",
+            "SITESKIN_ACTION_TAG_PREFIX",
+            "PROFILE_PAGE_HEADING = \"Account\"",
+            "${'$'}{SITESKIN_ACTION_TAG_PREFIX}profile",
+            "REGULAR_ADDRESS = \"https://www.google.com/ncr\"",
+            "REGULAR_DOMAIN = \"google.com\"",
+            "EXPRESSIVE_HEADER_TAG).assertDoesNotExist()",
+            "SITESKIN_DOCK_TAG).assertDoesNotExist()",
+        )
+
+        val SMOKE_MARKERS = listOf(
+            "PRODUCT_NAME = \"Happy Days Bouquet\"",
+            "PRODUCT_LINK_TEXT = \"Happy Days\"",
+            "findStorefrontProductLink()",
+            "scrollStorefrontTowardsProduct()",
+            "By.text(PRODUCT_LINK_TEXT).clickable(true)",
+            "SITESKIN_DOCK_BACK_TAG",
+            "SITESKIN_DOCK_FORWARD_TAG",
+            "SITESKIN_DOCK_HUB_TAG",
+            "waitForProductLink(isPresent = false)",
+            "waitForProductLink(isPresent = true)",
+            "REGULAR_SMOKE_ADDRESS = \"example.com\"",
+        )
+
+        val CANONICAL_FRAMES = listOf(
+            "01-home.png",
+            "02-siteskin-consent.png",
+            "03-bloom-storefront.png",
+            "04-bloom-actions.png",
+            "05-bloom-profile.png",
+            "06-google-regular.png",
         )
         val CAPTURE = Regex("captureDeviceScreenshot\\(\\\"([^\\\"]+\\.png)\\\"")
     }
