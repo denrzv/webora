@@ -83,7 +83,7 @@ References:
     `IllegalStateException` on reattach — remains unrun for want of a device, and is recorded as
     owed evidence rather than as a passed check.
 
-- [ ] TASK-3: make a cancelled TLS handshake terminal for its own tab
+- [x] TASK-3: make a cancelled TLS handshake terminal for its own tab
   - Modified: `web/HardenedWebViewClient.kt` — track the observed main-frame URL, add the pure
     `mainFrameTlsFailure(errorUrl, mainFrameUrl, alreadyFailed)`, publish through it after
     `handler.cancel()`.
@@ -93,6 +93,30 @@ References:
   - Negative controls to run and record: (a) `mainFrameTlsFailure` returns `errorUrl`
     unconditionally → the subframe/subresource assertion must fail; (b) drop the `isForMainFrame`
     filter in `onReceivedError` → the existing subresource assertion must fail.
+  - Result: `onReceivedSslError` still calls `handler.cancel()` first and unconditionally, then
+    publishes `LoadErrorKind.TLS` only through the pure `mainFrameTlsFailure`, which requires a
+    non-blank URL equal to the URL the browser observed the main frame starting and not already
+    published for this navigation. `failedMainFrameUrl` stays the one suppression mechanism, so the
+    following `onPageFinished` is still not a completion. `HardenedWebViewClientTest` is 10/10 and
+    `bash scripts/pre-commit-check.sh` is green.
+
+    Negative control (a) run and restored: returning `errorUrl` unconditionally failed three
+    assertions — the subresource case, the once-only case and the totality case — and nothing else.
+
+    **Negative control (b) found a real gap rather than confirming a guard.** Replacing
+    `if (request.isForMainFrame)` with an unconditional block left the entire suite green:
+    `BROWSE-004`'s main-frame filter, four tickets old and named in PRD criterion 9, had no test at
+    all. `a subresource error cannot replace the page` was written to close it — a non-main-frame
+    `onReceivedError` must publish no failure and must not suppress the page's completion — and the
+    control was then re-run against it and failed exactly that one assertion. This is the negative
+    control doing the job it exists for: the guard was correct, and the evidence for it did not
+    exist.
+
+    One test defect found by running rather than by reading, and worth the note because it is
+    `UX-002`'s trap in a new place: the first `handler.proceed(` scan read the whole file and failed
+    on **its own KDoc**, which says `handler.proceed()` appears nowhere in this tree. The scan now
+    strips comment lines, covers all of `src/main/java` rather than one file, and carries its own
+    counter-example proving it still sees a `proceed` in code.
 
 - [ ] TASK-4: review, QA and validate
   - `/review` findings become `TASK-FIX-N` with a `- Source:` line; then `/qa`, then `/validate`.
