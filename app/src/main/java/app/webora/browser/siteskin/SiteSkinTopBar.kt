@@ -121,10 +121,17 @@ private fun BrandLogo(asset: BrandAsset, colors: SiteSkinColorScheme) {
 
 @Composable
 private fun SecurityIdentity(security: SecurityPresentation) {
-    val transport = when (security.transportSecurity) {
-        TransportSecurity.SECURE -> stringResource(R.string.siteskin_tls_secure)
-        TransportSecurity.NOT_SECURE -> stringResource(R.string.siteskin_tls_not_secure)
-    }
+    // The shared browser-owned copy, exhaustive with no `else`. `siteskin_tls_secure` and
+    // `siteskin_tls_not_secure` were verbatim duplicates of the regular-mode strings, so the same
+    // guarantee could have drifted between modes by a translation edit; they are gone.
+    val transport = stringResource(
+        when (security.transportSecurity) {
+            TransportSecurity.SECURE -> R.string.security_secure
+            TransportSecurity.NOT_SECURE -> R.string.security_not_secure
+            TransportSecurity.UNKNOWN -> R.string.security_unknown
+            TransportSecurity.TLS_ERROR -> R.string.security_tls_error
+        },
+    )
     val description = stringResource(R.string.security_description, transport, security.registrableDomain)
     Row(
         verticalAlignment = Alignment.CenterVertically,
