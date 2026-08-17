@@ -1676,3 +1676,54 @@ real source, not by an in-test example.
 one.** Deleting the guard left the whole suite green — four tickets after the guard shipped, and with
 it named in this ticket's own acceptance criteria. A guard being correct and a guard being evidenced
 are different facts, and only the control tells them apart.
+
+### A retained renderer is not a loaded renderer (BROWSE-010)
+
+`BROWSE-006` made a tab's `WebView` outlive its Compose host so live back/forward history survives a
+tab switch. `HardenedWebView` went on asking `existing == null` — *is this `WebView` new?* — as its
+proxy for *does this renderer need the page?*. Those were the same question only while a renderer's
+life and its host's life coincided, and nothing re-derived the condition when retention broke the
+equivalence.
+
+The cost is a terminal state with no exit: **page → Home → type any address** never loads. Returning
+to Home removes `RegularBrowser` from composition while the controller keeps the renderer; navigating
+out remounts the host, `existing` is not null, and no navigation is issued. `navigateFromHome` has
+already set `isLoading = true`, and only a callback can clear it, so the tab paints the *previous*
+page under a spinner that cannot end.
+
+**The signal is the browser's own record, never `WebView.getUrl()`.** `BrowserWebViewController`
+holds `hostedUrl`, and `rendererMountAction(hosted, target, isLoading)` is a pure function the gate
+drives — `routeRendererEvent`'s shape, for `routeRendererEvent`'s reason. The framework's URL is the
+tempting input and it is wrong: after a failed navigation it may be the failed URL, the previously
+committed URL or `about:blank`, so a rule built on it re-issues the failing load every time the user
+switches back to an error tab. That is the reload `BROWSE-009`'s acceptance criterion 2 forbids,
+introduced by the ticket meant to protect it — and `TabRendererIsolationTest` drives exactly that tab.
+
+**Written from requests *and* reports, and never from failure.** `navigate()` records what the browser
+asked for; `observed()` records what the renderer said, from `onPageStarted`, `onPageChanged` and
+`onMainFrameCompleted`. The second half is not optional: an in-page link click never passes through
+`navigate`, so a record of requests alone drifts and reloads every tab the user browsed within, and a
+redirect drifts the same way. `onMainFrameFailed` deliberately does **not** write — the last request
+stands, which is what keeps the error tab silent on switch. Each half has a negative control.
+
+**A host may not report an observation it did not witness.** The first implementation had a third
+outcome, `Settle`, which emitted `PageChanged(isLoading = false)` for the page already on screen when
+a tab returned to the *same* URL. Two things were wrong and either was enough: every other
+`WebViewEvent` originates in a framework callback, so this one was the host inferring that a page had
+finished — and a tab switched away from **mid-load** has precisely that shape, so it would have been
+told its still-loading page was complete. It also wrote Compose state from inside `AndroidView`'s
+`factory`, which runs during composition. A waiting tab now gets a real load instead. The model is
+two cases, and `BROWSE-009`'s `EMITTED_EVENTS` inventory — which caught the extra emission — is back
+at 4.
+
+**The Back contract after a Home round trip is a second defect, filed as `BROWSE-011`.** `loadUrl`
+appends, so the renderer still holds the pre-Home entries while `onHome` reset the tab's state; Back
+from the new page can reach one the tab has forgotten. `BROWSE-010` exposes that rather than causing
+it — the page never loaded before — and every remedy depends on `clearHistory()`'s post-commit
+timing, which is a framework fact no JVM gate can settle. Decide it beside `BROWSE-008`'s ordering,
+not in the renderer host, and never by destroying the renderer on Home.
+
+**One prediction that failed, worth keeping.** The plan expected dropping `observed()` from
+`onPageChanged` to fail the pure in-page case. It did not: that case drives the controller directly,
+so it proves the *decision* handles an in-page URL, while only the source scan can see that the
+wiring producing one still exists. Neither layer covers that row alone.

@@ -47,8 +47,37 @@ internal sealed interface WebViewEvent {
 internal class BrowserWebViewController(val tabId: Long) {
     private var webView: WebView? = null
 
+    /**
+     * The URL this renderer is known to be on, or `null` before it has been given one.
+     *
+     * The retained renderer outlives its Compose host — `BROWSE-006` requires that — so `attached()`
+     * being non-null stopped answering "does this renderer already have its tab's page?" the moment
+     * renderers began outliving hosts. This is the value that answers it, and it lives here for the
+     * same reason [tabId] does: a fact about the renderer belongs to the renderer's owner, not to
+     * whichever call site last remembered to track it.
+     *
+     * Written from two browser-owned sources and nothing else — what the browser asked for
+     * ([navigate]) and what the renderer reported ([observed]). Page content and manifest fields
+     * have no path in, which matters because this value decides whether the browser re-issues a
+     * navigation and to where.
+     */
+    var hostedUrl: String? = null
+        private set
+
     fun attach(webView: WebView) {
         this.webView = webView
+    }
+
+    /**
+     * Records the URL the renderer reported for its own main frame.
+     *
+     * In-page navigation never passes through [navigate], so a record of *requests* alone drifts
+     * from what the renderer shows and would re-issue a load every time the user returned to a tab
+     * they had browsed within. A failed navigation deliberately does not reach here: the browser's
+     * last request stands, which is what keeps an error tab from reloading on every switch.
+     */
+    fun observed(url: String) {
+        hostedUrl = url
     }
 
     /**
@@ -76,9 +105,11 @@ internal class BrowserWebViewController(val tabId: Long) {
         detachFromParent()
         webView?.destroy()
         webView = null
+        hostedUrl = null
     }
 
     fun navigate(url: String) {
+        hostedUrl = url
         webView?.loadUrl(url)
     }
 
