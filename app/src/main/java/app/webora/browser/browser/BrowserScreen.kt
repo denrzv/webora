@@ -31,6 +31,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -714,15 +715,21 @@ internal fun RegularBrowser(
         }
         BrowserStatusRegion(state)
         Box(Modifier.fillMaxWidth().weight(1f).testTag(BROWSER_CONTENT_TAG)) {
-            HardenedWebView(
-                initialUrl = state.displayedUrl,
-                controller = controller,
-                onEvent = onRendererEvent,
-                onExternalNavigation = onExternalNavigation,
-                onDownload = onDownload,
-                onFileChooser = onFileChooser,
-                modifier = Modifier.fillMaxSize(),
-            )
+            // Keyed by the browser-owned tab id, and keyed *inside* the tagged Box: that rectangle
+            // is `CI-003`'s page measurement region, so it must not move. Without the key the
+            // composition slot is retained across a tab switch and keeps showing the previous tab's
+            // renderer.
+            key(controller.tabId) {
+                HardenedWebView(
+                    initialUrl = state.displayedUrl,
+                    controller = controller,
+                    onEvent = onRendererEvent,
+                    onExternalNavigation = onExternalNavigation,
+                    onDownload = onDownload,
+                    onFileChooser = onFileChooser,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
             state.loadFailure?.let { failure ->
                 BrowserErrorPage(
                     failure = failure,

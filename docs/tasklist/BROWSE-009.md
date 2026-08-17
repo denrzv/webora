@@ -45,7 +45,7 @@ References:
     `activeId` the id always resolves to a live tab, so the "no such tab" branch becomes
     unreachable.
 
-- [ ] TASK-2: give the Compose host a per-tab identity
+- [x] TASK-2: give the Compose host a per-tab identity
   - Modified: `browser/BrowserScreen.kt` (`key(controller.tabId)` inside the existing
     `Box(BROWSER_CONTENT_TAG)`), `web/BrowserWebViewController.kt` (`detachFromParent()` replaces the
     no-op `detach`; `destroy()` detaches first), `web/HardenedWebView.kt` (drop the body-local
@@ -58,6 +58,30 @@ References:
   - Negative control to run and record: remove `detachFromParent()`'s `removeView` and switch
     A → B → A; the reattach must throw `IllegalStateException: The specified child already has a
     parent` (or the isolation assertion must fail) rather than passing quietly.
+  - Deviation: the plan gave this task instrumented coverage only, which in this checkout means
+    **no coverage at all** — there is no emulator, so `TabRendererIsolationTest` compiles and never
+    runs, and its negative control cannot be executed either. A JVM `RendererHostContractTest` was
+    added so the three structural facts the instrumented behaviour depends on are held by the gate:
+    the host is keyed by `controller.tabId` *inside* the `BROWSER_CONTENT_TAG` box, every emitted
+    event carries the owner read once into a local, `BrowserScreen` contains no
+    `update(activeTabId)`, `detachFromParent` actually calls `removeView`, and `destroy` detaches
+    first. Same shape as `BrowserChromeContractTest`, and the same reason: runtime behaviour and
+    source structure fail under different regressions.
+  - Result: `key(controller.tabId)` wraps `HardenedWebView` inside the existing tagged `Box`, so
+    `CI-003`'s measured rectangle is unchanged. `detach(webView)` — which compared the view and
+    returned either way, called with a `var` every recomposition reset to `null` — is replaced by
+    `detachFromParent()`, the one owner of parent removal, and `destroy()` now detaches before
+    `WebView.destroy()` as the framework requires. `RendererHostContractTest` is 3/3 and
+    `bash scripts/pre-commit-check.sh` is green; `TabRendererIsolationTest` (3 cases: own renderer
+    and own failure across switches, exactly one attached renderer per switch, closing the failed
+    tab) compiles under `:app:compileDebugAndroidTestKotlin` and is **not run** here.
+
+    Negative controls, both run against the JVM contract test and both restored, each failing only
+    its own assertion: (a) `removeView(view)` replaced by a `check` → *detaching removes the
+    renderer from its parent* failed; (b) `key(controller.tabId)` replaced by `run` → *the renderer
+    host is keyed by tab* failed. The instrumented control the plan named — observing the actual
+    `IllegalStateException` on reattach — remains unrun for want of a device, and is recorded as
+    owed evidence rather than as a passed check.
 
 - [ ] TASK-3: make a cancelled TLS handshake terminal for its own tab
   - Modified: `web/HardenedWebViewClient.kt` — track the observed main-frame URL, add the pure

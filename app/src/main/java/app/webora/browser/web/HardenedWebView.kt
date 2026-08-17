@@ -13,6 +13,12 @@ import app.webora.browser.browser.ExternalNavigation
 
 /**
  * Hosts an untrusted web page with Webora's fixed renderer security policy.
+ *
+ * One host serves one tab. The caller keys this composable by the owning `BrowserTab.id`, because
+ * `AndroidView`'s `factory` runs once per *retained composition slot*: at one un-keyed call site,
+ * switching between two page tabs recomposes the slot instead of replacing it, leaving the previous
+ * tab's `WebView` on screen while the selected tab's controller — never attached to it — silently
+ * dropped every `navigate`, `reload`, `goBack` and `goForward`.
  */
 @Composable
 internal fun HardenedWebView(
@@ -25,7 +31,6 @@ internal fun HardenedWebView(
     modifier: Modifier = Modifier,
 ) {
     val currentObserver = rememberUpdatedState(onEvent)
-    var attachedWebView: WebView? = null
     AndroidView(
         modifier = modifier,
         factory = { context ->
@@ -58,13 +63,14 @@ internal fun HardenedWebView(
                 webChromeClient = UploadWebChromeClient(onFileChooser)
                 setDownloadListener { url, _, _, _, _ -> url?.let(onDownload) }
                 controller.attach(this)
-                attachedWebView = this
                 if (existing == null) loadUrl(initialUrl)
             }
         },
     )
+    // The controller already holds the reference, so the dispose path reads it from the one owner
+    // rather than from a body-local `var` that every recomposition reset to null.
     DisposableEffect(controller) {
-        onDispose { attachedWebView?.let(controller::detach) }
+        onDispose(controller::detachFromParent)
     }
 }
 
