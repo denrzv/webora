@@ -114,8 +114,8 @@ tab's committed target — changes *when a reload happens*, and "reattach withou
 criterion 2 of this very ticket. Getting that wrong turns a fix into a regression of live back/forward
 history, and the only thing that could confirm it is the instrumented suite, which this checkout
 cannot run for want of a device. Fixing it blind inside a review is how the `NET-004` retry would have
-been justified by a run that never exercised it. Filed as `BROWSE-010` in `docs/BACKLOG.md` with this
-analysis and the reproduction.
+been justified by a run that never exercised it. Filed as `BROWSE-010` in `docs/BACKLOG.md` and as GitHub issue
+[#106](https://github.com/denrzv/webora/issues/106), with this analysis and the reproduction.
 
 ## Not findings
 
@@ -160,7 +160,7 @@ own assertions, and all were restored.
 **RESOLVED.** `TASK-FIX-1` and `TASK-FIX-2` landed in commit `336eb2f`. The architecture, the
 security property and the layer split are sound; both findings were one-line-class defects in the new
 code, one of them in a test that overclaimed. `FINDING-3` is out of this ticket's scope and is
-recorded as `BROWSE-010` rather than carried.
+recorded as `BROWSE-010` (GitHub #106) rather than carried.
 
 Fixing `FINDING-2` produced the third instance of one trap in this ticket: the router's KDoc names
 `activeId` while forbidding it, so the first scan failed on its own documentation — after

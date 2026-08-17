@@ -972,6 +972,7 @@ passed on the first capture attempt at 478 ms — so the difference is the devic
 **Priority:** P2
 **Depends on:** `BROWSE-009`
 **Goal:** a tab that returns to Home and then navigates again must render the page it navigated to.
+**GitHub:** [#106](https://github.com/denrzv/webora/issues/106)
 
 **Found by:** `BROWSE-009`'s `/review`, by reasoning about renderer reuse rather than by a run. It is
 **pre-existing** on `main` and not what issue #103 reported; `BROWSE-009` neither causes nor cures it.

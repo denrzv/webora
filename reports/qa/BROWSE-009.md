@@ -103,4 +103,5 @@ entire suite green, so a guard four tickets old and named in this PRD's own acce
 navigating again never loads the new URL, because `HardenedWebView`'s factory only loads when it had
 to create the renderer. Pre-existing on `main`, unrelated to issue #103, and fixing it changes *when a
 reload happens* — which is this ticket's own acceptance criterion 2 — with no device available to
-confirm it. Filed as `BROWSE-010` in `docs/BACKLOG.md` with the mechanism and the reproduction.
+confirm it. Filed as `BROWSE-010` in `docs/BACKLOG.md` and as GitHub issue #106, with the mechanism and the
+reproduction.
