@@ -1,15 +1,22 @@
 package app.webora.browser.siteskin
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -25,9 +32,12 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import app.webora.browser.R
 import app.webora.browser.browser.MINIMUM_TOUCH_TARGET
 import app.webora.browser.browser.WeboraFloatingActionButton
+import app.webora.browser.browser.WeboraIconButton
+import app.webora.browser.design.WeboraSpacing
 import dev.siteskin.core.model.NavigationItem
 
 @Composable
@@ -85,51 +95,118 @@ internal fun SiteSkinQuickActions(
 }
 
 @Composable
-internal fun SiteSkinMenu(
-    model: SiteSkinChromeModel,
-    onSiteSelect: (NavigationItem) -> Unit,
-    onBrowserSelect: (BrowserMenuCommand) -> Unit,
+@OptIn(ExperimentalMaterial3Api::class)
+internal fun IntegratedBrowserMenuSheet(
+    commands: List<BrowserMenuCommand>,
     isFavourite: Boolean = false,
     onToggleFavourite: () -> Unit = {},
+    onSelect: (BrowserMenuCommand) -> Unit,
+    onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    ModalDrawerSheet(modifier.testTag(SITESKIN_MENU_TAG)) {
-        SiteHubSections(model, onSiteSelect)
-        if (model.hasSiteItems()) HorizontalDivider()
-        MenuHeading(stringResource(R.string.siteskin_browser_menu_heading))
-        MenuItem(
-            stringResource(if (isFavourite) R.string.remove_favourite else R.string.add_favourite),
-            null,
-            onClick = onToggleFavourite,
-        )
-        model.browserMenu.forEach { command ->
-            MenuItem(browserMenuLabel(command), null) { onBrowserSelect(command) }
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        modifier = modifier.testTag(INTEGRATED_BROWSER_MENU_TAG),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = WeboraSpacing.GUTTER)
+                .padding(bottom = WeboraSpacing.GUTTER),
+            verticalArrangement = Arrangement.spacedBy(WeboraSpacing.MEDIUM),
+        ) {
+            BrowserMenuHeader(onDismiss)
+            FavouriteTile(isFavourite) {
+                onDismiss()
+                onToggleFavourite()
+            }
+            commands.chunked(BROWSER_MENU_COLUMNS).forEach { row ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(WeboraSpacing.MEDIUM),
+                ) {
+                    row.forEach { command ->
+                        BrowserMenuTile(command) {
+                            onDismiss()
+                            onSelect(command)
+                        }
+                    }
+                    if (row.size < BROWSER_MENU_COLUMNS) Spacer(Modifier.weight(1f))
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun SiteHubSections(model: SiteSkinChromeModel, onSiteSelect: (NavigationItem) -> Unit) {
-    if (model.bottomNavigation.isNotEmpty()) {
-        MenuHeading(stringResource(R.string.siteskin_site_menu_heading))
-        model.bottomNavigation.forEach { item ->
-            MenuItem(item.label, item.icon, item.isActive) { onSiteSelect(item.item) }
-        }
+private fun BrowserMenuHeader(onDismiss: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(
+            stringResource(R.string.siteskin_browser_menu_heading),
+            style = MaterialTheme.typography.titleLarge,
+        )
+        WeboraIconButton(
+            icon = R.drawable.ic_close,
+            contentDescription = stringResource(R.string.close),
+            onClick = onDismiss,
+        )
     }
-    if (model.quickActions.isNotEmpty()) {
-        MenuHeading(stringResource(R.string.siteskin_quick_actions))
-        model.quickActions.forEach { item -> MenuItem(item.label, item.icon) { onSiteSelect(item.item) } }
-    }
-    if (model.siteMenu.isNotEmpty()) {
-        MenuHeading(stringResource(R.string.siteskin_site_menu_heading))
-        model.siteMenu.take(MAX_VISIBLE_MENU_ITEMS).forEach { item ->
-            MenuItem(item.label, item.icon) { onSiteSelect(item.item) }
+}
+
+@Composable
+private fun FavouriteTile(isFavourite: Boolean, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        modifier = Modifier.fillMaxWidth().heightIn(min = BROWSER_MENU_TILE_HEIGHT),
+    ) {
+        Row(
+            modifier = Modifier.padding(WeboraSpacing.LARGE),
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(WeboraSpacing.MEDIUM),
+        ) {
+            Icon(painterResource(R.drawable.ic_siteskin_flower), contentDescription = null)
+            Text(
+                stringResource(if (isFavourite) R.string.remove_favourite else R.string.add_favourite),
+                style = MaterialTheme.typography.labelLarge,
+            )
         }
     }
 }
 
-private fun SiteSkinChromeModel.hasSiteItems(): Boolean =
-    bottomNavigation.isNotEmpty() || quickActions.isNotEmpty() || siteMenu.isNotEmpty()
+@Composable
+private fun RowScope.BrowserMenuTile(command: BrowserMenuCommand, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        modifier = Modifier.weight(1f).heightIn(min = BROWSER_MENU_TILE_HEIGHT),
+    ) {
+        Column(
+            modifier = Modifier.padding(WeboraSpacing.LARGE),
+            verticalArrangement = Arrangement.spacedBy(WeboraSpacing.SMALL),
+        ) {
+            Icon(painterResource(browserMenuIcon(command)), contentDescription = null)
+            Text(browserMenuLabel(command), style = MaterialTheme.typography.labelLarge)
+        }
+    }
+}
+
+private fun browserMenuIcon(command: BrowserMenuCommand): Int = when (command) {
+    BrowserMenuCommand.PAGE_INFORMATION -> R.drawable.ic_lock
+    BrowserMenuCommand.TABS -> R.drawable.ic_tabs
+    BrowserMenuCommand.SETTINGS -> R.drawable.ic_menu
+    BrowserMenuCommand.INSPECTOR -> R.drawable.ic_search
+}
 
 /**
  * The browser-authored label for a browser-owned menu command.
@@ -148,36 +225,12 @@ internal fun browserMenuLabel(command: BrowserMenuCommand): String = when (comma
 }
 
 @Composable
-private fun MenuHeading(label: String) {
-    Text(label, modifier = Modifier.testTag("$SITESKIN_MENU_SECTION_PREFIX$label"))
-}
-
-@Composable
-private fun MenuItem(label: String, icon: String?, selected: Boolean? = null, onClick: () -> Unit) {
-    val selectedDescription = stringResource(R.string.siteskin_nav_selected)
-    val notSelectedDescription = stringResource(R.string.siteskin_nav_not_selected)
-    DropdownMenuItem(
-        text = { BoundedLabel(label) },
-        leadingIcon = icon?.let { { SiteSkinIcon(it) } },
-        onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = MINIMUM_TOUCH_TARGET)
-            .semantics {
-                if (selected != null) {
-                    stateDescription = if (selected) selectedDescription else notSelectedDescription
-                }
-            },
-    )
-}
-
-@Composable
 private fun BoundedLabel(label: String) {
     Text(text = label, maxLines = 1, overflow = TextOverflow.Ellipsis)
 }
 
 @Composable
-private fun SiteSkinIcon(name: String?) {
+internal fun SiteSkinIcon(name: String?) {
     Icon(
         painter = painterResource(siteSkinIconResource(name)),
         contentDescription = null,
@@ -203,8 +256,8 @@ private val SITE_SKIN_ICON_RESOURCES = mapOf(
 
 internal const val SITESKIN_BOTTOM_NAV_TAG = "siteskin_bottom_navigation"
 internal const val SITESKIN_QUICK_ACTIONS_TAG = "siteskin_quick_actions"
-internal const val SITESKIN_MENU_TAG = "siteskin_menu"
-internal const val SITESKIN_MENU_SECTION_PREFIX = "siteskin_menu_section_"
+internal const val INTEGRATED_BROWSER_MENU_TAG = "integrated_browser_menu"
 private const val MAX_VISIBLE_NAVIGATION = 5
 private const val MAX_VISIBLE_QUICK_ACTIONS = 5
-private const val MAX_VISIBLE_MENU_ITEMS = 20
+private const val BROWSER_MENU_COLUMNS = 2
+private val BROWSER_MENU_TILE_HEIGHT = 76.dp

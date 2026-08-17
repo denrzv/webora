@@ -36,7 +36,8 @@ import app.webora.browser.siteskin.SITESKIN_DOCK_BACK_TAG
 import app.webora.browser.siteskin.SITESKIN_DOCK_FORWARD_TAG
 import app.webora.browser.siteskin.SITESKIN_DOCK_HUB_TAG
 import app.webora.browser.siteskin.SITESKIN_DOCK_TAG
-import app.webora.browser.siteskin.SITESKIN_MENU_TAG
+import app.webora.browser.siteskin.SITESKIN_ACTION_BOUQUET_TAG
+import app.webora.browser.siteskin.SITESKIN_ACTION_TAG_PREFIX
 import app.webora.browser.siteskin.SITESKIN_QUICK_ACTIONS_TAG
 import app.webora.browser.siteskin.SITESKIN_SECURITY_TAG
 import org.junit.Assert.assertEquals
@@ -112,12 +113,12 @@ class LiveSiteScreenshotTest {
         captureDeviceScreenshot("06-happy-days-forward.png", requirePageContent = true)
 
         composeRule.onNodeWithTag(SITESKIN_DOCK_HUB_TAG).assertIsDisplayed().performClick()
-        waitUntilNodeExists(hasTestTag(SITESKIN_MENU_TAG))
-        composeRule.onNodeWithText(string(R.string.siteskin_site_menu_heading)).assertIsDisplayed()
-        composeRule.onNodeWithText(string(R.string.siteskin_browser_menu_heading)).assertIsDisplayed()
-        HUB_ITEMS.forEach { label -> composeRule.onNodeWithText(label).assertIsDisplayed() }
+        waitUntilNodeExists(hasTestTag(SITESKIN_ACTION_BOUQUET_TAG))
+        HUB_ITEM_IDS.forEach { id ->
+            composeRule.onNodeWithTag("$SITESKIN_ACTION_TAG_PREFIX$id").assertIsDisplayed()
+        }
         captureDeviceScreenshot("07-siteskin-hub.png", requirePageContent = true)
-        composeRule.onNodeWithText(HUB_HOME).performClick()
+        composeRule.onNodeWithTag("${SITESKIN_ACTION_TAG_PREFIX}home").performClick()
         returnFromBloomHistoryToHome()
     }
 
@@ -211,7 +212,7 @@ class LiveSiteScreenshotTest {
         composeRule.onNodeWithTag(SITESKIN_SECURITY_TAG).assertDoesNotExist()
         composeRule.onNodeWithTag(EXPRESSIVE_HEADER_TAG).assertDoesNotExist()
         composeRule.onNodeWithTag(SITESKIN_DOCK_TAG).assertDoesNotExist()
-        composeRule.onNodeWithTag(SITESKIN_MENU_TAG).assertDoesNotExist()
+        composeRule.onNodeWithTag(SITESKIN_ACTION_BOUQUET_TAG).assertDoesNotExist()
         composeRule.onNodeWithTag(SITESKIN_QUICK_ACTIONS_TAG).assertDoesNotExist()
         captureDeviceScreenshot("08-regular-browsing.png", requirePageContent = true)
     }
@@ -354,8 +355,7 @@ class LiveSiteScreenshotTest {
         const val REGULAR_DOMAIN = "example.com"
         const val PRODUCT_NAME = "Happy Days Bouquet"
         const val PRODUCT_LINK_TEXT = "Happy Days"
-        const val HUB_HOME = "Home"
-        val HUB_ITEMS = listOf(HUB_HOME, "Catalog", "Cart", "Profile", "Call")
+        val HUB_ITEM_IDS = listOf("home", "catalog", "cart", "profile", "call")
         const val MAX_HISTORY_RETURNS = 4
         const val MAX_PRODUCT_SCROLL_ATTEMPTS = 5
         const val PRODUCT_SCROLL_STEPS = 24

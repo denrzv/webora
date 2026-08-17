@@ -52,6 +52,29 @@ class SiteSkinChromeModelTest {
         assertEquals(20, model.siteMenu.size)
     }
 
+    @Test fun `action bouquet prioritises navigation then quick actions and caps at five`() {
+        val bouquet = SiteSkinChromeModel.from(
+            configuration(3, 3, 3),
+            "https://shop.example/item",
+        ).actionBouquet()
+
+        assertEquals(listOf("nav-0", "nav-1", "nav-2", "quick-0", "quick-1"), bouquet.map { it.id })
+    }
+
+    @Test fun `action bouquet deduplicates ids before applying the cap`() {
+        val original = SiteSkinChromeModel.from(configuration(2, 2, 2), "https://shop.example/item")
+        val duplicate = original.bottomNavigation.first()
+        val model = original.copy(
+            quickActions = listOf(duplicate) + original.quickActions,
+            siteMenu = listOf(duplicate) + original.siteMenu,
+        )
+
+        assertEquals(
+            listOf("nav-0", "nav-1", "quick-0", "quick-1", "menu-0"),
+            model.actionBouquet().map { it.id },
+        )
+    }
+
     @Test fun `active navigation uses browser page and no match selects nothing`() {
         val configuration = configuration(2, 0, 0)
 

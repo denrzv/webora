@@ -33,8 +33,15 @@ internal data class SiteSkinItemModel(
     val label: String,
     val icon: String?,
     val isActive: Boolean,
+    val isNavigation: Boolean,
     val item: NavigationItem,
 )
+
+/** Browser-owned projection for the compact flower hub: priority, uniqueness and cap are fixed. */
+internal fun SiteSkinChromeModel.actionBouquet(): List<SiteSkinItemModel> =
+    (bottomNavigation + quickActions + siteMenu)
+        .distinctBy(SiteSkinItemModel::id)
+        .take(MAX_BOUQUET_ITEMS)
 
 internal enum class BrowserMenuCommand {
     PAGE_INFORMATION,
@@ -87,14 +94,16 @@ internal fun browserMenuCommands(
  */
 internal fun accessibleLabel(raw: String): String = raw.take(SiteSkinLimits.MAX_LABEL_LENGTH)
 
-private fun NavigationItem.toModel(isActive: Boolean = false) = SiteSkinItemModel(
+private fun NavigationItem.toModel(isActive: Boolean? = null) = SiteSkinItemModel(
     id = id,
     label = accessibleLabel(label),
     icon = icon,
-    isActive = isActive,
+    isActive = isActive == true,
+    isNavigation = isActive != null,
     item = this,
 )
 
 private const val MAX_NAVIGATION_ITEMS = 5
 private const val MAX_QUICK_ACTIONS = 5
 private const val MAX_MENU_ITEMS = 20
+private const val MAX_BOUQUET_ITEMS = 5

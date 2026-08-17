@@ -24,8 +24,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -73,7 +71,7 @@ import app.webora.browser.siteskin.BitmapBrandAssetDecoder
 import app.webora.browser.siteskin.OkHttpBrandAssetSource
 import app.webora.browser.siteskin.SiteSkinChromeModel
 import app.webora.browser.siteskin.SiteSkinDock
-import app.webora.browser.siteskin.SiteSkinMenu
+import app.webora.browser.siteskin.IntegratedBrowserMenuSheet
 import app.webora.browser.siteskin.SiteSkinConsentModel
 import app.webora.browser.siteskin.ExpressiveSiteSkinPresentation
 import app.webora.browser.siteskin.SiteSkinTopBar
@@ -81,7 +79,7 @@ import app.webora.browser.siteskin.SiteSkinTopBarModel
 import app.webora.browser.siteskin.brandMonogram
 import app.webora.browser.siteskin.BrowserMenuCommand
 import app.webora.browser.siteskin.browserMenuCommands
-import app.webora.browser.siteskin.browserMenuLabel
+import app.webora.browser.siteskin.actionBouquet
 import app.webora.browser.inspector.InspectorBrowserState
 import app.webora.browser.inspector.SiteSkinInspectorHost
 import app.webora.browser.inspector.SiteSkinTraceRecorder
@@ -130,7 +128,8 @@ internal fun BrowserScreen(
     val generation = generations[activeTabId] ?: 0L
     var discoveryOwner by remember { mutableStateOf(activeTabId) }
     var pendingConsent by remember { mutableStateOf<Pair<Long, SiteSkinCandidate>?>(null) }
-    var siteMenuExpanded by remember { mutableStateOf(false) }
+    var siteActionsExpanded by remember { mutableStateOf(false) }
+    var browserMenuVisible by remember { mutableStateOf(false) }
     var tabsVisible by remember { mutableStateOf(false) }
     var settingsVisible by remember { mutableStateOf(false) }
     var clearConfirmation by remember { mutableStateOf(false) }
@@ -200,7 +199,10 @@ internal fun BrowserScreen(
     }
     val downloadMessages = stringResource(R.string.download_started) to stringResource(R.string.download_failed)
     val integrated = state.mode as? BrowserMode.Integrated
-    LaunchedEffect(activeTabId, integrated?.configuration) { siteMenuExpanded = false }
+    LaunchedEffect(activeTabId, integrated?.configuration) {
+        siteActionsExpanded = false
+        browserMenuVisible = false
+    }
     val currentBrandAsset = integrated?.configuration?.let { configuration ->
         brandAsset?.takeIf { it.first === configuration }?.second
             ?: BrandAsset.Monogram(brandMonogram(configuration.site.shortName, configuration.site.name))
@@ -265,7 +267,10 @@ internal fun BrowserScreen(
             is ResolvedAction.OpenMap -> externalNavigation(resolved.value)?.let { pendingExternal = it }
             is ResolvedAction.Share -> onShare(resolved.pageUrl)
             ResolvedAction.Refresh -> controller.reload()
-            ResolvedAction.OpenMenu -> siteMenuExpanded = true
+            ResolvedAction.OpenMenu -> {
+                browserMenuVisible = false
+                siteActionsExpanded = true
+            }
             null -> Unit
         }
         }
@@ -277,7 +282,11 @@ internal fun BrowserScreen(
         onObservation = { observation ->
             session = session.update(activeTabId) { it.observe(observation) }
         },
-        onHome = { session = session.updateActive { BrowserState() } },
+        onHome = {
+            siteActionsExpanded = false
+            browserMenuVisible = false
+            session = session.updateActive { BrowserState() }
+        },
         onExternalNavigation = { pendingExternal = it },
         onDownload = { url ->
             val message = if (onDownload(url)) downloadMessages.first else downloadMessages.second
@@ -285,14 +294,25 @@ internal fun BrowserScreen(
         },
         onFileChooser = onFileChooser,
         brandAsset = currentBrandAsset,
-        onOpenSiteHub = { siteMenuExpanded = true },
+        siteActionsExpanded = siteActionsExpanded,
+        onSiteActionsToggle = {
+            browserMenuVisible = false
+            siteActionsExpanded = !siteActionsExpanded
+        },
+        onSiteActionsDismiss = { siteActionsExpanded = false },
+        onSiteSelect = dispatchSiteItem,
+        onOpenBrowserMenu = {
+            siteActionsExpanded = false
+            browserMenuVisible = true
+        },
         onPageStarted = { url ->
             completedPages.remove(activeTabId)
             val nextGeneration = generation + 1
             generations[activeTabId] = nextGeneration
             discoveryOwner = activeTabId
             pendingConsent = null
-            siteMenuExpanded = false
+            siteActionsExpanded = false
+            browserMenuVisible = false
             if (siteSkinEnabled) manifestDiscovery.onPageStarted(url, nextGeneration)
         },
         onPageCompleted = { url, title ->
@@ -351,18 +371,12 @@ internal fun BrowserScreen(
         },
     ) }
     val activeMode = state.mode as? BrowserMode.Integrated
-    if (siteMenuExpanded && activeMode != null) {
-        val chrome = SiteSkinChromeModel.from(activeMode.configuration, state.displayedUrl)
-        SiteSkinMenu(
-            model = chrome,
+    if (browserMenuVisible && activeMode != null) {
+        IntegratedBrowserMenuSheet(
+            commands = browserMenuCommands(),
             isFavourite = currentIsFavourite,
             onToggleFavourite = toggleFavourite,
-            onSiteSelect = { item ->
-                siteMenuExpanded = false
-                dispatchSiteItem(item)
-            },
-            onBrowserSelect = { command ->
-                siteMenuExpanded = false
+            onSelect = { command ->
                 when (command) {
                     BrowserMenuCommand.PAGE_INFORMATION -> Unit
                     BrowserMenuCommand.TABS -> tabsVisible = true
@@ -370,6 +384,7 @@ internal fun BrowserScreen(
                     BrowserMenuCommand.INSPECTOR -> inspectorVisible = true
                 }
             },
+            onDismiss = { browserMenuVisible = false },
         )
     }
     }
@@ -383,7 +398,8 @@ internal fun BrowserScreen(
                 pendingConsent = null
                 pendingExternal = null
                 pendingExternalUrl = null
-                siteMenuExpanded = false
+                siteActionsExpanded = false
+                browserMenuVisible = false
             },
             onDismiss = { tabsVisible = false },
         )
@@ -639,7 +655,11 @@ internal fun RegularBrowser(
     onDownload: (String) -> Unit,
     onFileChooser: (String, (String?) -> Unit) -> Unit,
     brandAsset: BrandAsset?,
-    onOpenSiteHub: () -> Unit,
+    siteActionsExpanded: Boolean,
+    onSiteActionsToggle: () -> Unit,
+    onSiteActionsDismiss: () -> Unit,
+    onSiteSelect: (NavigationItem) -> Unit,
+    onOpenBrowserMenu: () -> Unit,
     onPageStarted: (String) -> Unit,
     onPageCompleted: (String, String?) -> Unit,
     onTabs: () -> Unit,
@@ -707,15 +727,20 @@ internal fun RegularBrowser(
                 darkTheme = isSystemInDarkTheme(),
                 reducedMotion = reducedMotionEnabled(LocalContext.current),
             )
+            val chrome = SiteSkinChromeModel.from(integrated.configuration, state.displayedUrl)
             SiteSkinDock(
                 presentation = presentation,
                 canGoBack = canNavigateBack,
                 canGoForward = state.canGoForward,
                 onBack = onBack,
                 onForward = controller::goForward,
-                onOpenHub = onOpenSiteHub,
+                siteActions = chrome.actionBouquet(),
+                siteActionsExpanded = siteActionsExpanded,
+                onSiteActionsToggle = onSiteActionsToggle,
+                onSiteActionsDismiss = onSiteActionsDismiss,
+                onSiteSelect = onSiteSelect,
                 onTabs = onTabs,
-                onMore = onOpenSiteHub,
+                onMore = onOpenBrowserMenu,
                 brandAsset = brandAsset ?: BrandAsset.Monogram(
                     brandMonogram(integrated.configuration.site.shortName, integrated.configuration.site.name),
                 ),
