@@ -53,6 +53,9 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - run: chmod +x ./gradlew
       - run: ./gradlew test
+      # Host-side unit tests do not compile androidTest sources. Compile them explicitly so a broken
+      # instrumentation helper cannot pass PR CI and fail only after merge in the hosted emulator job.
+      - run: ./gradlew :app:compileDebugAndroidTestKotlin
       # `test` covers the debug variant only — AGP 9 creates no other host-test task —
       # so the developer inspector's absence from the shipped variants is asserted
       # against their compiled classes rather than by a JUnit run that cannot exist.
