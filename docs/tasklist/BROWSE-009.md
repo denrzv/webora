@@ -63,10 +63,10 @@ References:
     runs, and its negative control cannot be executed either. A JVM `RendererHostContractTest` was
     added so the three structural facts the instrumented behaviour depends on are held by the gate:
     the host is keyed by `controller.tabId` *inside* the `BROWSER_CONTENT_TAG` box, every emitted
-    event carries the owner read once into a local, `BrowserScreen` contains no
-    `update(activeTabId)`, `detachFromParent` actually calls `removeView`, and `destroy` detaches
-    first. Same shape as `BrowserChromeContractTest`, and the same reason: runtime behaviour and
-    source structure fail under different regressions.
+    event carries the owner read once into a local, the renderer path cannot address the selected tab
+    (weak as first written — see `TASK-FIX-2`), `detachFromParent` actually calls `removeView`, and
+    `destroy` detaches first. Same shape as `BrowserChromeContractTest`, and the same reason: runtime
+    behaviour and source structure fail under different regressions.
   - Result: `key(controller.tabId)` wraps `HardenedWebView` inside the existing tagged `Box`, so
     `CI-003`'s measured rectangle is unchanged. `detach(webView)` — which compared the view and
     returned either way, called with a `var` every recomposition reset to `null` — is replaced by
@@ -145,6 +145,21 @@ References:
     only. The negative control for the delegation rule deliberately keeps both required parts, so it
     can only fail on the mutation itself rather than on a missing routing call.
 
-- [ ] TASK-4: review, QA and validate
+- [x] TASK-4: review, QA and validate
   - `/review` findings become `TASK-FIX-N` with a `- Source:` line; then `/qa`, then `/validate`.
   - Record the CLAUDE.md convention section for renderer ownership as part of the docs step.
+  - Result: `/review` raised three findings. Two were in the new code and became `TASK-FIX-1` and
+    `TASK-FIX-2` — a dead selected-tab accessor, and a contract assertion satisfied by the very thing
+    it forbade. The third is a **pre-existing** navigation defect the review found while reasoning
+    about renderer reuse (Home → new address never loads, because the factory only loads when it had
+    to create the renderer). It is deferred with its argument written down and filed as `BROWSE-010`:
+    the fix changes *when a reload happens*, which is this ticket's own acceptance criterion 2, and
+    no device is available to confirm it.
+
+    `/qa`: QA_PASSED, 30 scenarios, 363 app unit tests green, six negative controls each failing only
+    their own assertions. Scenarios 27–30 are **Unknown** — this checkout has no emulator, so
+    `TabRendererIsolationTest` and `BrowserRecoveryInstrumentedTest` compile and never run.
+
+    `/docs-update`: `CLAUDE.md` gained *A renderer belongs to one tab, and so does every event it
+    emits*; `docs/ROADMAP.md` records the ticket under M8; `docs/BACKLOG.md` carries `BROWSE-010`.
+    No `spec/` change — the manifest surface is untouched.

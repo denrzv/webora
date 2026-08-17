@@ -1,6 +1,6 @@
 # Review: BROWSE-009
 Date: 2026-08-17
-Status: OPEN
+Status: RESOLVED
 
 ## Summary
 
@@ -157,6 +157,13 @@ own assertions, and all were restored.
 
 ## Verdict
 
-**OPEN** pending `TASK-FIX-1` and `TASK-FIX-2`. The architecture, the security property and the layer
-split are sound; both findings are one-line-class defects in the new code, one of them in a test that
-currently overclaims. `FINDING-3` is out of this ticket's scope and is recorded rather than carried.
+**RESOLVED.** `TASK-FIX-1` and `TASK-FIX-2` landed in commit `336eb2f`. The architecture, the
+security property and the layer split are sound; both findings were one-line-class defects in the new
+code, one of them in a test that overclaimed. `FINDING-3` is out of this ticket's scope and is
+recorded as `BROWSE-010` rather than carried.
+
+Fixing `FINDING-2` produced the third instance of one trap in this ticket: the router's KDoc names
+`activeId` while forbidding it, so the first scan failed on its own documentation — after
+`handler.proceed(` matched its own KDoc in `TASK-3`, and after `UX-002`'s wrapper exemption exempted
+the file describing it. All three scans read executable lines only now, and that recurrence is worth a
+convention note rather than a third fix in isolation.
