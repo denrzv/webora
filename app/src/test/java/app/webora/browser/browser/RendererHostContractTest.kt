@@ -44,9 +44,8 @@ class RendererHostContractTest {
     }
 
     @Test
-    fun `a renderer event names its owner and the screen never addresses the selection`() {
+    fun `a renderer event names its owner`() {
         val host = source("app/webora/browser/web/HardenedWebView.kt").readText()
-        val screen = source("app/webora/browser/browser/BrowserScreen.kt").readText()
 
         // The owner is read once, into a local, and every event constructed from it. Reading
         // `controller.tabId` per callback would be the same value today and an invitation to make
@@ -56,9 +55,45 @@ class RendererHostContractTest {
             "every emitted event must carry the owner",
             Regex("""WebViewEvent\.\w+\(\s*owner""").findAll(host).count() == EMITTED_EVENTS,
         )
+    }
+
+    @Test
+    fun `the renderer path cannot address the selected tab`() {
+        // The first version of this assertion was `!screen.contains("update(activeTabId)")`, which
+        // `BrowserSession.updateActive` — literally `update(activeId, …)` — satisfies. A regression
+        // written as `session.updateActive { it.observe(rendererObservation) }` restored the whole
+        // defect and passed. Banning `updateActive` from the screen outright is not available
+        // either: four user-action call sites legitimately use it (Home reset, address edit, and
+        // SiteSkin deactivation from the privacy toggle and from clear-data). So assert the *path*.
+        // Code, not prose: the router's own KDoc says nothing in it may consult
+        // `BrowserSession.activeId`, and the first version of this assertion failed on that
+        // sentence. Third instance of the same trap in this ticket, after `handler.proceed(`
+        // matching its own KDoc and `UX-002`'s wrapper exemption exempting the file describing it.
+        val router = source("app/webora/browser/browser/RendererOwnership.kt").readText()
+        val screen = source("app/webora/browser/browser/BrowserScreen.kt").readText()
+
+        assertTrue("the router must not know which tab is selected", routerIgnoresSelection(router))
         assertFalse(
-            "no renderer state may be addressed to whichever tab is selected",
-            screen.contains("update(activeTabId)"),
+            "negative control: a router reading the selection must be rejected",
+            routerIgnoresSelection("val tabId = session.activeId"),
+        )
+        assertFalse(
+            "negative control: a router taking the active-addressed shortcut must be rejected",
+            routerIgnoresSelection("session.updateActive { it.observe(event.toBrowserObservation()) }"),
+        )
+        assertTrue("the screen must route renderer events, not mutate for them", screenDelegates(screen))
+        assertFalse(
+            "negative control: a renderer handler that mutates the session itself must be rejected",
+            // Deliberately keeps both required parts, so it can only fail on the mutation itself.
+            // A control missing the routing call would fail on the wrong condition and prove
+            // nothing about the rule being added.
+            screenDelegates(
+                "val applyRendererEvent: (WebViewEvent) -> Unit = { event ->\n" +
+                    "    val routing = routeRendererEvent(session, book, event)\n" +
+                    "    session = routing.session\n" +
+                    "    session = session.updateActive { it.observe(event.toBrowserObservation()) }\n" +
+                    "}\n",
+            ),
         )
     }
 
@@ -88,6 +123,32 @@ class RendererHostContractTest {
         val key = source.indexOf("key(controller.tabId)")
         val host = source.indexOf("HardenedWebView(")
         return region >= 0 && key > region && host > key
+    }
+
+    /** Executable lines only, with comments dropped so prose cannot participate in a rule. */
+    private fun code(text: String): String = text.lines()
+        .map(String::trim)
+        .filterNot { it.startsWith("*") || it.startsWith("//") || it.startsWith("/*") }
+        .joinToString("\n")
+
+    /** The selection is a concept the router may not have — by either of its two spellings. */
+    private fun routerIgnoresSelection(source: String): Boolean = code(source).let {
+        !it.contains("updateActive") && !it.contains("activeId")
+    }
+
+    /**
+     * `applyRendererEvent` delegates and performs; it does not decide.
+     *
+     * The only assignment it may make to `session` is the routing's own result, so a session
+     * mutation written inside the renderer handler fails here whichever id it names.
+     */
+    private fun screenDelegates(source: String): Boolean {
+        val handler = code(source)
+            .substringAfter("val applyRendererEvent: (WebViewEvent) -> Unit = { event ->", "")
+            .substringBefore("\nval downloadMessages")
+        return handler.contains("routeRendererEvent(session, book, event)") &&
+            handler.contains("session = routing.session") &&
+            !Regex("""session = session\.""").containsMatchIn(handler)
     }
 
     private fun detachRemovesFromParent(source: String): Boolean =

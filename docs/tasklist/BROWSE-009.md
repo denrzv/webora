@@ -118,6 +118,33 @@ References:
     strips comment lines, covers all of `src/main/java` rather than one file, and carries its own
     counter-example proving it still sees a `proceed` in code.
 
+- [x] TASK-FIX-1: delete the dead selected-tab generation local
+  - Source: `/review` FINDING-1.
+  - `BrowserScreen.kt:129`'s `val generation` lost both readers when the book replaced the maps.
+  - Acceptance: no unused accessor for "the selected tab's generation" survives in the file whose
+    point is to stop reading the selected tab.
+  - Result: deleted. Both readers had moved to `book.generation(ownerId)`.
+
+- [x] TASK-FIX-2: make the renderer-path contract assert the path, not a spelling
+  - Source: `/review` FINDING-2.
+  - `assertFalse(screen.contains("update(activeTabId)"))` is satisfied by `updateActive`, which is
+    literally `update(activeId, …)` — a regression written that way passes. `updateActive` cannot be
+    banned outright: four legitimate user-action call sites use it.
+  - Acceptance: the router's source contains neither `updateActive` nor `activeId`, and
+    `applyRendererEvent` delegates to `routeRendererEvent` with no session mutation of its own. Both
+    halves carry a negative control.
+  - Result: `the renderer path cannot address the selected tab` replaces the spelling check with two
+    rules and four controls. The decisive one is the regression the old assertion missed, run against
+    the real source: adding `session = session.updateActive { it.observe(event.toBrowserObservation()) }`
+    inside `applyRendererEvent` now fails, where it previously passed.
+
+    Writing it produced **the third instance of one trap in this ticket**: the router's own KDoc says
+    nothing in it may consult `BrowserSession.activeId`, so the first version of the scan failed on
+    that sentence — after `handler.proceed(` matched its own KDoc in TASK-3, and after `UX-002`'s
+    wrapper exemption exempted the file describing it. All three scans now read executable lines
+    only. The negative control for the delegation rule deliberately keeps both required parts, so it
+    can only fail on the mutation itself rather than on a missing routing call.
+
 - [ ] TASK-4: review, QA and validate
   - `/review` findings become `TASK-FIX-N` with a `- Source:` line; then `/qa`, then `/validate`.
   - Record the CLAUDE.md convention section for renderer ownership as part of the docs step.

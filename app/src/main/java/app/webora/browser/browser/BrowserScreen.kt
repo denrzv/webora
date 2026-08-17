@@ -126,7 +126,6 @@ internal fun BrowserScreen(
     }
     val controller = controllers.getOrPut(activeTabId) { BrowserWebViewController(activeTabId) }
     var book by remember { mutableStateOf(RendererPageBook()) }
-    val generation = book.generation(activeTabId)
     var discoveryOwner by remember { mutableStateOf(activeTabId) }
     var pendingConsent by remember { mutableStateOf<Pair<Long, SiteSkinCandidate>?>(null) }
     var siteActionsExpanded by remember { mutableStateOf(false) }

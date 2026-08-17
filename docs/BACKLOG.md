@@ -964,3 +964,50 @@ passed on the first capture attempt at 478 ms — so the difference is the devic
 - The readiness artifact records whatever new condition is added, sample by sample, as it already
   does for the existing four.
 - `bash scripts/pre-commit-check.sh` passes.
+
+---
+
+### `BROWSE-010` — Leaving Home again shows the previous page under a permanent spinner
+
+**Priority:** P2
+**Depends on:** `BROWSE-009`
+**Goal:** a tab that returns to Home and then navigates again must render the page it navigated to.
+
+**Found by:** `BROWSE-009`'s `/review`, by reasoning about renderer reuse rather than by a run. It is
+**pre-existing** on `main` and not what issue #103 reported; `BROWSE-009` neither causes nor cures it.
+
+**The mechanism.** `BrowserScreen` composes `RegularBrowser` only when the tab is not on Home, so
+returning a tab to Home disposes its `AndroidView` while `BrowserWebViewController` deliberately
+retains the `WebView` — `BROWSE-006` requires live back/forward history to survive. Navigating that
+tab out of Home remounts the host, and `HardenedWebView`'s factory reads:
+
+```kotlin
+if (existing == null) loadUrl(initialUrl)
+```
+
+`existing` is not null, so the new URL is **never loaded**. The renderer keeps showing the previous
+page while `BrowserState.displayedUrl` says the new one and `isLoading` stays `true` with no callback
+ever arriving. Reproduction: load a page → Home → type any address.
+
+**Why `BROWSE-009` did not fix it.** The obvious fix — load when the retained renderer's URL differs
+from the tab's committed target — changes *when a reload happens*, and "switching back reattaches the
+same instance without a reload" is `BROWSE-009`'s own acceptance criterion 2. Getting that wrong
+converts a fix into a regression of the live history the retention exists to preserve, and the only
+thing that can confirm it is the instrumented suite, which needs a device. `NET-004` records what
+happens when a change is justified by reasoning and then blessed by a run that never exercised it.
+
+**Scope**
+- Decide the mount-time rule: what makes a retained renderer *stale* for its tab, expressed in
+  browser-observed values only.
+- Keep tab switching reload-free. A rule that fires on A → B → A has failed, and `BROWSE-009`'s
+  `TabRendererIsolationTest` is where that shows up.
+- Reconcile with `BROWSE-008`: after a Home round trip the renderer still holds the pre-Home history,
+  so Back from the newly loaded page reaches a page the browser state has forgotten. Decide whether
+  that is the same defect or a second one before changing either.
+- Do not fix this by destroying the renderer on Home. That discards the tab's live history, which is
+  the thing `BROWSE-006` retains it for.
+
+**Acceptance**
+- Page → Home → new address renders the new address, with loading terminating.
+- Tab switching still performs no reload; the instrumented isolation cases stay green.
+- `bash scripts/pre-commit-check.sh` passes.
