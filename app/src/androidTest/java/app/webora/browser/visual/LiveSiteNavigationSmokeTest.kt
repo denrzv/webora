@@ -25,7 +25,6 @@ import app.webora.browser.browser.BROWSER_NAVIGATION_SHELL_TAG
 import app.webora.browser.browser.BROWSER_SECURITY_TAG
 import app.webora.browser.siteskin.EXPRESSIVE_HEADER_TAG
 import app.webora.browser.siteskin.SITESKIN_ACTION_BOUQUET_TAG
-import app.webora.browser.siteskin.SITESKIN_ACTION_TAG_PREFIX
 import app.webora.browser.siteskin.SITESKIN_BACK_TAG
 import app.webora.browser.siteskin.SITESKIN_DOCK_BACK_TAG
 import app.webora.browser.siteskin.SITESKIN_DOCK_FORWARD_TAG
@@ -76,10 +75,12 @@ class LiveSiteNavigationSmokeTest {
 
         composeRule.onNodeWithTag(SITESKIN_DOCK_HUB_TAG).assertIsDisplayed().performClick()
         waitUntilNodeExists(hasTestTag(SITESKIN_ACTION_BOUQUET_TAG))
-        HUB_ITEM_IDS.forEach { id ->
-            composeRule.onNodeWithTag("$SITESKIN_ACTION_TAG_PREFIX$id").assertIsDisplayed()
+        BloomReferenceContract.ACTION_IDS.forEach { id ->
+            composeRule.onNodeWithTag(BloomReferenceContract.actionTag(id)).assertIsDisplayed()
         }
-        composeRule.onNodeWithTag("${SITESKIN_ACTION_TAG_PREFIX}home").performClick()
+        composeRule.onNodeWithTag(
+            BloomReferenceContract.actionTag(BloomReferenceContract.HOME_ACTION_ID),
+        ).performClick()
         waitUntilNodeAbsent(hasTestTag(SITESKIN_ACTION_BOUQUET_TAG))
         requireIntegratedChrome()
 
@@ -239,7 +240,6 @@ class LiveSiteNavigationSmokeTest {
         const val REGULAR_SMOKE_ADDRESS = "example.com"
         const val PRODUCT_NAME = "Happy Days Bouquet"
         const val PRODUCT_LINK_TEXT = "Happy Days"
-        val HUB_ITEM_IDS = listOf("home", "catalog", "cart", "profile", "call")
         const val MAX_HISTORY_RETURNS = 8
         const val MAX_PRODUCT_SCROLL_ATTEMPTS = 5
         const val PRODUCT_SCROLL_STEPS = 24
