@@ -40,10 +40,11 @@ class BrowserSiteSkinLayoutTest {
             WeboraTheme {
                 RegularBrowser(
                     state = state,
-                    controller = BrowserWebViewController(),
+                    controller = BrowserWebViewController(TAB_ID),
                     canNavigateBack = true,
                     onBack = { backInvoked = true },
-                    onObservation = {},
+                    onAddressEdited = {},
+                    onRendererEvent = {},
                     onHome = {},
                     onExternalNavigation = {},
                     onDownload = {},
@@ -54,8 +55,6 @@ class BrowserSiteSkinLayoutTest {
                     onSiteActionsDismiss = {},
                     onSiteSelect = {},
                     onOpenBrowserMenu = {},
-                    onPageStarted = {},
-                    onPageCompleted = { _, _ -> },
                     onTabs = {},
                     onSettings = {},
                     onInspector = {},
@@ -85,10 +84,11 @@ class BrowserSiteSkinLayoutTest {
             WeboraTheme {
                 RegularBrowser(
                     state = state,
-                    controller = BrowserWebViewController(),
+                    controller = BrowserWebViewController(TAB_ID),
                     canNavigateBack = true,
                     onBack = { backInvoked = true },
-                    onObservation = {},
+                    onAddressEdited = {},
+                    onRendererEvent = {},
                     onHome = {},
                     onExternalNavigation = {},
                     onDownload = {},
@@ -99,8 +99,6 @@ class BrowserSiteSkinLayoutTest {
                     onSiteActionsDismiss = {},
                     onSiteSelect = {},
                     onOpenBrowserMenu = {},
-                    onPageStarted = {},
-                    onPageCompleted = { _, _ -> },
                     onTabs = {},
                     onSettings = {},
                     onInspector = {},
@@ -116,6 +114,7 @@ class BrowserSiteSkinLayoutTest {
     }
 
     private companion object {
+        const val TAB_ID = 1L
         const val SITE_URL = "https://shop.example"
         val MANIFEST = """
             {"schemaVersion":"1.0","site":{"id":"shop","name":"Shop"},
