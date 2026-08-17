@@ -110,7 +110,7 @@ Product-polish track:
   browser-owned Back control independent of manifest styling
 - [x] `UX-007` Adaptive SiteSkin consent action hierarchy — clear primary/secondary/persistent-deny
   actions across narrow widths and large font scales
-- [x] `UX-019` Tab switcher modal — the last browser-owned list surface predating the design refresh
+- [x] `UX-020` Tab switcher modal — the last browser-owned list surface predating the design refresh
   joins `UX-018`'s modal language. Eighteen filled buttons at the eight-tab limit become tonal
   selectable rows with a sibling icon close control, and the selected state becomes a colour role
   that survives the dark projection — which the obvious `surfaceVariant`/`primaryContainer` pairing

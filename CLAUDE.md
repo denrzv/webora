@@ -1545,7 +1545,7 @@ DOM padding, a fixed Bloom offset, or a second inset read would violate that own
 double-reserve space. Exact-origin/configuration teardown makes the branded dock structurally
 unreachable and the existing asset publication identity guard prevents late identity leakage.
 
-### Two modal shapes, and the pair that separates a selected row (UX-019)
+### Two modal shapes, and the pair that separates a selected row (UX-020)
 
 Browser-owned modals come in exactly two shapes, and which one a surface takes is decided by its
 content, not by which was easier to reach for. A **confirmation** — a sentence and two decisions — is
