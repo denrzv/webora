@@ -44,6 +44,48 @@ class BrowserChromeTest {
         assertEquals("https://attacker.test", address)
     }
 
+    @Test fun identityReportsObservedTransportRatherThanTheCommittedScheme() {
+        // Every row here holds the same https committed origin. Only the browser's observation
+        // differs, so a chip that re-derived its label from the scheme would read `Secure` in all
+        // four and fail three of them.
+        listOf(
+            TransportSecurity.SECURE to "Secure · example.com",
+            TransportSecurity.NOT_SECURE to "Not secure · example.com",
+            TransportSecurity.UNKNOWN to "Not verified · example.com",
+            TransportSecurity.TLS_ERROR to "Certificate error · example.com",
+        ).forEach { (transport, expected) ->
+            compose.setContent {
+                WeboraTheme {
+                    BrowserChrome(
+                        state = state("https://example.com/page", transport = transport),
+                        onAddressChanged = {},
+                        onSubmit = {},
+                    )
+                }
+            }
+
+            compose.onNodeWithTag(BROWSER_SECURITY_TAG).assertIsDisplayed()
+            compose.onNodeWithText(expected).assertIsDisplayed()
+        }
+    }
+
+    @Test fun aLoadingPageIsNotAnnouncedAsSecure() {
+        // The window `UX-021` exists to close, on the surface that already had words for it: while a
+        // navigation is in flight the browser has confirmed nothing, and the accessible description
+        // must not say otherwise.
+        compose.setContent {
+            WeboraTheme {
+                BrowserChrome(
+                    state = state("https://example.com/page", transport = TransportSecurity.UNKNOWN),
+                    onAddressChanged = {},
+                    onSubmit = {},
+                )
+            }
+        }
+
+        compose.onNodeWithContentDescription("Not verified connection to example.com").assertIsDisplayed()
+    }
+
     @Test fun dockPreservesCommandsAndHistoryEnabledStates() {
         var reload = false
         var home = false
@@ -178,11 +220,20 @@ class BrowserChromeTest {
         assertTrue(retried && home)
     }
 
-    private fun state(address: String, canGoBack: Boolean = true, canGoForward: Boolean = false) = BrowserState(
+    private fun state(
+        address: String,
+        canGoBack: Boolean = true,
+        canGoForward: Boolean = false,
+        // Stated rather than defaulted, because `UX-021` made this the difference between "the
+        // browser confirmed this connection" and "the URL starts with https". A test asserting
+        // `Secure · example.com` has to say which one it is exercising.
+        transport: TransportSecurity = TransportSecurity.SECURE,
+    ) = BrowserState(
         mode = BrowserMode.Regular(requireNotNull(SiteOrigin.parse("https://example.com/page"))),
         displayedUrl = "https://example.com/page",
         addressText = address,
         canGoBack = canGoBack,
         canGoForward = canGoForward,
+        transport = transport,
     )
 }
