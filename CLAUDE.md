@@ -1594,3 +1594,85 @@ declaration and would pass over a switcher that had dropped both row tags. Asser
 `testTag("$TAB_SELECT_TAG${summary.id}")`. And `$` inside a Kotlin raw string is a template with no
 `\$` escape — the first regexes here compiled to `\s` + `elect_tab_` and matched nothing in either
 direction, which a negative control catches and reading does not.
+
+### A renderer belongs to one tab, and so does every event it emits (BROWSE-009)
+
+`BROWSE-006` wrote the rule — *"UI and WebView callbacks must carry a tab id rather than updating
+whichever tab happens to be active when they arrive"* — and implemented it in `BrowserSession`. The
+renderer layer did not obey it, in **three independent ways, any one of which was sufficient**:
+
+1. **`AndroidView`'s `factory` runs once per retained composition slot.** `RegularBrowser` composed
+   `HardenedWebView` at one un-keyed call site, so switching between two page tabs recomposed the
+   slot instead of replacing it: the previous tab's `WebView` stayed on screen while the selected
+   tab's controller — never attached to it — silently dropped every `navigate`, `reload`, `goBack`
+   and `goForward`. A Home↔page switch *did* replace it, because that crosses a different branch,
+   which is why the bug was not visible on every switch.
+2. **`rememberUpdatedState(onEvent)` re-points the observer**, so the retained renderer reported into
+   the newly selected tab's callbacks.
+3. **The callbacks resolved `activeTabId` at delivery time.** A late `onPageFinished`,
+   `onReceivedError` or history update rewrote the selected tab's URL, address text, loading flag,
+   history capability and `loadFailure` — and therefore its `SecurityPresentation`. **That is one
+   origin's identity presented over another origin's page**, which is `HARDEN-002`'s impersonation
+   surface reached without a manifest. Failed navigation is what makes it reachable by hand: terminal
+   callbacks arrive after the user has already switched tabs.
+
+**Fix the addressing first, and the hosting second.** `routeRendererEvent(session, book, event)` is a
+pure function and the only caller of `BrowserSession.update` for renderer state; `WebViewEvent`
+carries a `tabId` fixed when the renderer is built and never re-read. Fixing only the visible cause —
+the un-keyed host — would have removed the symptom and left the cross-tab write reachable the moment
+anything reshaped the composition. It is also the only layer the JVM gate can drive: the wiring is
+inside a `@Composable`, so the decision has to leave it. Same shape as `publishesBrandAsset`, and the
+inverse of `BrandAssetCoordinator`, which had a test and no callers while `BrowserScreen`
+reimplemented it inline.
+
+**`updateActive` is legal only for user actions**, and the distinction is now visible in the seam:
+`RegularBrowser` takes `onAddressEdited` (a keystroke belongs to the tab on screen) and
+`onRendererEvent` (an observation belongs to the tab that produced it) instead of one `onObservation`
+carrying both. Effects are a closed model — `DiscoverManifest`, `RecordVisit` — each naming its
+owner; a generic "run this lambda" case would put arbitrary work back behind an id nobody checks.
+
+**Selection detaches, only close destroys.** `BROWSE-006` requires live back/forward history to
+survive a switch, so a retained `WebView` may never be destroyed on selection. It must still be
+removed from its parent: Compose removes the *host*, not the child inside it, and a `View` that keeps
+a parent throws `IllegalStateException: The specified child already has a parent` when its tab is
+selected again. `detachFromParent()` is the one owner of that removal, and it replaced a
+`detach(webView)` that compared the view and returned either way — called with a `var` that every
+recomposition reset to `null`, so nothing observable happened on either side. `key(...)` sits
+**inside** the `BROWSER_CONTENT_TAG` box; that rectangle is `CI-003`'s page measurement region and
+must not move.
+
+**`onReceivedSslError` may settle the page, and only on the browser's own evidence.** `BROWSE-004`
+cancelled and published nothing because the callback does not identify the main frame — correct, and
+the cost was an indefinite spinner with no error page on a rejected certificate. `mainFrameTlsFailure`
+narrows that refusal instead of bypassing it: publish only when the failing URL equals the URL the
+browser observed the main frame *starting* on, and only once per navigation, because the framework
+may raise `ERROR_FAILED_SSL_HANDSHAKE` for the same navigation as well — idempotence belongs in the
+signature, not in an assumed delivery order. `handler.cancel()` stays first and unconditional and
+`handler.proceed(` appears in no executable line under `src/main/java`. A redirect chain failing after
+the observed start still publishes nothing; that is the fail-closed direction, and narrowing it needs
+a main-frame URL that survives redirects, which is a `BROWSE-004` change.
+
+**A negative control that fails everything proves the tests run, not that they test the rule.**
+Re-pointing the router at `session.activeId` fails 6 of 8 cases, because every routing case delivers
+from a non-selected tab. The file therefore carries a deliberate discriminator — *an event from the
+selected tab still updates the selected tab* — which must keep passing under the control. Two tests
+survive it; that is what separates a targeted control from a broken file.
+
+**One trap surfaced three times in one ticket: a comment participating in the rule it describes.**
+`handler.proceed(` matched its own KDoc; `activeId` matched the router's KDoc forbidding it; and
+`UX-002` had already recorded the wrapper exemption exempting the file that documented it. **A source
+scan reads executable lines, never `readText()`** — strip lines starting with `*`, `//` or `/*`
+before matching, or the prose will satisfy or violate the rule on the code's behalf.
+
+**And a scan must forbid the mechanism, not a spelling.** `assertFalse(source.contains(
+"update(activeTabId)"))` reads like a ban on active-tab addressing and is satisfied by
+`updateActive`, which *is* `update(activeId, …)`. Banning `updateActive` outright is not available
+either — four user-action call sites legitimately use it. The assertion covers the renderer *path*
+instead: the router's code contains neither spelling, and `applyRendererEvent` delegates to
+`routeRendererEvent` and mutates nothing itself. Verified by reintroducing the regression into the
+real source, not by an in-test example.
+
+**`BROWSE-004`'s `isForMainFrame` filter had no test until this ticket's negative control looked for
+one.** Deleting the guard left the whole suite green — four tickets after the guard shipped, and with
+it named in this ticket's own acceptance criteria. A guard being correct and a guard being evidenced
+are different facts, and only the control tells them apart.

@@ -150,6 +150,13 @@ browser navigation, tabs, history and the transition between regular and integra
 - [x] `BROWSE-008` Back-to-Home fallback — when the active tab has no WebView history, browser Back
   returns that tab to native Home; visible regular/SiteSkin Back and Android system/predictive Back
   share the same history → Home → platform-exit contract. Detailed scope: [`backlog/BROWSE-008.md`](backlog/BROWSE-008.md)
+- [x] `BROWSE-009` Per-tab renderer ownership and clean failure recovery — a WebView callback used to
+  resolve the *selected* tab at delivery time, so a late completion or error from a background
+  renderer rewrote another tab's URL, identity and error state; an un-keyed `AndroidView` served
+  every tab from one composition slot; and a cancelled TLS handshake published nothing, leaving an
+  indefinite spinner. Events now carry an immutable owner id through a pure router, the host is keyed
+  by `BrowserTab.id` with a real detach, and a main-frame handshake failure settles its own tab. The
+  ticket's negative control also found that `BROWSE-004`'s `isForMainFrame` filter had no test at all
 - [~] `CI-007` Canonical regular-browsing evidence — implementation landed, but hosted runs #30 and
   #31 stop after frames 01–03 because the first-page SiteSkin Back control cannot return to Home;
   acceptance resumes after `BROWSE-008`

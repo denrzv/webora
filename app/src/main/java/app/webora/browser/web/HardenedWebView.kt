@@ -13,6 +13,12 @@ import app.webora.browser.browser.ExternalNavigation
 
 /**
  * Hosts an untrusted web page with Webora's fixed renderer security policy.
+ *
+ * One host serves one tab. The caller keys this composable by the owning `BrowserTab.id`, because
+ * `AndroidView`'s `factory` runs once per *retained composition slot*: at one un-keyed call site,
+ * switching between two page tabs recomposes the slot instead of replacing it, leaving the previous
+ * tab's `WebView` on screen while the selected tab's controller — never attached to it — silently
+ * dropped every `navigate`, `reload`, `goBack` and `goForward`.
  */
 @Composable
 internal fun HardenedWebView(
@@ -25,38 +31,46 @@ internal fun HardenedWebView(
     modifier: Modifier = Modifier,
 ) {
     val currentObserver = rememberUpdatedState(onEvent)
-    var attachedWebView: WebView? = null
     AndroidView(
         modifier = modifier,
         factory = { context ->
             val existing = controller.attached()
+            // Fixed once, for the renderer's whole lifetime. `currentObserver` deliberately swings
+            // to the newest handler on every recomposition; that is only safe because what it
+            // delivers names its own tab, so the handler can address the owner rather than the
+            // selection. Reading `controller.tabId` per callback would be the same value today and
+            // an invitation to make it dynamic later.
+            val owner = controller.tabId
             (existing ?: WebView(context)).apply {
                 if (existing == null) applyWebViewHardening(this)
                 webViewClient = HardenedWebViewClient(
                     onPageStarted = { view, url ->
-                        currentObserver.value(WebViewEvent.PageStarted(view.toObservation(url, true)))
+                        currentObserver.value(WebViewEvent.PageStarted(owner, view.toObservation(url, true)))
                     },
                     onPageChanged = { view, url, isLoading ->
-                        currentObserver.value(WebViewEvent.PageChanged(view.toObservation(url, isLoading)))
+                        currentObserver.value(WebViewEvent.PageChanged(owner, view.toObservation(url, isLoading)))
                     },
                     onMainFrameCompleted = { view, url, title ->
-                        currentObserver.value(WebViewEvent.MainFrameCompleted(view.toObservation(url, false), title))
+                        currentObserver.value(
+                            WebViewEvent.MainFrameCompleted(owner, view.toObservation(url, false), title),
+                        )
                     },
                     onMainFrameFailed = { url, kind ->
-                        currentObserver.value(WebViewEvent.MainFrameFailed(url, kind))
+                        currentObserver.value(WebViewEvent.MainFrameFailed(owner, url, kind))
                     },
                     onExternalNavigation = onExternalNavigation,
                 )
                 webChromeClient = UploadWebChromeClient(onFileChooser)
                 setDownloadListener { url, _, _, _, _ -> url?.let(onDownload) }
                 controller.attach(this)
-                attachedWebView = this
                 if (existing == null) loadUrl(initialUrl)
             }
         },
     )
+    // The controller already holds the reference, so the dispose path reads it from the one owner
+    // rather than from a body-local `var` that every recomposition reset to null.
     DisposableEffect(controller) {
-        onDispose { attachedWebView?.let(controller::detach) }
+        onDispose(controller::detachFromParent)
     }
 }
 

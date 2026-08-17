@@ -31,6 +31,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -123,9 +124,8 @@ internal fun BrowserScreen(
             controllers.clear()
         }
     }
-    val controller = controllers.getOrPut(activeTabId, ::BrowserWebViewController)
-    val generations = remember { mutableMapOf<Long, Long>() }
-    val generation = generations[activeTabId] ?: 0L
+    val controller = controllers.getOrPut(activeTabId) { BrowserWebViewController(activeTabId) }
+    var book by remember { mutableStateOf(RendererPageBook()) }
     var discoveryOwner by remember { mutableStateOf(activeTabId) }
     var pendingConsent by remember { mutableStateOf<Pair<Long, SiteSkinCandidate>?>(null) }
     var siteActionsExpanded by remember { mutableStateOf(false) }
@@ -144,7 +144,6 @@ internal fun BrowserScreen(
     val consentStore = remember(context) { SiteConsentStore(context) }
     val privacyStore = remember(context) { PrivacySettingsStore(context) }
     val recordStore = remember(context) { BrowsingRecordStore(context) }
-    val completedPages = remember { mutableMapOf<Long, String>() }
     var recordVersion by remember { mutableIntStateOf(0) }
     val currentRecordUrl = canonicalBrowsingUrl(state.displayedUrl)
     val currentIsFavourite = currentRecordUrl?.let(recordStore::isFavourite) == true
@@ -186,7 +185,7 @@ internal fun BrowserScreen(
             is BrowserMode.Integrated -> mode.origin
         }
         val decision = outcome.origin?.let(consentStore::decision)
-        val ownerGeneration = generations[discoveryOwner] ?: 0L
+        val ownerGeneration = book.generation(discoveryOwner)
         when (val disposition = candidateDisposition(outcome, origin, ownerGeneration, decision, siteSkinEnabled)) {
             is CandidateDisposition.Activate -> {
                 session = session.update(discoveryOwner) {
@@ -195,6 +194,34 @@ internal fun BrowserScreen(
             }
             is CandidateDisposition.Ask -> pendingConsent = discoveryOwner to disposition.candidate
             CandidateDisposition.Ignore -> Unit
+        }
+    }
+    // Every renderer callback lands here and nowhere else. The routing is a pure function so the
+    // JVM gate can drive it; this lambda only performs the effects it names, each one addressed by
+    // the owner id the event carried rather than by whichever tab happens to be selected now.
+    val applyRendererEvent: (WebViewEvent) -> Unit = { event ->
+        val routing = routeRendererEvent(session, book, event)
+        session = routing.session
+        book = routing.book
+        routing.effects.forEach { effect ->
+            when (effect) {
+                is RendererEffect.DiscoverManifest -> {
+                    discoveryOwner = effect.tabId
+                    // Only the owner's own prompt, and only the selected tab's transient surfaces.
+                    // Clearing both unconditionally let a background page start dismiss the
+                    // foreground tab's consent dialog and close its open menu.
+                    if (pendingConsent?.first == effect.tabId) pendingConsent = null
+                    if (effect.tabId == activeTabId) {
+                        siteActionsExpanded = false
+                        browserMenuVisible = false
+                    }
+                    if (siteSkinEnabled) manifestDiscovery.onPageStarted(effect.url, effect.generation)
+                }
+                is RendererEffect.RecordVisit -> {
+                    recordStore.recordVisit(effect.url, effect.title)
+                    recordVersion += 1
+                }
+            }
         }
     }
     val downloadMessages = stringResource(R.string.download_started) to stringResource(R.string.download_failed)
@@ -279,9 +306,12 @@ internal fun BrowserScreen(
         controller = controller,
         canNavigateBack = canNavigateBack,
         onBack = navigateBack,
-        onObservation = { observation ->
-            session = session.update(activeTabId) { it.observe(observation) }
+        onAddressEdited = { text ->
+            // A user edit belongs to the tab the user is looking at, so this one is legitimately
+            // active-addressed. Renderer callbacks are not, and go through applyRendererEvent.
+            session = session.updateActive { it.observe(BrowserObservation.AddressEdited(text)) }
         },
+        onRendererEvent = applyRendererEvent,
         onHome = {
             siteActionsExpanded = false
             browserMenuVisible = false
@@ -304,23 +334,6 @@ internal fun BrowserScreen(
         onOpenBrowserMenu = {
             siteActionsExpanded = false
             browserMenuVisible = true
-        },
-        onPageStarted = { url ->
-            completedPages.remove(activeTabId)
-            val nextGeneration = generation + 1
-            generations[activeTabId] = nextGeneration
-            discoveryOwner = activeTabId
-            pendingConsent = null
-            siteActionsExpanded = false
-            browserMenuVisible = false
-            if (siteSkinEnabled) manifestDiscovery.onPageStarted(url, nextGeneration)
-        },
-        onPageCompleted = { url, title ->
-            val canonical = canonicalBrowsingUrl(url)
-            if (canonical != null && completedPages[activeTabId] != canonical) {
-                recordStore.recordVisit(canonical, title)
-                completedPages[activeTabId] = canonical
-            }
         },
         onTabs = { tabsVisible = true },
         onSettings = { settingsVisible = true },
@@ -345,19 +358,18 @@ internal fun BrowserScreen(
         },
         onDismiss = { pendingExternalUrl = null },
     ) }
-    pendingConsent?.takeIf { it.first == activeTabId }?.second?.let { candidate -> SiteSkinConsentDialog(
+    pendingConsent?.takeIf { it.first == activeTabId }?.let { (ownerId, candidate) -> SiteSkinConsentDialog(
         origin = candidate.origin.canonical,
         model = SiteSkinConsentModel.from(candidate.configuration, isSystemInDarkTheme()),
         onAllow = {
             consentStore.save(candidate.origin, SiteConsentDecision.ALLOW)
             storedDecisions = consentStore.decisions()
-            val currentOrigin = when (val mode = state.mode) {
-                is BrowserMode.Regular -> mode.origin
-                is BrowserMode.Integrated -> mode.origin
-                BrowserMode.Home -> null
-            }
-            if (siteSkinEnabled && candidate.isCurrent(currentOrigin, generation)) {
-                session = session.updateActive {
+            // Recheck against the tab that asked, not against the selection. They are the same tab
+            // while the dialog is on screen, and addressing the owner is what keeps that true if a
+            // later change lets the dialog outlive the selection.
+            val currentOrigin = session.tab(ownerId)?.state?.mode?.observedOrigin()
+            if (siteSkinEnabled && candidate.isCurrent(currentOrigin, book.generation(ownerId))) {
+                session = session.update(ownerId) {
                     it.activateSiteSkin(candidate.origin, candidate.configuration)
                 }
             }
@@ -392,7 +404,7 @@ internal fun BrowserScreen(
         BrowserTabSwitcher(
             session = session,
             controllers = controllers,
-            generations = generations,
+            onForgetTab = { id -> book = book.forget(id) },
             onSessionChange = { changed ->
                 session = changed
                 pendingConsent = null
@@ -467,7 +479,7 @@ internal fun BrowserScreen(
 private fun BrowserTabSwitcher(
     session: BrowserSession,
     controllers: MutableMap<Long, BrowserWebViewController>,
-    generations: MutableMap<Long, Long>,
+    onForgetTab: (Long) -> Unit,
     onSessionChange: (BrowserSession) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -476,7 +488,7 @@ private fun BrowserTabSwitcher(
         onSelect = { id -> onSessionChange(session.select(id)); onDismiss() },
         onCloseTab = { id ->
             controllers.remove(id)?.destroy()
-            generations.remove(id)
+            onForgetTab(id)
             onSessionChange(session.close(id))
         },
         onNewTab = { onSessionChange(session.createTab()); onDismiss() },
@@ -649,7 +661,8 @@ internal fun RegularBrowser(
     controller: BrowserWebViewController,
     canNavigateBack: Boolean,
     onBack: () -> Unit,
-    onObservation: (BrowserObservation) -> Unit,
+    onAddressEdited: (String) -> Unit,
+    onRendererEvent: (WebViewEvent) -> Unit,
     onHome: () -> Unit,
     onExternalNavigation: (ExternalNavigation) -> Unit,
     onDownload: (String) -> Unit,
@@ -660,8 +673,6 @@ internal fun RegularBrowser(
     onSiteActionsDismiss: () -> Unit,
     onSiteSelect: (NavigationItem) -> Unit,
     onOpenBrowserMenu: () -> Unit,
-    onPageStarted: (String) -> Unit,
-    onPageCompleted: (String, String?) -> Unit,
     onTabs: () -> Unit,
     // Neither handler defaults to a no-op. A browser-owned menu command that is offered and does
     // nothing is the same failure the offered list exists to prevent, one layer down.
@@ -679,7 +690,7 @@ internal fun RegularBrowser(
             TopChrome.NONE -> Unit
             TopChrome.REGULAR -> BrowserChrome(
                     state = state,
-                    onAddressChanged = { onObservation(BrowserObservation.AddressEdited(it)) },
+                    onAddressChanged = onAddressEdited,
                     onSubmit = { resolveAddressInput(state.addressText)?.let(controller::navigate) },
                 )
             TopChrome.PROTECTED_INTEGRATED -> {
@@ -703,15 +714,21 @@ internal fun RegularBrowser(
         }
         BrowserStatusRegion(state)
         Box(Modifier.fillMaxWidth().weight(1f).testTag(BROWSER_CONTENT_TAG)) {
-            HardenedWebView(
-                initialUrl = state.displayedUrl,
-                controller = controller,
-                onEvent = { handleWebViewEvent(it, onObservation, onPageStarted, onPageCompleted) },
-                onExternalNavigation = onExternalNavigation,
-                onDownload = onDownload,
-                onFileChooser = onFileChooser,
-                modifier = Modifier.fillMaxSize(),
-            )
+            // Keyed by the browser-owned tab id, and keyed *inside* the tagged Box: that rectangle
+            // is `CI-003`'s page measurement region, so it must not move. Without the key the
+            // composition slot is retained across a tab switch and keeps showing the previous tab's
+            // renderer.
+            key(controller.tabId) {
+                HardenedWebView(
+                    initialUrl = state.displayedUrl,
+                    controller = controller,
+                    onEvent = onRendererEvent,
+                    onExternalNavigation = onExternalNavigation,
+                    onDownload = onDownload,
+                    onFileChooser = onFileChooser,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
             state.loadFailure?.let { failure ->
                 BrowserErrorPage(
                     failure = failure,
@@ -762,38 +779,6 @@ internal fun RegularBrowser(
             )
         }
     }
-}
-
-private fun handleWebViewEvent(
-    event: WebViewEvent,
-    onObservation: (BrowserObservation) -> Unit,
-    onPageStarted: (String) -> Unit,
-    onPageCompleted: (String, String?) -> Unit,
-) {
-    onObservation(event.toBrowserObservation())
-    if (event is WebViewEvent.PageStarted) onPageStarted(event.observation.url)
-    if (event is WebViewEvent.MainFrameCompleted) onPageCompleted(event.observation.url, event.title)
-}
-
-private fun WebViewEvent.toBrowserObservation(): BrowserObservation = when (this) {
-    is WebViewEvent.MainFrameFailed -> BrowserObservation.PageFailed(url, kind)
-    is WebViewEvent.PageStarted -> BrowserObservation.PageStarted(
-        observation.url,
-        observation.canGoBack,
-        observation.canGoForward,
-    )
-    is WebViewEvent.PageChanged -> BrowserObservation.Page(
-        observation.url,
-        observation.isLoading,
-        observation.canGoBack,
-        observation.canGoForward,
-    )
-    is WebViewEvent.MainFrameCompleted -> BrowserObservation.Page(
-        url = observation.url,
-        isLoading = false,
-        canGoBack = observation.canGoBack,
-        canGoForward = observation.canGoForward,
-    )
 }
 
 @Composable
