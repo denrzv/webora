@@ -68,6 +68,26 @@ References:
     `LiveSiteScreenshotTest` fails the assertion, so the repaired marker is load-bearing rather than
     a spelling that happens to match. The other six markers were verified still present and untouched.
 
-- [ ] TASK-3: review and QA
+- [x] TASK-FIX-1: load a waiting tab instead of fabricating a completion
+  - Review FINDING-1: the `Settle` branch reported a `PageChanged(isLoading = false)` the browser
+    never observed, and wrote Compose state from inside `AndroidView`'s `factory`. A tab switched
+    away from mid-load has that exact shape and would have been told its loading page was finished.
+  - Review FINDING-2: the new contract test collided by simple name with `BROWSE-009`'s.
+  - Result: `Settle` removed; a tab that believes it is loading now gets a real load. The model is
+    two cases, no synthetic event exists, and `EMITTED_EVENTS` returns to 4 — the shape that was
+    right before this ticket briefly widened it. Renamed to `RendererMountContractTest`. All three
+    negative controls **re-run against the simplified decision** rather than carried over; each
+    still fails only its own assertion. Full gate green.
+
+- [x] TASK-3: review and QA
   - `/review` findings become `TASK-FIX-N`; `/qa` then `/validate`.
-  - Result: _pending_
+  - Result: `/review` raised two findings, both fixed in `TASK-FIX-1`; the first made the change
+    smaller rather than larger. `/qa`: QA_PASSED, 24 scenarios, 377 app unit tests, four negative
+    controls. Scenarios 23–24 are Unknown — no emulator here, so the defect's own fix is proven in
+    the JVM gate and not on a device.
+
+- [x] TASK-4: record the convention in `CLAUDE.md`
+  - Result: added the *A retained renderer is not a loaded renderer* section — the equivalence
+    `BROWSE-006` broke, why the record is written from reports as well as requests, why
+    `WebView.getUrl()` is not the signal, and why the host may not report an observation it did not
+    witness.

@@ -157,6 +157,13 @@ browser navigation, tabs, history and the transition between regular and integra
   indefinite spinner. Events now carry an immutable owner id through a pure router, the host is keyed
   by `BrowserTab.id` with a real detach, and a main-frame handshake failure settles its own tab. The
   ticket's negative control also found that `BROWSE-004`'s `isForMainFrame` filter had no test at all
+- [x] `BROWSE-010` Leaving Home again shows the previous page under a permanent spinner — a retained
+  renderer's mount was gated on the `WebView` being new, which stopped meaning "needs the page" when
+  `BROWSE-006` made renderers outlive their hosts. The load decision is now a pure function over the
+  tab's committed target and the browser's own record of where its renderer is — written from
+  requests *and* reports, never from a failure, and deliberately not from `WebView.getUrl()`. Its own
+  review removed a synthetic completion the first implementation reported. Issue
+  [#106](https://github.com/denrzv/webora/issues/106); the Back exposure it uncovered is `BROWSE-011`
 - [~] `CI-007` Canonical regular-browsing evidence — implementation landed, but hosted runs #30 and
   #31 stop after frames 01–03 because the first-page SiteSkin Back control cannot return to Home;
   acceptance resumes after `BROWSE-008`
