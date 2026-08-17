@@ -1841,3 +1841,28 @@ string the strip must hide *and* a real regression would legitimately add, so it
 control it was meant to be neutral to and could not tell a broken strip from a genuine violation. It
 is anchored on a KDoc sentence that cannot become code. `BROWSE-009`'s rule needs that corollary: the
 anchor must be prose in every world, not just in the current one.
+
+**One `when`, one owner — the mapping shipped twice before the review caught it.** Regular chrome and
+the chip each carried a verbatim copy of the transport→string `when`. Sharing the four *strings* was
+never enough: a fifth state produced two compile errors that could legitimately be resolved
+differently, and a re-pointed branch in one file drifted from the other with nothing failing.
+`transportLabel` now lives in `browser/TransportLabel.kt` beside `SecurityPresentation` — belonging to
+neither chrome, because it is a property of the state and both modes are readers — and
+`BrowserChromeContractTest` asserts exactly one file maps the enum to resources. This is `UX-020`'s
+lesson one ticket later, where a colour assertion named Webora roles while the composable named
+Material ones and `materialColorScheme`, the mapping between them, was consulted by neither.
+
+**`SECURITY_CHIP_MAX_WIDTH` is inert, and raising it makes things worse.** The review found the domain
+truncating to about `example.c…` at 200% font scale and proposed raising the 160 dp cap. The symptom
+is real; the cap is not the cause. On a 320 dp host the brand row has 280 dp, of which Back, the logo
+and three gaps take 116 — leaving **164 dp for the title and the chip together**. At 100% scale the
+chip's content is ~117 dp, under the cap; at 200% it wants ~198 dp, so *available width* binds at 164
+first. Raising the cap to 200 dp therefore widens the chip by 4 dp and takes the manifest title from
+4 dp to **0**, trading the site's name for roughly one more character of domain.
+
+So the cap stayed and the arithmetic lives at its declaration. Measure the row before tuning a bound;
+a constant that never binds is not the thing truncating the text. What the review was right about is
+the *test*: `assertTrue(identity.width > 0f)` passes on a chip showing one character and an ellipsis,
+which is closer to the bare-shield layout this ticket deliberately rejected than to the one it chose.
+The instrumented assertion is now a 140 dp floor. The residual — one row cannot hold Back, a logo, a
+manifest title and a full domain at 200% — is a layout problem, filed as `UX-023`.
