@@ -88,13 +88,56 @@ class SiteSkinTopBarTest {
             compose.onNodeWithTag(SITESKIN_BACK_TAG).assertIsDisplayed().assertHeightIsAtLeast(48.dp)
             compose.onNodeWithTag(SITESKIN_BRAND_TAG).assertIsDisplayed()
             compose.onNodeWithTag(SITESKIN_SECURITY_TAG).assertIsDisplayed()
-            val brand = compose.onNodeWithTag(SITESKIN_BRAND_TAG).fetchSemanticsNode().boundsInRoot
+
+            // `UX-021` moved the identity into the brand row, so the old assertion — identity
+            // strictly below brand — describes a layout that no longer exists. What replaced it is
+            // the stronger question the move raises: the title is manifest-supplied and deliberately
+            // longer than the header, so does the site's text push the browser's trust mark out?
+            val header = compose.onNodeWithTag(EXPRESSIVE_HEADER_TAG).fetchSemanticsNode().boundsInRoot
             val identity = compose.onNodeWithTag(SITESKIN_SECURITY_TAG).fetchSemanticsNode().boundsInRoot
+            val fixture = compose.onNodeWithTag(FIXTURE_TAG).fetchSemanticsNode().boundsInRoot
             assertTrue(
-                "identity must follow brand for dark=$darkTheme reduced=$reducedMotion: $brand $identity",
-                brand.bottom <= identity.top,
+                "identity must stay inside the header for dark=$darkTheme reduced=$reducedMotion: " +
+                    "$header $identity",
+                identity.left >= header.left && identity.right <= header.right,
             )
+            assertTrue(
+                "identity must stay inside the 320 dp host, not merely inside a header that overflows " +
+                    "it: $fixture $identity",
+                identity.right <= fixture.right,
+            )
+            assertTrue("identity must have width at 200% font scale: $identity", identity.width > 0f)
         }
+    }
+
+    @Test fun everyTransportStateKeepsTheBrowserAuthoredIdentityNode() {
+        // Issue requirement 8, and the reason the node is tagged rather than recognised by colour:
+        // the shield's tint changes across these four, the description changes with it, and neither
+        // is anything the manifest in `CONFIGURATION` can reach. The same hostile title is present
+        // in every row.
+        listOf(
+            TransportSecurity.SECURE to "Secure connection to example.co.uk",
+            TransportSecurity.NOT_SECURE to "Not secure connection to example.co.uk",
+            TransportSecurity.UNKNOWN to "Not verified connection to example.co.uk",
+            TransportSecurity.TLS_ERROR to "Certificate error connection to example.co.uk",
+        ).forEach { (transport, description) ->
+            compose.setContent { topBar(transport = transport) }
+
+            compose.onNodeWithTag(SITESKIN_SECURITY_TAG)
+                .assertIsDisplayed()
+                .assertContentDescriptionEquals(description)
+        }
+    }
+
+    @Test fun theRegistrableDomainStaysVisibleInIntegratedChrome() {
+        // `ADR-006`: the domain is *visible*, not merely announced. Issue #104's target layout drops
+        // it and this implementation deliberately does not — a coloured glyph beside a
+        // manifest-supplied title and logo would be the only contradicting signal on screen, which
+        // is the exact scenario `ADR-006` exists to prevent. Asserted as displayed text, because a
+        // `contentDescription` alone would satisfy an implementation that had dropped the pixels.
+        compose.setContent { topBar() }
+
+        compose.onNodeWithText("example.co.uk").assertIsDisplayed()
     }
 
     @Composable
@@ -103,17 +146,19 @@ class SiteSkinTopBarTest {
         canGoBack: Boolean = true,
         onBack: () -> Unit = {},
         presentation: ExpressiveSiteSkinPresentation = presentation(false, false),
-    ) = SiteSkinTopBar(model(asset), presentation, canGoBack, onBack)
+        transport: TransportSecurity = TransportSecurity.SECURE,
+    ) = SiteSkinTopBar(model(asset, transport), presentation, canGoBack, onBack)
 
     private fun presentation(darkTheme: Boolean, reducedMotion: Boolean) =
         ExpressiveSiteSkinPresentation.from(CONFIGURATION, darkTheme, reducedMotion)
 
-    private fun model(asset: BrandAsset) = SiteSkinTopBarModel(
-        title = "A very long trusted brand title that must not replace security identity",
-        subtitle = "Fresh today",
-        brandAsset = asset,
-        security = SecurityPresentation("example.co.uk", TransportSecurity.SECURE),
-    )
+    private fun model(asset: BrandAsset, transport: TransportSecurity = TransportSecurity.SECURE) =
+        SiteSkinTopBarModel(
+            title = "A very long trusted brand title that must not replace security identity",
+            subtitle = "Fresh today",
+            brandAsset = asset,
+            security = SecurityPresentation("example.co.uk", transport),
+        )
 
     private companion object {
         const val FIXTURE_TAG = "siteskin_top_fixture"
