@@ -1727,3 +1727,117 @@ not in the renderer host, and never by destroying the renderer on Home.
 `onPageChanged` to fail the pure in-page case. It did not: that case drives the controller directly,
 so it proves the *decision* handles an in-page URL, while only the source scan can see that the
 wiring producing one still exists. Neither layer covers that row alone.
+
+### A shield is a claim, so the signal had to become honest first (UX-021)
+
+`SKIN-002` gave integrated chrome a full-width `Secure · domain` row, and `securityPresentation`
+classified it from one fact: `origin.scheme == "https"`. That is true of a page whose certificate was
+rejected, true of a page still loading, and true of a new tab pointed at an HTTPS URL that never
+arrived. As a 12 sp word it was wrong and quiet. Issue #104 asked to render it as a **green shield**,
+and a green shield is a positive trust claim in a way a word is not — so making the indicator
+emphatic before making the signal honest would have shipped a worse defect than the one being fixed.
+The state model is TASK-1 and the pixels are TASK-4, in that order and not interchangeable.
+
+**The gap was structural, not a missed condition.** `BrowserMode` carries an origin and an origin has
+no lifecycle: nothing in the type can distinguish *this page loaded and its certificate was accepted*
+from *this is the URL we are currently attempting*. `BROWSE-009` had already given
+`onReceivedSslError` a way to settle the page, and the resulting `BrowserLoadFailure(kind = TLS)`
+landed in `loadFailure` — where the projection never looked. A rejected certificate kept
+`mode = Regular(https://…)` and still reported `SECURE`.
+
+**`TransportSecurity` is four values, `UNKNOWN` declared first** so the value that looks
+uninitialised is the one that claims nothing. `SECURE` is the only value requiring positive evidence.
+`TLS_ERROR` and `UNKNOWN` render identically — the visible mapping is two colours, per the issue —
+and are kept distinct because a later page-information surface must be able to explain the difference,
+and a distinction not stored cannot be recovered.
+
+**The load-bearing detail is that `MainFrameCompleted` is the *successful*-completion signal and
+`PageChanged` is not.** `onPageFinished` fires `onPageChanged` unconditionally and only then fires
+`onMainFrameCompleted`, suppressed for a URL that already failed. `toBrowserObservation` was
+collapsing both into `BrowserObservation.Page`, so the distinction was gone before `BrowserState`
+could see it and a rule written downstream would go green on a failed page. Completion is now its own
+observation case rather than a boolean: a case makes `observe`'s `when` exhaustive over it, where a
+flag would let a call site pass the wrong one silently.
+
+**Four transitions, and the reset is the one that matters.** `PageStarted` → `UNKNOWN`
+unconditionally, including on a reload of the same URL. `Page` → preserved only while the observed
+`SiteOrigin` equals the committed one, so a same-document change keeps a confirmed connection and a
+cross-origin one does not. `MainFrameCompleted` → `completedTransport`. `PageFailed(TLS)` →
+`TLS_ERROR`, every other kind → `UNKNOWN`, never preserved. The unconditional reset is what makes
+every gap in the observation surface fail closed: `mainFrameTlsFailure` publishes nothing when it
+cannot identify the main frame, so "no news" must never be able to mean the previous page's good news.
+
+**The `PageStarted` negative control failed nothing on its first run, and that was the finding.**
+Every transport case started from a fresh `BrowserState`, already `UNKNOWN`, so "reset" and
+"preserve" were indistinguishable and the most security-relevant transition had no test at all. A
+control that confirms coverage tells you less than one that finds its absence. Two cases were added
+reaching a genuinely `SECURE` state first, which is the shape any future test of a clearing rule
+needs.
+
+**State lives on `BrowserState`, never `BrowserMode`.** Mode equality decides whether integrated mode
+survives a page start and whether activation applies, and `NET-004` records that `forObservedOrigin`
+returns the *same* `Integrated` instance for every same-origin page start — which is what keys
+`BrowserScreen`'s brand-asset effect. A mode whose identity changed with transport would re-run that
+load on every navigation. It is also deliberately unpersisted: `BROWSE-006` requires a restored tab to
+re-traverse discovery, and a persisted `SECURE` would skip the observation that earns it.
+
+**`completedTransport` has no third scheme arm, and the test for one would have proved nothing.**
+`SiteOrigin`'s constructor is private and `parse` refuses every scheme but `http`/`https`, so a
+non-HTTP(S) origin is unconstructible and arrives as the `null` row. An `ftp` assertion passes through
+that null while appearing to exercise the scheme check. Written as *only `https` earns `SECURE`*, with
+the type-level guarantee pinned by its own assertion.
+
+**`ADR-006` was kept, not amended — and this is the decision to not quietly reverse.** The issue's
+target header is `[Back] [Logo] Title [shield]`, with the registrable domain gone from integrated
+chrome entirely. The `UX-015` hub does not display an origin either, so taken literally that leaves a
+coloured glyph as the only signal contradicting a manifest-supplied title and logo. That is precisely
+`ADR-006`'s `evil.example`-renders-as-a-bank scenario, which is Play *Deceptive Behavior* territory
+and suspension-grade. The issue's actual complaint was that the row was **heavy** — a third of the
+expressive header — and deleting the *row* satisfies it without deleting the *domain*. The chip is
+`[shield] bloom.example`: compact, browser-owned, and `ADR-006` is cited unchanged.
+
+**The chip's ground is the whole colour argument.** `secure` and `notSecure` are documented in
+`WeboraColorScheme` as "on `container`" and `WeboraColorSchemeTest` measures them against `container`
+alone. `materialColorScheme` maps `primaryContainer` to `container` — and maps `surfaceContainer`,
+which the deleted row used, to `chrome`. That was harmless while the row drew its text in `onSurface`
+and is not harmless for a shield drawn in `secure`. The chip therefore grounds on `primaryContainer`,
+the same ground `BrowserSecurityIdentity` already uses, so one measured pair serves both modes.
+Painting onto `presentation.colors.background` instead would put a compiled browser colour on a
+website-chosen surface with no contrast floor at all — `UX-002`'s `C2` violation arriving through the
+one element whose entire job is to be trustworthy.
+
+**The chip is declared *after* the `weight(1f)` title column and carries no weight**, so a
+manifest-supplied title yields width to it. Reverse the order and a long enough title pushes the
+browser's trust mark out of the header — the site moving the one surface it must not.
+
+**Two new shields, budget 18 → 20, and `ic_lock`/`ic_warning` keep their jobs.** In regular chrome the
+glyph supports the words `Secure · example.com`; in the integrated header the mark stands beside a
+manifest-supplied title and has to read as the browser's own. Both shields share one outline so the
+pair reads as one control changing state, and their interior marks carry the distinction so colour is
+never the only differentiator. `ic_shield_unverified` is named for what it means — it stands for
+`UNKNOWN`, `NOT_SECURE` and `TLS_ERROR` together — and its mark is a question, not a cross: asserting
+danger on a page that is merely still loading is the same class of false claim this ticket removes
+from the green side.
+
+**`SITESKIN_SECURITY_TAG` keeps its exact value and moves onto the chip.** `CI-009` is pending hosted
+acceptance on assertions using it, including the `assertDoesNotExist` that proves `UX-012`'s teardown.
+All five call sites were audited rather than assumed; the only one reading bounds was
+`SiteSkinTopBarTest`, whose assertion described the old two-row layout and now asserts what the move
+actually raises.
+
+**Two instrumented tests were broken by the state change and the JVM gate could not see it.**
+`BrowserChromeTest` and `BrowserFontScaleTest` both built a `BrowserState` with no transport — now
+`UNKNOWN` — while asserting `Secure · example.com`. `CI-003`'s "the gate never compiles `androidTest`"
+arriving again, and the reason `:app:compileDebugAndroidTestKotlin` is run separately. And
+`LiveSiteScreenshotTest`'s identity assertion became a `waitUntilNodeExists`: the chip appears as soon
+as an origin is committed, but `Secure` is now earned by a completion, so the node can legitimately
+read `Not verified` for a moment. Waiting for a state the app reaches on its own is `NET-004`'s rule,
+and it makes the frame stronger evidence — it can no longer be captured while the browser has
+confirmed nothing.
+
+**A source scan reads executable lines, and this ticket found a second way to get that wrong.**
+`SiteSkinTopBarContractTest`'s prose check was first anchored on `presentation.colors.background` — a
+string the strip must hide *and* a real regression would legitimately add, so it failed under the very
+control it was meant to be neutral to and could not tell a broken strip from a genuine violation. It
+is anchored on a KDoc sentence that cannot become code. `BROWSE-009`'s rule needs that corollary: the
+anchor must be prose in every world, not just in the current one.
