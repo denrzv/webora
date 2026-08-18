@@ -26,8 +26,8 @@ import app.webora.browser.browser.BROWSER_SECURITY_TAG
 import app.webora.browser.siteskin.EXPRESSIVE_HEADER_TAG
 import app.webora.browser.siteskin.SITESKIN_HUB_DRAWER_TAG
 import app.webora.browser.siteskin.SITESKIN_BACK_TAG
-import app.webora.browser.siteskin.SITESKIN_DOCK_BACK_TAG
-import app.webora.browser.siteskin.SITESKIN_DOCK_FORWARD_TAG
+import app.webora.browser.siteskin.SITESKIN_FORWARD_TAG
+import app.webora.browser.siteskin.SITESKIN_NAV_HUB_TAG
 import app.webora.browser.siteskin.SITESKIN_DOCK_HUB_TAG
 import app.webora.browser.siteskin.SITESKIN_DOCK_TAG
 import app.webora.browser.siteskin.SITESKIN_SECURITY_TAG
@@ -58,14 +58,16 @@ class LiveSiteNavigationSmokeTest {
 
         waitForProductLink(isPresent = false)
         requireIntegratedChrome()
-        composeRule.onNodeWithTag(SITESKIN_DOCK_BACK_TAG)
+        openNavigationHub()
+        composeRule.onNodeWithTag(SITESKIN_BACK_TAG)
             .assertIsDisplayed()
             .assertIsEnabled()
             .performClick()
 
         waitForProductLink(isPresent = true)
         requireIntegratedChrome()
-        composeRule.onNodeWithTag(SITESKIN_DOCK_FORWARD_TAG)
+        openNavigationHub()
+        composeRule.onNodeWithTag(SITESKIN_FORWARD_TAG)
             .assertIsDisplayed()
             .assertIsEnabled()
             .performClick()
@@ -101,8 +103,10 @@ class LiveSiteNavigationSmokeTest {
                 composeRule.onAllNodes(regularHome).fetchSemanticsNodes().isNotEmpty() ->
                     composeRule.onNode(regularHome).performClick()
 
-                composeRule.onAllNodes(hasTestTag(SITESKIN_BACK_TAG)).fetchSemanticsNodes().isNotEmpty() ->
+                composeRule.onAllNodes(hasTestTag(SITESKIN_NAV_HUB_TAG)).fetchSemanticsNodes().isNotEmpty() -> {
+                    openNavigationHub()
                     composeRule.onNodeWithTag(SITESKIN_BACK_TAG).performClick()
+                }
             }
             composeRule.waitForIdle()
             SystemClock.sleep(NAVIGATION_SETTLE_MILLIS)
@@ -178,10 +182,24 @@ class LiveSiteNavigationSmokeTest {
         composeRule.onNodeWithTag(SITESKIN_DOCK_TAG).assertIsDisplayed()
     }
 
+    /**
+     * `UX-024`: integrated Back lives behind the browser navigation hub.
+     *
+     * `CI-008`'s rule survives the extra step and is why the prerequisite is asserted on the *hub*
+     * as well as on the bubble: a click followed by a destination timeout cannot say whether the
+     * control was unavailable or whether the transition failed, and after this ticket there are two
+     * controls between the user and the navigation.
+     */
+    private fun openNavigationHub() {
+        waitUntilNodeExists(hasTestTag(SITESKIN_NAV_HUB_TAG))
+        composeRule.onNodeWithTag(SITESKIN_NAV_HUB_TAG).assertIsDisplayed().assertIsEnabled().performClick()
+        waitUntilNodeExists(hasTestTag(SITESKIN_BACK_TAG))
+    }
+
     private fun returnFromBloomHistoryToHome() {
         repeat(MAX_HISTORY_RETURNS) {
             if (isHome()) return
-            waitUntilNodeExists(hasTestTag(SITESKIN_BACK_TAG))
+            openNavigationHub()
             composeRule.onNodeWithTag(SITESKIN_BACK_TAG).performClick()
             composeRule.waitForIdle()
             SystemClock.sleep(NAVIGATION_SETTLE_MILLIS)

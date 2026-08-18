@@ -8,7 +8,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertWidthIsEqualTo
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -33,10 +32,6 @@ class SiteSkinDockTest {
             CompositionLocalProvider(LocalDensity provides Density(density.density, 2f)) {
                 SiteSkinDock(
                     presentation(false, true),
-                    canGoBack = false,
-                    canGoForward = true,
-                    onBack = { invoked += "back" },
-                    onForward = { invoked += "forward" },
                     siteActions = emptyList(),
                     hubSurface = HubSurface.BOUQUET,
                     siteActionsExpanded = false,
@@ -50,9 +45,9 @@ class SiteSkinDockTest {
             }
         }
 
+        // `UX-024`: three slots, not five. Back and Forward moved to the header's navigation hub,
+        // where `SiteSkinNavigationHubTest` drives their enabled state and dispatch.
         val tags = listOf(
-            SITESKIN_DOCK_BACK_TAG,
-            SITESKIN_DOCK_FORWARD_TAG,
             SITESKIN_DOCK_HUB_TAG,
             SITESKIN_DOCK_TABS_TAG,
             SITESKIN_DOCK_MORE_TAG,
@@ -60,9 +55,8 @@ class SiteSkinDockTest {
         tags.forEach { compose.onNodeWithTag(it).assertIsDisplayed().assertHeightIsAtLeast(48.dp) }
         compose.onNodeWithTag(SITESKIN_DOCK_HUB_TAG).assertWidthIsEqualTo(BRAND_HUB_TARGET_SIZE)
         compose.onNodeWithTag(BRAND_HUB_IDENTITY_TAG, useUnmergedTree = true).assertIsDisplayed()
-        compose.onNodeWithTag(SITESKIN_DOCK_BACK_TAG).assertIsNotEnabled()
-        tags.drop(1).forEach { compose.onNodeWithTag(it).performClick() }
-        assertEquals(listOf("forward", "hub", "tabs", "more"), invoked)
+        tags.forEach { compose.onNodeWithTag(it).performClick() }
+        assertEquals(listOf("hub", "tabs", "more"), invoked)
     }
 
     @Test fun fiveSiteActionsFormABoundedArcAndDismissBeforeTypedSelection() {
@@ -72,10 +66,6 @@ class SiteSkinDockTest {
         compose.setContent {
             SiteSkinDock(
                 presentation = presentation(false, false),
-                canGoBack = true,
-                canGoForward = true,
-                onBack = {},
-                onForward = {},
                 siteActions = model.actionBouquet(),
                 // These cases are about the bouquet, so they name it. `UX-022` made the surface a
                 // decision, and a dock test that let the default choose would be testing whichever
@@ -115,7 +105,7 @@ class SiteSkinDockTest {
         var dismissals = 0
         compose.setContent {
             SiteSkinDock(
-                presentation(false, false), true, true, {}, {}, model().actionBouquet(),
+                presentation(false, false), model().actionBouquet(),
                 HubSurface.BOUQUET, expanded, {},
                 onSiteActionsDismiss = {
                     dismissals += 1
@@ -135,7 +125,7 @@ class SiteSkinDockTest {
         val bitmap = Bitmap.createBitmap(8, 8, Bitmap.Config.ARGB_8888)
         compose.setContent {
             SiteSkinDock(
-                presentation(false, false), true, true, {}, {}, emptyList(), HubSurface.BOUQUET,
+                presentation(false, false), emptyList(), HubSurface.BOUQUET,
                 false, {}, {}, {}, {}, {}, BrandAsset.BitmapAsset(bitmap),
             )
         }

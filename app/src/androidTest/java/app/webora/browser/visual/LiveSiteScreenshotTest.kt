@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.Rect
 import android.os.SystemClock
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
@@ -31,6 +32,7 @@ import app.webora.browser.inspector.inspectorRecorder
 import app.webora.browser.siteskin.EXPRESSIVE_HEADER_TAG
 import app.webora.browser.siteskin.SITESKIN_HUB_DRAWER_TAG
 import app.webora.browser.siteskin.SITESKIN_BACK_TAG
+import app.webora.browser.siteskin.SITESKIN_NAV_HUB_TAG
 import app.webora.browser.siteskin.SITESKIN_DOCK_HUB_TAG
 import app.webora.browser.siteskin.SITESKIN_DOCK_TAG
 import app.webora.browser.siteskin.SITESKIN_QUICK_ACTIONS_TAG
@@ -160,11 +162,19 @@ class LiveSiteScreenshotTest {
         composeRule.onNodeWithTag(SITESKIN_DOCK_TAG).assertIsDisplayed()
     }
 
+    /**
+     * `UX-024`: integrated Back lives behind the browser navigation hub, so the traversal opens it
+     * first. `CI-008`'s prerequisite is asserted on the bubble, immediately before the click, and no
+     * frame is captured while the bouquet is open — its `Popup` overhangs `BROWSER_CONTENT_TAG`, and
+     * `CI-005` records what measuring a modal as page content costs.
+     */
     private fun returnFromBloomHistoryToHome() {
         repeat(MAX_HISTORY_RETURNS) {
             if (isHome()) return
+            waitUntilNodeExists(hasTestTag(SITESKIN_NAV_HUB_TAG))
+            composeRule.onNodeWithTag(SITESKIN_NAV_HUB_TAG).performClick()
             waitUntilNodeExists(hasTestTag(SITESKIN_BACK_TAG))
-            composeRule.onNodeWithTag(SITESKIN_BACK_TAG).performClick()
+            composeRule.onNodeWithTag(SITESKIN_BACK_TAG).assertIsDisplayed().assertIsEnabled().performClick()
             composeRule.waitForIdle()
             SystemClock.sleep(NAVIGATION_SETTLE_MILLIS)
         }

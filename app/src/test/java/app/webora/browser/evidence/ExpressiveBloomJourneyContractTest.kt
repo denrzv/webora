@@ -42,8 +42,7 @@ class ExpressiveBloomJourneyContractTest {
         val source = source(SCREENSHOT_SOURCE)
 
         assertFalse(source.contains("PRODUCT_LINK_TEXT"))
-        assertFalse(source.contains("SITESKIN_DOCK_BACK_TAG"))
-        assertFalse(source.contains("SITESKIN_DOCK_FORWARD_TAG"))
+        assertFalse(source.contains("SITESKIN_FORWARD_TAG"))
         assertFalse(source.contains("waitForProductLink"))
     }
 
@@ -145,8 +144,12 @@ class ExpressiveBloomJourneyContractTest {
             "findStorefrontProductLink()",
             "scrollStorefrontTowardsProduct()",
             "By.text(PRODUCT_LINK_TEXT).clickable(true)",
-            "SITESKIN_DOCK_BACK_TAG",
-            "SITESKIN_DOCK_FORWARD_TAG",
+            // `UX-024`: the dock no longer offers Back or Forward, so the smoke traversal reaches
+            // them through the header's navigation hub. Re-stated rather than dropped — losing the
+            // history half of this journey is exactly what a shortened marker list would hide.
+            "openNavigationHub()",
+            "SITESKIN_BACK_TAG",
+            "SITESKIN_FORWARD_TAG",
             "SITESKIN_DOCK_HUB_TAG",
             "waitForProductLink(isPresent = false)",
             "waitForProductLink(isPresent = true)",

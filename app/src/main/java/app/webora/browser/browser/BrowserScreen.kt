@@ -848,10 +848,6 @@ internal fun RegularBrowser(
             )
             SiteSkinDock(
                 presentation = presentation,
-                canGoBack = canNavigateBack,
-                canGoForward = state.canGoForward,
-                onBack = onBack,
-                onForward = controller::goForward,
                 siteActions = chrome.actionBouquet(),
                 hubSurface = hubSurface,
                 siteActionsExpanded = overlay == IntegratedOverlay.SITE_HUB,

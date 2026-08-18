@@ -6,6 +6,16 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SiteSkinNavigationContractTest {
+    /**
+     * The dock's commands are compiled and ordered, and `UX-024` re-stated the list rather than
+     * shortening it.
+     *
+     * `UX-015` compiled five; Back and Forward moved into the header's navigation hub, because issue
+     * #122 forbids ending with two controls competing for the same browser command semantics.
+     * Deleting two names from an ordered list is indistinguishable from weakening the rule, so the
+     * re-statement ships with a second control: a fourth command driven by the site's action count
+     * must be rejected by the same predicate that accepts the three.
+     */
     @Test
     fun `expressive dock exposes only fixed browser owned commands`() {
         val source = source("app/webora/browser/siteskin/SiteSkinDock.kt").readText()
@@ -17,6 +27,18 @@ class SiteSkinNavigationContractTest {
                 "ExpressiveSiteSkinDock(presentation) { " +
                     "model.items.forEach { DockCommand(it.icon, it.label) } }",
             ),
+        )
+        assertFalse(
+            "negative control: a fourth slot driven by the site's action count must be rejected",
+            fixedDock(
+                "ExpressiveSiteSkinDock(presentation) { BrandHubCommand(asset = brandAsset); " +
+                    "BrandAsset.BitmapAsset; ic_tabs; ic_more; " +
+                    "siteActions.forEach { DockCommand(ic_more) } }",
+            ),
+        )
+        assertFalse(
+            "the browser commands the hub now owns must not also live in the dock",
+            listOf("SITESKIN_DOCK_BACK_TAG", "SITESKIN_DOCK_FORWARD_TAG").any { it in source },
         )
     }
 
@@ -93,7 +115,7 @@ class SiteSkinNavigationContractTest {
             !source.contains("if (model.security")
 
     private fun fixedDock(source: String): Boolean {
-        val order = listOf("ic_back", "ic_forward", "BrandHubCommand", "ic_tabs", "ic_more")
+        val order = listOf("BrandHubCommand", "ic_tabs", "ic_more")
         val positions = order.map(source::indexOf)
         return source.contains("ExpressiveSiteSkinDock(") &&
             positions.all { it >= 0 } && positions == positions.sorted() &&
