@@ -123,6 +123,12 @@ class ExpressiveBloomJourneyContractTest {
         )
 
         val SHOWCASE_MARKERS = listOf(
+            // `UX-024`/`/review` FINDING-2: two browser-owned controls now stand between the user
+            // and integrated Back, and `CI-008` binds on both. One helper per file rather than an
+            // inlined copy, because the showcase's copy and the smoke test's had already drifted —
+            // one asserted the hub's prerequisite and the other did not.
+            "private fun openNavigationHub()",
+            ".onNodeWithTag(SITESKIN_NAV_HUB_TAG).assertIsDisplayed().assertIsEnabled().performClick()",
             "SITESKIN_DOCK_HUB_TAG",
             "SITESKIN_HUB_DRAWER_TAG",
             // `CI-009`'s #110 moved the tag prefix behind `BloomReferenceContract`, and this list
@@ -147,7 +153,8 @@ class ExpressiveBloomJourneyContractTest {
             // `UX-024`: the dock no longer offers Back or Forward, so the smoke traversal reaches
             // them through the header's navigation hub. Re-stated rather than dropped — losing the
             // history half of this journey is exactly what a shortened marker list would hide.
-            "openNavigationHub()",
+            "private fun openNavigationHub()",
+            ".onNodeWithTag(SITESKIN_NAV_HUB_TAG).assertIsDisplayed().assertIsEnabled().performClick()",
             "SITESKIN_BACK_TAG",
             "SITESKIN_FORWARD_TAG",
             "SITESKIN_DOCK_HUB_TAG",

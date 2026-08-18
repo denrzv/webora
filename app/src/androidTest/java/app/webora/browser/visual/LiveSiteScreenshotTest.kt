@@ -168,12 +168,27 @@ class LiveSiteScreenshotTest {
      * frame is captured while the bouquet is open — its `Popup` overhangs `BROWSER_CONTENT_TAG`, and
      * `CI-005` records what measuring a modal as page content costs.
      */
+    /**
+     * Opens the browser-owned navigation hub, asserting its prerequisite before invoking it.
+     *
+     * `CI-008` requires a transition control's displayed and enabled semantics immediately before the
+     * click, because a click followed by a destination timeout cannot say whether the action was
+     * unavailable or whether the transition failed. `UX-024` put a **second** control between the
+     * user and integrated Back, so the rule now applies twice: without this, a hub that composed but
+     * never opened would fail at the bubble's wait and name the bubble.
+     *
+     * This can only make the evidence refuse earlier, which is `CI-008`'s own constraint on itself.
+     */
+    private fun openNavigationHub() {
+        waitUntilNodeExists(hasTestTag(SITESKIN_NAV_HUB_TAG))
+        composeRule.onNodeWithTag(SITESKIN_NAV_HUB_TAG).assertIsDisplayed().assertIsEnabled().performClick()
+        waitUntilNodeExists(hasTestTag(SITESKIN_BACK_TAG))
+    }
+
     private fun returnFromBloomHistoryToHome() {
         repeat(MAX_HISTORY_RETURNS) {
             if (isHome()) return
-            waitUntilNodeExists(hasTestTag(SITESKIN_NAV_HUB_TAG))
-            composeRule.onNodeWithTag(SITESKIN_NAV_HUB_TAG).performClick()
-            waitUntilNodeExists(hasTestTag(SITESKIN_BACK_TAG))
+            openNavigationHub()
             composeRule.onNodeWithTag(SITESKIN_BACK_TAG).assertIsDisplayed().assertIsEnabled().performClick()
             composeRule.waitForIdle()
             SystemClock.sleep(NAVIGATION_SETTLE_MILLIS)
