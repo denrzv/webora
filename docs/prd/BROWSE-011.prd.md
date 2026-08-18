@@ -83,8 +83,17 @@ room for it. The brand row is not edited at all, so `SITESKIN_SECURITY_TAG`, the
 1. Protected integrated mode composes a browser-owned Refresh control that is visible without
    opening the SiteSkin hub, the browser menu, or any site surface.
 2. Activating it calls `reload()` on the controller owned by the **selected** tab, and on no other.
-3. It creates no tab, replaces no renderer, and issues no `loadUrl` — the retained `WebView` reloads
-   in place and `hostedUrl` is not rewritten by the act of refreshing.
+3. It creates no tab and replaces no renderer. Refreshing a page the renderer holds re-fetches it in
+   place through `reload()`, appending no history entry and leaving `hostedUrl` untouched — that
+   value is what `BROWSE-010`'s mount rule reads to decide whether to re-issue a navigation.
+   Refreshing a *failed* page re-issues its exact retry URL, which is a `loadUrl`, because the
+   renderer's own URL after a failed navigation is not a target the browser can name; that is the
+   call `BrowserErrorPage`'s Retry has made since `BROWSE-004`, and a failed navigation commits no
+   history entry for it to duplicate.
+
+   > An earlier draft of this criterion forbade `loadUrl` outright. The plan then decided the
+   > failure path and nothing reconciled the two, so the shipped code contradicted its own
+   > criterion. Recorded rather than quietly edited: `/review` FINDING-1.
 4. Loading and completion state restart and settle through the existing `WebViewEvent` pipeline,
    routed by `routeRendererEvent` under the originating tab's id.
 5. A refresh in tab A cannot change tab B's URL, address text, loading flag, history capability,

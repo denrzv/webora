@@ -154,3 +154,30 @@ a control that fails nothing is a finding, not a formality.
     - The note states the measurement, not just the conclusion.
     - It records that the site's own `refresh` action deliberately survives.
   - Tests: `bash scripts/pre-commit-check.sh`.
+
+- [x] TASK-FIX-1: say what criterion 3 means, and pin the invariant behind it
+  - Source: `/review` FINDING-1
+  - Modified: `docs/prd/BROWSE-011.prd.md`, `app/src/test/java/app/webora/browser/web/RendererMountActionTest.kt`
+  - Criterion 3 forbids `loadUrl`, which the `Retry` path issues — it was written before the plan
+    decided the failure path and never reconciled. Restate it at the mechanism, and assert the
+    invariant it was reaching for: `reload()` does not rewrite `hostedUrl`, which
+    `rendererMountAction` reads on every mount.
+  - Acceptance:
+    - Criterion 3 describes the shipped behaviour on both paths.
+    - A JVM case fails if `reload()` writes `hostedUrl`.
+  - Tests: `RendererMountActionTest`.
+  - Negative control: `hostedUrl = webView?.url` inside `reload()` → **1 of 10 failed**, the new
+    case. That is the exact regression `BROWSE-010` warns about, from the exact framework value
+    it names, and nothing in the suite caught it before this case existed.
+
+- [ ] TASK-FIX-2: let Home ask the decision instead of restating its answer
+  - Source: `/review` FINDING-2
+  - Modified: `app/src/main/java/app/webora/browser/browser/BrowserScreen.kt`,
+    `app/src/test/java/app/webora/browser/browser/BrowserChromeContractTest.kt`
+  - Home's shell passes a literal `false` where the shared decision is available, leaving
+    `RefreshAction.None` unreachable in production and the two answers free to disagree.
+  - Acceptance:
+    - All three reload call sites derive from `refreshAction`.
+    - The value is unchanged today; the agreement is structural rather than coincidental.
+  - Tests: `BrowserChromeContractTest`.
+  - Negative control: restore the literal → the single-owner case must fail. Result: _to record_.
