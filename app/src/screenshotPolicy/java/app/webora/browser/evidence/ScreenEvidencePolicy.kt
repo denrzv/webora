@@ -88,7 +88,10 @@ object ScreenEvidencePolicy {
             Regex("""\bpackage=${Regex.escape(appPackage)}(?:\s|$)""").containsMatchIn(line)
         }
         val applicationSubPanel = block.lineSequence().any { line ->
-            line.contains("type=$APPLICATION_SUB_PANEL") || line.contains("type=1002")
+            line.contains("type=$APPLICATION_SUB_PANEL") ||
+                line.contains("ty=$APPLICATION_SUB_PANEL") ||
+                line.contains("type=1002") ||
+                line.contains("ty=1002")
         }
         val parentOwned = block.lineSequence()
             .filter { it.contains("mParentWindow=") }
