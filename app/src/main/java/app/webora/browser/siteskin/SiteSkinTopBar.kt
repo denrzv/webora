@@ -45,39 +45,35 @@ import app.webora.browser.design.WeboraColors
 import app.webora.browser.design.WeboraRadius
 
 /**
- * Integrated top chrome: the site's identity row, then the browser's own control row.
+ * Integrated top chrome: the browser's navigation hub, the site's identity, the browser's trust mark.
  *
- * **Two rows, and the second one is `BROWSE-011`'s answer to a measurement.** Issue #116 sketched
- * Refresh as a trailing icon in the brand row. On the 320 dp host this repository treats as its
- * floor that row has 280 dp, of which Back, the logo and three gaps take 116 — leaving 164 dp for
- * the weighted title and the unweighted trust chip. A 48 dp control plus its gap takes that to 108,
- * while the chip alone wants about 121 for a domain like `denrzv.github.io`. The chip is unweighted
- * and measures first, so it truncates and the site's title measures to *zero* — at default font
- * scale. `UX-023` already records that this row cannot hold four things at 200%; a fifth is not the
- * direction.
+ * **One row now, where `BROWSE-011` needed two.** That ticket measured the brand row and found it
+ * could not take a sixth child — 280 dp of content width at the 320 dp floor, of which Back, the
+ * logo and three gaps take 116, leaving 164 dp for the weighted title and the unweighted chip, so a
+ * 48 dp control plus its gap truncates the domain and measures the site's title to zero. Its
+ * conclusion, *a browser command needed a row of its own*, was correct given that the leading slot
+ * already held a single-purpose Back button. `UX-024` removes that premise instead of arguing with
+ * the arithmetic: the slot now holds a control that opens Back, Forward **and** Refresh, so the
+ * width budget is unchanged and `BrowserControlRow`'s 40 dp goes back to the page.
  *
- * So the browser's controls get their own row and the brand row is not edited at all, which is what
- * keeps `SITESKIN_SECURITY_TAG`, the chip's ground, its width floor and its declaration order
- * meaning exactly what they meant when `UX-021` accepted them.
+ * The leading slot itself is unchanged in every dimension — the same 48 dp `BrowserControlTile` in
+ * the same position — which is why `headerIdentityPlacement`'s `HEADER_FIXED_WIDTH` did not move.
+ * If a future change needs that constant edited, the footprint has moved and `UX-023`'s measured
+ * wrap threshold needs re-deriving with it.
  *
- * Back stays in the brand row. `UX-008` and `UX-014` require integrated top chrome to carry a
- * leading Back affordance before site branding; moving it down here to pay for Refresh's width
- * would have been width-neutral and is a navigation-contract reversal, not a side effect of adding
- * a reload command.
- *
- * Neither [canRefresh] nor [onRefresh] is defaulted. `DEVX-003`: an offered browser command whose
- * handler does nothing is the failure the offered list exists to prevent, and a default no-op puts
- * that one forgetful call site away.
+ * `UX-008` and `UX-014` require integrated top chrome to carry a leading browser-owned affordance
+ * before site branding, with browser-observed enabled state and a browser callback that no manifest
+ * seam can suppress, relabel, reorder, restyle or dispatch. Every clause still holds. What changed
+ * is that the slot holds a control which *opens* Back rather than *being* Back — and holds two more
+ * browser commands besides, which is more browser capability in browser-owned chrome, not less.
+ * SiteSkin still does not replace the browser's history contract, which is what those tickets are
+ * about.
  */
 @Composable
-@Suppress("LongParameterList")
 internal fun SiteSkinTopBar(
     model: SiteSkinTopBarModel,
     presentation: ExpressiveSiteSkinPresentation,
-    canGoBack: Boolean,
-    onBack: () -> Unit,
-    canRefresh: Boolean,
-    onRefresh: () -> Unit,
+    navigation: BrowserNavigationHubState,
     modifier: Modifier = Modifier,
 ) {
     ExpressiveSiteSkinHeader(presentation, modifier) {
@@ -95,14 +91,12 @@ internal fun SiteSkinTopBar(
                 BrandRow(
                     model = model,
                     presentation = presentation,
-                    canGoBack = canGoBack,
-                    onBack = onBack,
+                    navigation = navigation,
                     inlineIdentity = placement == HeaderIdentityPlacement.INLINE,
                 )
                 if (placement == HeaderIdentityPlacement.OWN_ROW) {
                     SiteSkinIdentityRow(model.security)
                 }
-                BrowserControlRow(canRefresh, onRefresh)
             }
         }
     }
@@ -112,15 +106,14 @@ internal fun SiteSkinTopBar(
 private fun BrandRow(
     model: SiteSkinTopBarModel,
     presentation: ExpressiveSiteSkinPresentation,
-    canGoBack: Boolean,
-    onBack: () -> Unit,
+    navigation: BrowserNavigationHubState,
     inlineIdentity: Boolean,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth().testTag(SITESKIN_BRAND_TAG),
     ) {
-        BrowserBack(canGoBack, onBack)
+        BrowserNavigationHub(navigation)
         Spacer(Modifier.width(8.dp))
         BrandLogo(model.brandAsset, presentation.colors)
         Spacer(Modifier.width(12.dp))
@@ -163,12 +156,13 @@ private fun BrandRow(
 /**
  * The trust chip alone, on a row that carries no site content whatsoever.
  *
- * Composed only when [headerIdentityPlacement] says the brand row cannot hold it. It is a separate
- * row rather than a passenger in `BROWSE-011`'s control row on a named mechanism: that row asserts
- * it declares no weight and uses `Arrangement.End`, because the contract test locates the brand
- * row's flexible title column by the file's *first* `Modifier.weight(1f)`. Joining it would need
- * either a conditional arrangement or a weighted child, and both make a live assertion depend on
- * something unrelated to what it asserts.
+ * Composed only when [headerIdentityPlacement] says the brand row cannot hold it. `UX-023` chose a
+ * separate row over joining `BROWSE-011`'s browser control row, on a named mechanism: that row
+ * declared no weight and used `Arrangement.End`, and the contract test locates the brand row's
+ * flexible title column by the file's *first* `Modifier.weight(1f)`, so a weighted passenger would
+ * have made a live assertion depend on something unrelated to what it asserts. `UX-024` removed the
+ * control row entirely, which makes the question moot rather than the decision wrong — and leaves
+ * this row unchanged, composed on the same browser-owned condition it always was.
  *
  * `UX-021`'s guarantee is that a manifest-supplied title cannot push the browser's trust mark out of
  * the header. Here it holds by construction rather than by declaration order — there is no site
@@ -188,81 +182,6 @@ private fun SiteSkinIdentityRow(security: SecurityPresentation) {
         // dropping the modifier's cap does not let it overflow the header.
         SiteSkinSecurityChip(security, maxWidth = Dp.Unspecified)
     }
-}
-
-/**
- * The site's half of the header, plus the browser controls that must precede it.
- *
- * Lifted into its own declaration by `BROWSE-011` so the containing function stays under detekt's
- * `LongMethod` ceiling. Its contents are otherwise unchanged, which is the point: every structural
- * assertion `UX-021` left behind reads this row.
- */
-/**
- * The browser's controls, on their own line inside a header the site paints.
- *
- * Trailing-aligned by `Arrangement.End` rather than by a weighted spacer, and this is deliberate:
- * `SiteSkinTopBarContractTest` locates the brand row's flexible title column by the *first*
- * `Modifier.weight(1f)` in this file, and a second weighted child would make that assertion depend
- * on declaration order for a reason unrelated to what it asserts.
- *
- * The row is composed unconditionally. There is no count, flag, list index or model field through
- * which a manifest could empty it, reorder it or add to it — the reason the isolation test asserts
- * on this declaration's text rather than on a runtime absence.
- */
-@Composable
-private fun BrowserControlRow(canRefresh: Boolean, onRefresh: () -> Unit) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.End,
-        modifier = Modifier.fillMaxWidth().testTag(SITESKIN_CONTROLS_TAG),
-    ) {
-        BrowserControlTile(SITESKIN_REFRESH_TAG) {
-            WeboraIconButton(
-                icon = R.drawable.ic_reload,
-                // The same name regular chrome gives this command. `DEVX-003`: one command does not
-                // acquire two names because it is drawn on a second surface.
-                contentDescription = stringResource(R.string.reload),
-                onClick = onRefresh,
-                enabled = canRefresh,
-            )
-        }
-    }
-}
-
-@Composable
-private fun BrowserBack(canGoBack: Boolean, onBack: () -> Unit) {
-    BrowserControlTile(SITESKIN_BACK_TAG) {
-        WeboraIconButton(
-            icon = R.drawable.ic_back,
-            contentDescription = stringResource(R.string.back),
-            onClick = onBack,
-            enabled = canGoBack,
-        )
-    }
-}
-
-/**
- * One declaration for the browser-owned sub-surface every browser control in this header sits on.
- *
- * `UX-014` records why the tile exists at all: the header's colours are the site's, so a browser
- * control drawn straight onto them would read as the site's too — *"the visual boundary is the
- * ownership boundary"*. It reads `MaterialTheme.colorScheme.surfaceContainer` and nothing from
- * [SiteSkinColorScheme]; `UX-021`'s trust chip grounds elsewhere for a reason specific to the
- * measured `secure`/`notSecure` pair, and that difference is not an inconsistency to tidy away.
- *
- * Shared rather than copied because `UX-021` records what two copies of one rule cost: regular
- * chrome and the integrated chip each carried a verbatim `when`, and a re-pointed branch in one
- * file drifted from the other with nothing failing.
- */
-@Composable
-private fun BrowserControlTile(tag: String, content: @Composable () -> Unit) {
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainer)
-            .testTag(tag),
-        content = { content() },
-    )
 }
 
 @Composable
@@ -354,10 +273,7 @@ private fun SiteSkinSecurityChip(security: SecurityPresentation, maxWidth: Dp = 
 
 internal const val SITESKIN_LOGO_TAG = "siteskin_logo"
 internal const val SITESKIN_SECURITY_TAG = "siteskin_security"
-internal const val SITESKIN_BACK_TAG = "siteskin_back"
 internal const val SITESKIN_BRAND_TAG = "siteskin_brand"
-internal const val SITESKIN_CONTROLS_TAG = "siteskin_browser_controls"
-internal const val SITESKIN_REFRESH_TAG = "siteskin_refresh"
 internal val LOGO_SLOT_SIZE = 40.dp
 
 /**

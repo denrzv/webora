@@ -116,10 +116,17 @@ class BrowserIconContractTest {
          * been free and would have made one glyph do two jobs on two surfaces with different
          * amounts of supporting text.
          *
+         * Raised again 20 → 21 by `UX-024`, for `ic_history`. The navigation hub's collapsed control
+         * needs a glyph that names Back, Forward and Refresh *as a group*, and every candidate for
+         * reuse says something else: `ic_back` is the misleading direct-Back reading the ticket
+         * exists to remove, `ic_more` is already the dock's More, `ic_menu` means menu. Back,
+         * Forward and Refresh are the history family, so a history glyph names the group without
+         * standing for any member of it.
+         *
          * A raise is a decision someone makes on purpose. The alternative — quietly bumping this
          * number whenever a surface wants a new picture — is what the budget exists to prevent.
          */
-        const val BUDGET = 20
+        const val BUDGET = 21
         const val STROKE_WIDTH = """android:strokeWidth="1.9""""
         const val FILL_ATTRIBUTE = "android:fillColor"
         const val PATH_DATA = "android:pathData"
@@ -155,6 +162,7 @@ class BrowserIconContractTest {
             "ic_siteskin_generic",
             "ic_shield_secure",
             "ic_shield_unverified",
+            "ic_history",
         )
 
         val FORBIDDEN_ICON_LOOKUPS = listOf("getIdentifier(", "Uri.parse(", "File(", "URL(")

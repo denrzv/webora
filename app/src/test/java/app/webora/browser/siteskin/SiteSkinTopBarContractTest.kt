@@ -106,73 +106,46 @@ class SiteSkinTopBarContractTest {
         )
     }
 
+    /**
+     * The header's leading slot is the browser's, and it holds one control rather than a row.
+     *
+     * `BROWSE-011` put Refresh on a second row because the brand row already held a single-purpose
+     * Back button and could not take a sixth child. `UX-024` removed that premise: the leading slot
+     * now opens Back, Forward and Refresh together, so the width budget is unchanged and the second
+     * row is gone. What this file still owns is that the brand row carries a browser control first
+     * and the trust chip last; everything about the hub's own contents is asserted where it is
+     * declared, in `BrowserNavigationHubContractTest`.
+     */
     @Test
-    fun `the browser refresh control is browser-owned in every value it reads`() {
-        // `BROWSE-011`. The control sits inside a header a manifest paints, so the runtime can only
-        // show that it renders; a source scan is what shows no path exists from the SiteSkin palette
-        // or the site's model to its ground, its icon, its label or its callback. The negative
-        // control is a one-word edit: ground the tile on `presentation.colors.secondary`.
-        val control = declaration("private fun BrowserControlRow(")
-
-        assertTrue("the control must draw the compiled reload icon", "R.drawable.ic_reload" in control)
-        assertTrue("its name must be a browser-authored resource", "stringResource(R.string.reload)" in control)
-        FORBIDDEN_IN_CHIP.forEach { forbidden ->
-            assertFalse(
-                "a manifest-influenced value reached a browser command: '$forbidden'",
-                forbidden in control,
-            )
-        }
-    }
-
-    @Test
-    fun `browser controls in the header share one Webora-token sub-surface`() {
-        // `UX-014`: the header's colours are the site's, so a browser control drawn straight onto
-        // them reads as the site's — "the visual boundary is the ownership boundary". One
-        // declaration rather than two copies, for the reason `UX-021` records about a `when` that
-        // shipped twice and drifted.
-        val tile = declaration("private fun BrowserControlTile(")
-
-        assertTrue(
-            "the browser tile must ground on a Webora token",
-            "MaterialTheme.colorScheme.surfaceContainer" in tile,
-        )
-        assertFalse("no site colour may paint a browser control's tile", "presentation" in tile)
-        assertFalse("no site colour may paint a browser control's tile", "colors." in tile)
-
-        val source = executableLines(topBarFile())
-        assertTrue("Back must use the shared tile", "BrowserControlTile(SITESKIN_BACK_TAG)" in source)
-        assertTrue("Refresh must use the shared tile", "BrowserControlTile(SITESKIN_REFRESH_TAG)" in source)
-    }
-
-    @Test
-    fun `the refresh tag is applied to a node rather than merely declared`() {
-        // `UX-020`'s lesson again: the constant is declared in this same file, so a `contains` over
-        // the bare name would be satisfied by the declaration alone.
-        val source = executableLines(topBarFile())
-
-        assertTrue(
-            "SITESKIN_REFRESH_TAG must reach a node",
-            "BrowserControlTile(SITESKIN_REFRESH_TAG)" in source,
-        )
-        assertTrue("the tile is what applies it", "testTag(tag)" in declaration("private fun BrowserControlTile("))
-    }
-
-    @Test
-    fun `the browser control row does not compete with the brand row for width`() {
-        // `BROWSE-011`'s whole placement argument, as a structural fact. The brand row has 164 dp
-        // for the title and the trust chip at 320 dp; a browser control in *that* row truncates the
-        // domain and measures the site's title to zero. It is also why the control row must declare
-        // no weight: the assertion above locates the title column by the file's first
-        // `Modifier.weight(1f)`, and a second weighted child would make that depend on declaration
-        // order for an unrelated reason.
-        val control = declaration("private fun BrowserControlRow(")
+    fun `the brand row leads with the browser navigation hub and ends with the trust chip`() {
         val brand = declaration("private fun BrandRow(")
 
-        assertFalse("the control row must not introduce a second weighted child", "weight(" in control)
-        assertTrue("it is trailing-aligned instead", "Arrangement.End" in control)
-        assertFalse("no browser command may join the brand row", "BrowserControlRow(" in brand)
-        assertTrue("the brand row still carries Back", "BrowserBack(" in brand)
-        assertTrue("and still ends with the trust chip", "SiteSkinSecurityChip(" in brand)
+        assertTrue("the leading control must be the browser's navigation hub", "BrowserNavigationHub(" in brand)
+        assertTrue("and it must still end with the trust chip", "SiteSkinSecurityChip(" in brand)
+        assertTrue(
+            "the hub must be declared before the flexible title column",
+            brand.indexOf("BrowserNavigationHub(") < brand.indexOf("Modifier.weight(1f)"),
+        )
+    }
+
+    @Test
+    fun `the standalone refresh row is gone and does not return`() {
+        // Criterion 9 and criterion 10, as the deleted-shape guard `UX-021` uses for its own removed
+        // row. Asserted as a comparison of what the header composes, not as a new row count: an
+        // assertion that the header has two children would also pass on a header that had grown a
+        // different second one.
+        val source = executableLines(topBarFile())
+
+        assertFalse("the browser control row must not return", "fun BrowserControlRow(" in source)
+        assertFalse("nor its tag", "SITESKIN_CONTROLS_TAG" in source)
+        assertFalse("nor a second standalone Back", "fun BrowserBack(" in source)
+
+        // The comparison, named rather than counted: all three rows this header has ever composed,
+        // filtered by what it composes now. A bare count of children would go green on a header that
+        // had swapped the control row for a different one.
+        val header = declaration("internal fun SiteSkinTopBar(")
+        val composed = ROW_CANDIDATES.filter { it in header }
+        assertEquals(listOf("BrandRow(", "SiteSkinIdentityRow("), composed)
     }
 
     /**
@@ -248,6 +221,9 @@ class SiteSkinTopBarContractTest {
     }
 
     private companion object {
+        /** Every row this header has composed across `UX-021`, `BROWSE-011` and `UX-024`. */
+        val ROW_CANDIDATES = listOf("BrandRow(", "SiteSkinIdentityRow(", "BrowserControlRow(")
+
         val FORBIDDEN_IN_CHIP = listOf(
             "presentation",
             "SiteSkinColorScheme",

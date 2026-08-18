@@ -16,11 +16,11 @@ internal enum class HeaderIdentityPlacement {
  * Whether the brand row can still hold the trust chip beside the site's title.
  *
  * **The arithmetic, measured in `docs/research/UX-023.md` F1.** The expressive header's 20 dp
- * gutters leave 280 dp on a 320 dp host. The brand row's fixed children — Back 48, spacer 8, logo
- * 40, spacer 12, spacer 8 — take [HEADER_FIXED_WIDTH], so the title and the chip share what is
- * left. The chip is unweighted and declared after the weighted title column, so it measures first
- * and the title absorbs any shortfall — which is why the failure mode is a title of zero width
- * rather than a chip that overflows.
+ * gutters leave 280 dp on a 320 dp host. The brand row's fixed children — the browser's leading
+ * control 48, spacer 8, logo 40, spacer 12, spacer 8 — take [HEADER_FIXED_WIDTH], so the title and
+ * the chip share what is left. The chip is unweighted and declared after the weighted title column,
+ * so it measures first and the title absorbs any shortfall — which is why the failure mode is a
+ * title of zero width rather than a chip that overflows.
  *
  * | Host | Scale | Domain | Chip needs | Budget | Result |
  * |---|---|---|---|---|---|
@@ -60,7 +60,19 @@ internal fun headerIdentityPlacement(
     return if (required <= budget) HeaderIdentityPlacement.INLINE else HeaderIdentityPlacement.OWN_ROW
 }
 
-/** Back 48 + 8, logo 40 + 12, and the 8 dp before the chip. */
+/**
+ * The browser's leading control 48 + 8, logo 40 + 12, and the 8 dp before the chip.
+ *
+ * **The first term is a footprint, not a command, and `UX-024` is why that distinction matters.**
+ * `UX-023` measured it against `BrowserBack`; the slot now holds a navigation hub that opens Back,
+ * Forward *and* Refresh, and the number did not move — same 48 dp `BrowserControlTile`, same
+ * position. That is what let `BROWSE-011`'s separate control row be deleted without re-deriving any
+ * of the table above, and `HeaderIdentityPlacementTest` passing unedited across that ticket is the
+ * evidence rather than the intention.
+ *
+ * So: a change to the leading slot that needs this constant edited has moved the footprint, and the
+ * wrap threshold has to be re-measured with it.
+ */
 private val HEADER_FIXED_WIDTH = 116.dp
 
 /** What the site's name currently gets at 100% on a 320 dp host, and the floor worth keeping. */

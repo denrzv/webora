@@ -39,15 +39,26 @@ import app.webora.browser.R
 import app.webora.browser.browser.WeboraIconButton
 import dev.siteskin.core.model.NavigationItem
 
-/** Fixed browser-owned commands hosted by the expressive SiteSkin surface. */
+/**
+ * Fixed browser-owned commands hosted by the expressive SiteSkin surface.
+ *
+ * **Three commands, where `UX-015` compiled five.** Back and Forward left in `UX-024`: they now live
+ * in the header's navigation hub beside Refresh, and issue #122 forbids ending with two controls
+ * competing for the same browser command semantics. The *contract* is unchanged — compiled, ordered,
+ * browser-owned, with no count, index, model or configuration input — and only its membership moved.
+ *
+ * The reduction costs nothing geometrically and is measured rather than assumed: at the 320 dp floor
+ * the pill has 280 dp of slot width, so three equal slots are 93.3 dp each against five at 56.0, and
+ * `BRAND_HUB_TARGET_SIZE` still centres with 20.6 dp either side instead of 2. No dimension, radius,
+ * height or colour in `ExpressiveSiteSkinDock` changes.
+ *
+ * The honest cost is elsewhere and is recorded in `UX-024`'s PRD: integrated Back is one interaction
+ * further away than it was. Android system and predictive Back are untouched and still one gesture.
+ */
 @Composable
 @Suppress("LongParameterList")
 internal fun SiteSkinDock(
     presentation: ExpressiveSiteSkinPresentation,
-    canGoBack: Boolean,
-    canGoForward: Boolean,
-    onBack: () -> Unit,
-    onForward: () -> Unit,
     siteActions: List<SiteSkinItemModel>,
     hubSurface: HubSurface,
     siteActionsExpanded: Boolean,
@@ -60,18 +71,6 @@ internal fun SiteSkinDock(
     modifier: Modifier = Modifier,
 ) {
     ExpressiveSiteSkinDock(presentation, modifier.testTag(SITESKIN_DOCK_TAG)) {
-        DockCommand(
-            R.drawable.ic_back, stringResource(R.string.back), canGoBack, onBack,
-            SITESKIN_DOCK_BACK_TAG, presentation.colors.onSecondary,
-        )
-        DockCommand(
-            R.drawable.ic_forward,
-            stringResource(R.string.forward),
-            canGoForward,
-            onForward,
-            SITESKIN_DOCK_FORWARD_TAG,
-            presentation.colors.onSecondary,
-        )
         BrandHubCommand(
             asset = brandAsset,
             label = stringResource(R.string.siteskin_open_hub),
@@ -260,8 +259,6 @@ private fun BrandHubIdentity(asset: BrandAsset, contentColor: Color) {
 }
 
 internal const val SITESKIN_DOCK_TAG = "siteskin_browser_dock"
-internal const val SITESKIN_DOCK_BACK_TAG = "siteskin_dock_back"
-internal const val SITESKIN_DOCK_FORWARD_TAG = "siteskin_dock_forward"
 internal const val SITESKIN_DOCK_HUB_TAG = "siteskin_dock_hub"
 internal const val SITESKIN_DOCK_TABS_TAG = "siteskin_dock_tabs"
 internal const val SITESKIN_DOCK_MORE_TAG = "siteskin_dock_more"

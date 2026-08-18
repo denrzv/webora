@@ -99,8 +99,6 @@ class BrowserChromeContractTest {
         )
         assertFalse("no call site may state the reload answer as a literal", screen.contains("canReload = false"))
         assertTrue("and so is its callback", screen.contains("onReload = onRefresh"))
-        assertTrue("the integrated header receives the same pair", screen.contains("canRefresh = canRefresh"))
-        assertTrue("and the same callback", screen.contains("onRefresh = onRefresh"))
         assertFalse(
             "the regular dock must not reach the renderer directly for reload",
             screen.contains("onReload = controller::reload"),
@@ -114,6 +112,9 @@ class BrowserChromeContractTest {
             "app/webora/browser/browser/BrowserScreen.kt",
             "app/webora/browser/browser/BrowserChrome.kt",
             "app/webora/browser/siteskin/SiteSkinTopBar.kt",
+            // Added by `UX-024`: the header's Refresh moved into the navigation hub, so the file
+            // that draws it is now a candidate second owner and has to be scanned as one.
+            "app/webora/browser/siteskin/BrowserNavigationHub.kt",
         ).filter { decidesReload(executableLines(source(it))) }
 
         assertEquals(listOf("app/webora/browser/browser/RefreshAction.kt"), owners)
@@ -131,6 +132,29 @@ class BrowserChromeContractTest {
         )
     }
 
+    /**
+     * The integrated header reaches the same reload decision, through `UX-024`'s hub.
+     *
+     * Split out of the case above rather than appended to it: that one is already at detekt's
+     * `LongMethod` ceiling, and a rule crammed in to fit is a rule someone deletes to make room.
+     * The shared availability becomes the Refresh action's `enabled` flag and the shared callback is
+     * the `REFRESH` arm of the hub's exhaustive dispatch — re-stated, not relaxed. A header that
+     * computed its own answer fails these exactly as it failed the pair they replace.
+     */
+    @Test
+    fun `the integrated navigation hub reaches the same reload decision`() {
+        val screen = executableLines(source("app/webora/browser/browser/BrowserScreen.kt"))
+
+        assertTrue(
+            "the hub's refresh availability is the shared one",
+            screen.contains("browserNavigationActions(canNavigateBack, state.canGoForward, canRefresh)"),
+        )
+        assertTrue(
+            "and its dispatch is the shared callback",
+            screen.contains("BrowserNavigationCommand.REFRESH -> onRefresh()"),
+        )
+    }
+
     @Test
     fun `the transport label mapping has one owner`() {
         // UX-021 shipped this `when` twice, verbatim, in regular chrome and the integrated chip,
@@ -142,6 +166,9 @@ class BrowserChromeContractTest {
             "app/webora/browser/browser/TransportLabel.kt",
             "app/webora/browser/browser/BrowserChrome.kt",
             "app/webora/browser/siteskin/SiteSkinTopBar.kt",
+            // Added by `UX-024`: the header's Refresh moved into the navigation hub, so the file
+            // that draws it is now a candidate second owner and has to be scanned as one.
+            "app/webora/browser/siteskin/BrowserNavigationHub.kt",
         ).filter { mapsTransport(source(it).readText()) }
 
         assertEquals(listOf("app/webora/browser/browser/TransportLabel.kt"), owners)

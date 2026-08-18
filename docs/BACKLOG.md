@@ -1097,3 +1097,35 @@ domain at 200%; that is a layout problem, not a constant.
   the title is still present.
 - The instrumented floor from `UX-021` survives or is raised, never lowered.
 - `bash scripts/pre-commit-check.sh` passes.
+
+### `UX-024` — Three browser commands presented as three unrelated controls ✅
+
+**Priority:** P2
+**Source:** GitHub issue [#122](https://github.com/denrzv/webora/issues/122)
+**Depends on:** `BROWSE-011`, `UX-015`, `UX-021`, `UX-023`
+**Goal:** consolidate integrated Back, Forward and Refresh into one compact browser-owned Navigation
+Hub, and give `BROWSE-011`'s 40 dp refresh row back to the page.
+
+**The arithmetic.** `ExpressiveSiteSkinHeader` is `heightIn(min = 96.dp)` with a 20 dp gutter and
+20 dp of reserved curve, so a brand row plus `BrowserControlRow` measured 136 dp and now measures the
+96 dp floor. The dock's five slots became three: at the 320 dp floor the pill has 280 dp of slot
+width, so each slot went 56.0 → 93.3 dp and `BRAND_HUB_TARGET_SIZE` centres with 20.6 dp either side
+instead of 2.
+
+**Scope**
+- Replace the brand row's standalone Back tile with a hub that opens Back, Forward and Refresh; keep
+  the 48 dp footprint so `headerIdentityPlacement`'s `HEADER_FIXED_WIDTH` does not move.
+- Delete `BrowserControlRow`; introduce no second visible Refresh anywhere in integrated chrome.
+- Drop Back and Forward from the dock so no two controls compete for the same browser command
+  semantics.
+- Keep the browser and site bouquets as separate item models end to end.
+
+**Acceptance**
+- The hub opens exactly three actions in compiled order, each ≥48 dp with its own label and
+  browser-observed enabled state; the collapsed control is never disabled.
+- Selecting closes before dispatching; an outside tap and Android Back close without navigating.
+- No manifest value reaches the hub or a bubble, with a negative control.
+- `bash scripts/pre-commit-check.sh` passes.
+
+**Shipped.** All five tasks green; `CI-009`/`CI-010` hosted acceptance is pending, because the
+integrated frames photograph a header one row shorter and a three-slot dock.

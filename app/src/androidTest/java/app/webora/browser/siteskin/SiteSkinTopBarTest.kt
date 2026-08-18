@@ -3,6 +3,10 @@ package app.webora.browser.siteskin
 import android.graphics.Bitmap
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.Modifier
@@ -60,18 +64,27 @@ class SiteSkinTopBarTest {
             .assertContentDescriptionEquals("Secure connection to example.co.uk")
     }
 
+    /**
+     * Back is still browser-owned, still browser-observed, and now one tap further in.
+     *
+     * `UX-024` replaced the standalone tile with the navigation hub, so the assertion opens the hub
+     * first. What it asserts is unchanged: Back is present in both history states, enabled only when
+     * the browser says so, and dispatches nothing when it is not.
+     */
     @Test fun browserBackIsStableAndDispatchesOnlyWhenAvailable() {
-        var backCount = 0
-        compose.setContent { topBar(canGoBack = true, onBack = { backCount++ }) }
+        val commands = mutableListOf<BrowserNavigationCommand>()
+        compose.setContent { topBar(canGoBack = true, onCommand = { commands += it }) }
 
+        compose.onNodeWithTag(SITESKIN_NAV_HUB_TAG).assertIsDisplayed().performClick()
         compose.onNodeWithTag(SITESKIN_BACK_TAG).assertIsDisplayed()
         compose.onNodeWithContentDescription("Back").assertIsEnabled().performClick()
-        assertEquals(1, backCount)
+        assertEquals(listOf(BrowserNavigationCommand.BACK), commands)
 
-        compose.setContent { topBar(canGoBack = false, onBack = { backCount++ }) }
+        compose.setContent { topBar(canGoBack = false, onCommand = { commands += it }) }
+        compose.onNodeWithTag(SITESKIN_NAV_HUB_TAG).performClick()
         compose.onNodeWithTag(SITESKIN_BACK_TAG).assertIsDisplayed()
         compose.onNodeWithContentDescription("Back").assertIsNotEnabled()
-        assertEquals(1, backCount)
+        assertEquals(listOf(BrowserNavigationCommand.BACK), commands)
     }
 
     /**
@@ -96,7 +109,7 @@ class SiteSkinTopBarTest {
             }
 
             compose.onNodeWithTag(EXPRESSIVE_HEADER_TAG).assertIsDisplayed()
-            compose.onNodeWithTag(SITESKIN_BACK_TAG).assertIsDisplayed().assertHeightIsAtLeast(48.dp)
+            compose.onNodeWithTag(SITESKIN_NAV_HUB_TAG).assertIsDisplayed().assertHeightIsAtLeast(48.dp)
             compose.onNodeWithTag(SITESKIN_BRAND_TAG).assertIsDisplayed()
             compose.onNodeWithTag(SITESKIN_SECURITY_TAG).assertIsDisplayed()
 
@@ -144,6 +157,44 @@ class SiteSkinTopBarTest {
             compose.onNodeWithTag(SITESKIN_SECURITY_TAG)
                 .assertWidthIsAtLeast(SECURITY_CHIP_MAX_WIDTH + 1.dp)
         }
+    }
+
+    /**
+     * The 40 dp `UX-024` returned to the page, measured rather than scanned.
+     *
+     * `the standalone refresh row is gone and does not return` reads the source and compares the set
+     * of rows the header composes against the three it has ever composed. That catches
+     * `BrowserControlRow` coming back and would not catch a differently-named second browser row, or
+     * a hub that grew vertical chrome of its own. `UX-009` is the precedent: an assertion about where
+     * a value *came from* answered a different question from whether it *fits*, and only running the
+     * real layout told them apart.
+     *
+     * The bound is deliberately loose rather than exact. Content is 20 dp of gutter + a 48 dp brand
+     * row + 20 dp of reserved curve = 88 dp against `EXPRESSIVE_HEADER_MIN_HEIGHT`'s 96, so the
+     * header should measure its floor — but title and subtitle metrics can move the brand row, and
+     * an exact assertion would be flaky for a reason unrelated to what it asserts. A second browser
+     * row costs 48 dp, so anything under the old 136 dp separates the two layouts with room to spare.
+     */
+    @Test fun theHeaderNoLongerReservesARowForASingleBrowserCommand() {
+        compose.setContent {
+            val density = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale = 1f)) {
+                Box(Modifier.width(320.dp).testTag(FIXTURE_TAG)) { topBar() }
+            }
+        }
+
+        val header = compose.onNodeWithTag(EXPRESSIVE_HEADER_TAG).fetchSemanticsNode().boundsInRoot
+        val height = with(compose.density) { header.height.toDp() }
+
+        assertTrue(
+            "the header must not have regrown a browser control row: measured $height",
+            height < TWO_ROW_HEADER_HEIGHT,
+        )
+        // Paired so the bound cannot pass by the header failing to compose at all — a zero-height
+        // node clears any upper bound, which is how an assertion of this shape goes green for the
+        // worst possible reason.
+        compose.onNodeWithTag(SITESKIN_BRAND_TAG).assertIsDisplayed()
+        compose.onNodeWithTag(SITESKIN_NAV_HUB_TAG).assertIsDisplayed().assertHeightIsAtLeast(48.dp)
     }
 
     /**
@@ -205,19 +256,21 @@ class SiteSkinTopBarTest {
     }
 
     @Test fun browserRefreshIsAnAccessibleBrowserActionDistinctFromTheTrustMark() {
-        // Issue requirements 9 and 12. The trust chip is a status display and the refresh control is
-        // an action; a screen reader must be able to tell them apart, and the chip must not have
-        // become tappable by sharing a row with something that is.
-        var refreshes = 0
-        compose.setContent { topBar(onRefresh = { refreshes++ }) }
+        // `BROWSE-011`'s requirement, re-pointed by `UX-024` at the surface that now carries it. The
+        // trust chip is a status display and Refresh is an action; a screen reader must be able to
+        // tell them apart, and the chip must not have become tappable by sharing a header with
+        // something that is.
+        val commands = mutableListOf<BrowserNavigationCommand>()
+        compose.setContent { topBar(onCommand = { commands += it }) }
 
-        compose.onNodeWithTag(SITESKIN_CONTROLS_TAG).assertIsDisplayed()
+        compose.onNodeWithTag(SITESKIN_NAV_HUB_TAG).assertIsDisplayed().performClick()
+        compose.onNodeWithTag(SITESKIN_NAV_BOUQUET_TAG).assertIsDisplayed()
         compose.onNodeWithTag(SITESKIN_REFRESH_TAG)
             .assertIsDisplayed()
             .assertHeightIsAtLeast(48.dp)
             .assertWidthIsAtLeast(48.dp)
         compose.onNodeWithContentDescription("Reload").assertIsEnabled().performClick()
-        assertEquals(1, refreshes)
+        assertEquals(listOf(BrowserNavigationCommand.REFRESH), commands)
 
         // Same name the regular dock gives this command, and not the chip's sentence.
         compose.onNodeWithTag(SITESKIN_SECURITY_TAG)
@@ -225,21 +278,29 @@ class SiteSkinTopBarTest {
     }
 
     @Test fun browserRefreshIsVisibleAndDisabledWithNothingToReload() {
-        // Issue requirement 7: visible-and-disabled, never absent. An absent control moves under
-        // the user's finger as state changes; `UX-016` made the same choice for the regular dock.
-        var refreshes = 0
-        compose.setContent { topBar(canRefresh = false, onRefresh = { refreshes++ }) }
+        // Visible-and-disabled, never absent. An absent control moves under the user's finger as
+        // state changes; `UX-016` made the same choice for the regular dock. The *hub* is never
+        // disabled — it opens whatever the history state — which is `UX-024`'s criterion 2.
+        val commands = mutableListOf<BrowserNavigationCommand>()
+        compose.setContent { topBar(canRefresh = false, onCommand = { commands += it }) }
 
+        compose.onNodeWithTag(SITESKIN_NAV_HUB_TAG).assertIsEnabled().performClick()
         compose.onNodeWithTag(SITESKIN_REFRESH_TAG).assertIsDisplayed()
         compose.onNodeWithContentDescription("Reload").assertIsNotEnabled()
-        assertEquals(0, refreshes)
+        assertEquals(emptyList<BrowserNavigationCommand>(), commands)
     }
 
-    @Test fun theControlRowDoesNotTakeWidthFromBrowserIdentity() {
-        // The whole reason `BROWSE-011` put Refresh on its own line. If it had gone in the brand
-        // row, the chip would truncate and the site's title would measure to zero at this width —
-        // so the assertion that matters is that the chip's floor from `UX-021` still holds with the
-        // control composed, at the same 320 dp and 200% the measurement was taken at.
+    /**
+     * The hub takes Back's footprint and no more, which is what keeps `UX-023`'s budget intact.
+     *
+     * `BROWSE-011` gave Refresh its own row because a sixth child in the brand row truncates the
+     * domain and measures the site's title to zero. `UX-024` returns Refresh to the leading slot by
+     * putting it *behind* the control that was already there — so the row's arithmetic is unchanged
+     * and `HEADER_FIXED_WIDTH` did not move. This is the rendered half of that claim: at the same
+     * 320 dp and 200% scale the measurement was taken at, the chip still clears `UX-021`'s floor and
+     * the collapsed hub keeps a 48 dp target inside the host.
+     */
+    @Test fun theCollapsedHubDoesNotTakeWidthFromBrowserIdentity() {
         compose.setContent {
             val density = LocalDensity.current
             CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale = 2f)) {
@@ -248,26 +309,47 @@ class SiteSkinTopBarTest {
         }
 
         val fixture = compose.onNodeWithTag(FIXTURE_TAG).fetchSemanticsNode().boundsInRoot
-        val refresh = compose.onNodeWithTag(SITESKIN_REFRESH_TAG).fetchSemanticsNode().boundsInRoot
+        val hub = compose.onNodeWithTag(SITESKIN_NAV_HUB_TAG).fetchSemanticsNode().boundsInRoot
 
         compose.onNodeWithTag(SITESKIN_SECURITY_TAG).assertIsDisplayed().assertWidthIsAtLeast(SECURITY_CHIP_FLOOR)
-        compose.onNodeWithTag(SITESKIN_REFRESH_TAG).assertIsDisplayed().assertHeightIsAtLeast(48.dp)
+        compose.onNodeWithTag(SITESKIN_NAV_HUB_TAG)
+            .assertIsDisplayed()
+            .assertHeightIsAtLeast(48.dp)
+            .assertWidthIsAtLeast(48.dp)
         assertTrue(
-            "the refresh control must stay inside the 320 dp host: $fixture $refresh",
-            refresh.right <= fixture.right && refresh.left >= fixture.left,
+            "the collapsed hub must stay inside the 320 dp host: $fixture $hub",
+            hub.right <= fixture.right && hub.left >= fixture.left,
         )
     }
 
+    /**
+     * `UX-024`: the header's browser commands arrive as one compiled list plus one dispatcher, so
+     * the fixture builds them the same way production does — through `browserNavigationActions`,
+     * never as a hand-written list, or the test would be exercising a shape the browser never uses.
+     */
     @Composable
+    @Suppress("LongParameterList")
     private fun topBar(
         asset: BrandAsset = BrandAsset.Monogram("B"),
         canGoBack: Boolean = true,
-        onBack: () -> Unit = {},
+        canGoForward: Boolean = true,
+        canRefresh: Boolean = true,
+        onCommand: (BrowserNavigationCommand) -> Unit = {},
         presentation: ExpressiveSiteSkinPresentation = presentation(false, false),
         transport: TransportSecurity = TransportSecurity.SECURE,
-        canRefresh: Boolean = true,
-        onRefresh: () -> Unit = {},
-    ) = SiteSkinTopBar(model(asset, transport), presentation, canGoBack, onBack, canRefresh, onRefresh)
+    ) {
+        var expanded by remember { mutableStateOf(false) }
+        SiteSkinTopBar(
+            model = model(asset, transport),
+            presentation = presentation,
+            navigation = BrowserNavigationHubState(
+                actions = browserNavigationActions(canGoBack, canGoForward, canRefresh),
+                expanded = expanded,
+                onExpandedChange = { expanded = it },
+                onCommand = onCommand,
+            ),
+        )
+    }
 
     private val SECURITY_CHIP_FLOOR = 140.dp
 
@@ -283,6 +365,13 @@ class SiteSkinTopBarTest {
         )
 
     private companion object {
+        /**
+         * What the header measured with `BROWSE-011`'s row: 20 dp gutter + 48 brand + 48 controls +
+         * 20 curve. `UX-024` removed the third band, and `EXPRESSIVE_HEADER_MIN_HEIGHT`'s 96 dp floor
+         * absorbs the removal, so the two layouts are 40 dp apart and any bound between them works.
+         */
+        val TWO_ROW_HEADER_HEIGHT = 136.dp
+
         const val FIXTURE_TAG = "siteskin_top_fixture"
         const val LONG_TITLE = "A very long trusted brand title that must not replace security identity"
 

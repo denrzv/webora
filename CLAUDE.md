@@ -173,7 +173,15 @@ These components deliberately are not wired into `BrowserScreen`. `SKIN-004` own
 origin-bound activation and connects typed selections to `ActionResolver` and browser-owned effect
 dispatch.
 
-### Integrated mode keeps browser Back visible (UX-008)
+### Integrated mode keeps browser Back visible (UX-008, amended by UX-024)
+
+> **`UX-024` narrowed one clause of this section and no others.** The leading slot now holds a
+> browser-owned *navigation hub* that opens Back, Forward and Refresh, rather than a Back button.
+> Every other requirement below still binds — browser-observed enabled state, an existing controller
+> callback, and no manifest field or model seam through which any of it can be suppressed, relabelled,
+> reordered, restyled or dispatched — and the slot is unchanged in position, size and ground. The
+> purpose the section states is unaffected: SiteSkin does not replace the browser's history contract.
+> What changed is that the slot carries *more* browser capability, not less.
 
 SiteSkin replaces both regular chrome surfaces, but it does not replace the browser's history
 contract. Integrated top chrome therefore always carries a leading Back affordance before site
@@ -1399,7 +1407,11 @@ browser commands and trusted typed site items. Neither ticket may move identity,
 geometry, inset, or motion duration into manifest-derived state merely because the containers now
 accept site colours.
 
-### Expressive integrated top chrome preserves a separate browser identity (UX-014)
+### Expressive integrated top chrome preserves a separate browser identity (UX-014, amended by UX-024)
+
+> **`UX-024`:** the fixed browser-authored control in the brand row is the navigation hub, not Back
+> alone. Its ground, order, icon, label, enabled state and callbacks remain browser policy in exactly
+> the terms below.
 
 Protected integrated mode now fills `ExpressiveSiteSkinHeader` with a fixed browser-authored Back/
 brand row followed by an unconditional canonical domain/TLS surface. The outer curve and site text
@@ -1430,7 +1442,12 @@ just to exercise it; the first downstream ticket adding a real decorative transi
 `REDUCED` to an immediate state change. Security identity, origin teardown, controls, and input
 availability are never animation participants.
 
-### The integrated dock is browser-owned; site commands live in a typed hub (UX-015)
+### The integrated dock is browser-owned; site commands live in a typed hub (UX-015, amended by UX-024)
+
+> **`UX-024` reduced the five to three** — brand hub, Tabs, More — because Back and Forward moved
+> into the header's navigation hub and issue #122 forbids two controls competing for the same browser
+> command semantics. The contract below is unchanged in every other respect; only the membership
+> moved, and the slots got wider (56.0 → 93.3 dp at the 320 dp floor).
 
 Protected integrated mode's floating dock has exactly five compiled commands in fixed order: Back,
 Forward, brand hub, Tabs, and More. Their local icons, localized labels, enabled state, 48 dp targets,
@@ -2015,7 +2032,13 @@ which is closer to the bare-shield layout this ticket deliberately rejected than
 The instrumented assertion is now a 140 dp floor. The residual — one row cannot hold Back, a logo, a
 manifest title and a full domain at 200% — is a layout problem, filed as `UX-023`.
 
-### A browser command needed a row of its own (BROWSE-011)
+### A browser command needed a row of its own (BROWSE-011, superseded in placement by UX-024)
+
+> **The measurement below is still correct and the row it produced is gone.** `BROWSE-011` could not
+> put Refresh in the brand row because that row already held a single-purpose Back button; `UX-024`
+> removed that premise rather than arguing with the arithmetic, and Refresh now lives in the leading
+> slot's navigation hub beside Back and Forward. Everything here about `refreshAction`,
+> `RefreshAction.Retry`, and `reload()` not rewriting `hostedUrl` is unchanged and still binding.
 
 Reload existed everywhere except the one mode where the browser had given away the most screen.
 `UX-016` fixed the regular dock at Back/Forward/Reload/Home/Tabs/More; `UX-015` fixed the integrated
@@ -2083,3 +2106,115 @@ Nothing in the renderer, event-routing, discovery, consent, capture or protocol 
 every cross-tab and lifecycle requirement is met by **not** adding a second path. `CI-009`'s frame
 inventory and per-frame checks are unchanged; hosted acceptance is re-taken because the integrated
 frames photograph a header one row taller, not because a contract moved.
+
+### Three commands were one family presented as three controls (UX-024)
+
+Integrated chrome spent two header rows and five dock slots on browser navigation. Back was a
+leading tile in the brand row (`UX-008`, `UX-014`) **and** a dock slot (`UX-015`). Refresh had a row
+to itself (`BROWSE-011`). Forward existed only at the other end of the screen. One command family,
+three surfaces, one member duplicated and one member nowhere near the others.
+
+**The row was 40 dp of page and the minimum height absorbs its removal.** `ExpressiveSiteSkinHeader`
+is `heightIn(min = 96.dp)` with a 20 dp top gutter and 20 dp of reserved curve depth, so the header
+measured 20 + 48 + 48 + 20 = **136 dp** and now measures its 96 dp floor. On the hosted emulator's
+360 dp × 3 that is 120 px returned to the WebView.
+
+**`BROWSE-011`'s arithmetic was never wrong; its premise was.** That ticket measured the brand row —
+280 dp at the 320 dp floor, 116 taken by Back, the logo and three gaps, 164 left for the weighted
+title and the unweighted trust chip — and concluded a sixth child truncates the domain and measures
+the site's title to zero. True, and it remains true. What it could not do was put Refresh *behind*
+the control already in the leading slot. The hub occupies the same 48 dp `BrowserControlTile` in the
+same position, so `HEADER_FIXED_WIDTH` did not move and `HeaderIdentityPlacementTest` passed
+unedited — which is the evidence, not the intention, that `UX-023`'s wrap threshold still holds.
+
+**The commands are a compiled list, because the wiring is a `@Composable` and a decision inside one
+has no negative control.** `browserNavigationActions(canGoBack, canGoForward, canRefresh)` returns
+all three, always, in declared order; only the `enabled` flags move, and each comes from a
+browser-observed fact the caller supplies. Same shape as `browserMenuCommands()`, `refreshAction`,
+`rendererMountAction` and `routeRendererEvent`, for the same reason. Count/order and per-flag enabled
+state are **separate assertions**: a function returning the right three commands always enabled
+satisfies every membership check while reporting that Back works on a page with no history.
+
+**The one new impersonation path is a shared item model, and the two bouquets share no type.** The
+browser cluster and `UX-015`'s site cluster look alike *by design* — the issue asks for exactly that
+— so the moment they shared an item type a manifest could publish something that renders identically
+to Back. `SiteSkinItemModel` carries an icon, a label and a `NavigationItem` because a website
+supplies all three; `BrowserNavigationAction` carries a closed enum and a `Boolean`. A reflective
+field inventory keeps it closed as the model grows, and the file-scoped scan proves nothing in
+`BrowserNavigationHub.kt` names `presentation`, `colors.`, `model.`, `SiteSkinItemModel`,
+`NavigationItem` or `ActionResolver`.
+
+**Scope the scan to the file, not to a declaration.** A rule written against one composable's body
+has to be re-scoped every time a helper is added beside it, and re-scoping is how a rule stops
+covering the thing it was written for. `UX-022` recorded the mirror image — a rule stated too coarse
+fails honest call sites and teaches people to widen it. Here the whole file is browser chrome, so the
+whole file is the subject.
+
+**The bouquet is a `Popup`, and that is the mechanism rather than the decoration.** Its own window
+buys three things at once: Android and predictive Back are consumed before `BrowserBackHandler` sees
+them, so `BROWSE-002`'s single Back contract needs no second handler racing it (`BrowserBack.kt` is
+untouched); an outside tap dismisses without reaching the page; and the cluster contributes nothing
+to the header's layout, so the 40 dp is genuinely returned rather than spent again below. It expands
+*downward* — `SiteActionBouquet`'s anchor inverted — from `Alignment.TopStart`, which resolves
+against layout direction, so RTL is correct with no physical constant in the file.
+
+**It overhangs `BROWSER_CONTENT_TAG` by about 40 dp, and that is a capture constraint.** A `Popup`
+adds nothing to layout but its pixels are in a device screenshot, so **no frame may be captured with
+the navigation bouquet open under `requirePageContent = true`** — `CI-005`'s defect verbatim, and
+`UX-022` already removed that check from the frame a drawer covers. None of `CI-009`'s six canonical
+frames opens it; the rule needs writing down before someone adds a seventh.
+
+**`siteActionsExpanded` became one nullable `IntegratedOverlay`.** `UX-022` recorded what a second
+visibility flag costs — *"a drawer with its own flag would need all three [resets] again, and the
+failure is silent and specific: a tab switch tears down the dock while a drawer nobody reset stays
+composed over the next origin's page"* — and a third overlay would have taken that bet twice. One
+value makes "only one open at a time" what the type says instead of what two assignments have to
+remember in both directions, and every existing reset became `= null` at its existing site.
+
+**The collapsed control is never disabled, and carries no state at all.** A hub that greys out at the
+history root *is* a Back button — the misleading affordance the ticket exists to remove — and a user
+who cannot open it also loses Forward and Refresh. Decoration on the collapsed control (a dot when
+Forward is available, say) was considered and refused for the same reason. The three children carry
+enabled state, semantically, per `A11Y-001`.
+
+**The dock went five commands to three**, and the reduction is measured: 280 dp of slot width at the
+320 dp floor gives three equal slots 93.3 dp each against five at 56.0, with `BRAND_HUB_TARGET_SIZE`
+centring on 20.6 dp either side instead of 2. No dimension, radius, height or colour in
+`ExpressiveSiteSkinDock` changed. `fixedDock`'s ordered list was **re-stated, not shortened** —
+deleting two names from an ordered list is indistinguishable from weakening the predicate, so the
+edit ships with a control proving a fourth slot driven by the site's action count is still refused.
+
+**The honest cost, stated rather than discovered: integrated Back is one interaction further away.**
+It was one tap in the header and one in the dock; it is now behind the hub. Android system and
+predictive Back are untouched and still one gesture, and issue #122 directs the consolidation
+explicitly — but this is a real ergonomic trade and the first hosted frames are where to re-check it.
+
+**`ic_history` raises the icon budget 20 → 21, deliberately.** Every reuse candidate says something
+else: `ic_back` is the misleading reading, `ic_more` is already the dock's More, `ic_menu` means menu.
+Back, Forward and Refresh are the history family, so a history glyph names the group without standing
+for any member. `UX-005` and `UX-021` are the precedents; a raise is a decision someone makes on
+purpose.
+
+**Reduced motion gains no reader here, and that is a deferral rather than an omission.** `UX-013`'s
+closed policy still has none. The issue permits an instant transition, the browser has no animation
+anywhere, and a security-relevant overlay whose behaviour no local gate can observe is the wrong
+place to spend the first one. The obligation passes to the next ticket adding a real decorative
+transition.
+
+**A control that does not compile is not a passing control.** The first colour-leak control wrote
+`colors.secondary` straight into the tile, where that identifier is unresolved: Gradle failed at
+compilation, the previous run's XML stayed on disk, and the runner reported *nothing failed* — which
+reads exactly like a control that bit nothing. `UX-022` hit the same trap from the other side. The
+control that counts threads a real `SiteSkinColorScheme` in from the header, because that is what the
+regression would actually look like.
+
+**Two smaller traps worth keeping.** A reflective field inventory must filter **static** fields, not
+only synthetics: the Compose compiler adds `public static final int $stable` to every stable class
+and does not mark it synthetic, so a synthetic-only filter fails on correct code. And `RegularBrowser`
+crossed detekt's cyclomatic (14/10) and cognitive (16/15) ceilings once the hub's dispatch joined it;
+`ProtectedIntegratedTopBar`, `integratedNavigationHub` and `dispatchBrowserNavigation` are the
+extractions, each recorded at its declaration.
+
+`CI-009`/`CI-010` hosted acceptance must be re-taken: the integrated frames photograph a header one
+row shorter and a three-slot dock. No canonical frame was added — the inventory stays at six, and a
+seventh is a `CI-*` ticket's decision.

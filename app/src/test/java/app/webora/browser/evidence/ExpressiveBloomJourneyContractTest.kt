@@ -42,8 +42,7 @@ class ExpressiveBloomJourneyContractTest {
         val source = source(SCREENSHOT_SOURCE)
 
         assertFalse(source.contains("PRODUCT_LINK_TEXT"))
-        assertFalse(source.contains("SITESKIN_DOCK_BACK_TAG"))
-        assertFalse(source.contains("SITESKIN_DOCK_FORWARD_TAG"))
+        assertFalse(source.contains("SITESKIN_FORWARD_TAG"))
         assertFalse(source.contains("waitForProductLink"))
     }
 
@@ -90,22 +89,34 @@ class ExpressiveBloomJourneyContractTest {
         assertFalse(capturedFrames(unsafe) == CANONICAL_FRAMES)
     }
 
-    private fun source(path: Path): String = String(Files.readAllBytes(path))
+    /**
+     * The hosted source at [path], resolved from the root the build declares as an input.
+     *
+     * Not a relative path. `SiteSkinTopBarContractTest` records why — *"the working directory a test
+     * runs in is not a contract, and a scan that silently fails to find its subject is a scan that
+     * passes for the wrong reason"* — and `app/build.gradle.kts` records why the same property also
+     * has to be an `inputs.dir`: without it this whole file is `UP-TO-DATE` on exactly the change it
+     * exists to catch.
+     */
+    private fun source(path: Path): String {
+        val root = requireNotNull(System.getProperty(INSTRUMENTED_ROOT_PROPERTY)) {
+            "$INSTRUMENTED_ROOT_PROPERTY is unset; app/build.gradle.kts must pass the androidTest root"
+        }
+        val resolved = Path.of(root).resolve(path)
+        require(Files.exists(resolved)) { "hosted source not found: $resolved" }
+        return String(Files.readAllBytes(resolved))
+    }
 
     private fun capturedFrames(source: String): List<String> = CAPTURE.findAll(source)
         .map { match -> match.groupValues[1] }
         .toList()
 
     private companion object {
-        val SCREENSHOT_SOURCE = Path.of(
-            "src/androidTest/java/app/webora/browser/visual/LiveSiteScreenshotTest.kt",
-        )
-        val SMOKE_SOURCE = Path.of(
-            "src/androidTest/java/app/webora/browser/visual/LiveSiteNavigationSmokeTest.kt",
-        )
-        val SUITE_SOURCE = Path.of(
-            "src/androidTest/java/app/webora/browser/visual/LiveSiteHostedSuite.kt",
-        )
+        const val INSTRUMENTED_ROOT_PROPERTY = "webora.app.androidTest"
+
+        val SCREENSHOT_SOURCE = Path.of("app/webora/browser/visual/LiveSiteScreenshotTest.kt")
+        val SMOKE_SOURCE = Path.of("app/webora/browser/visual/LiveSiteNavigationSmokeTest.kt")
+        val SUITE_SOURCE = Path.of("app/webora/browser/visual/LiveSiteHostedSuite.kt")
 
         /** Frames whose subject is a full-window modal rather than the page behind it. */
         val MODAL_FRAMES = listOf("02-siteskin-consent.png", "04-bloom-actions.png")
@@ -124,6 +135,12 @@ class ExpressiveBloomJourneyContractTest {
         )
 
         val SHOWCASE_MARKERS = listOf(
+            // `UX-024`/`/review` FINDING-2: two browser-owned controls now stand between the user
+            // and integrated Back, and `CI-008` binds on both. One helper per file rather than an
+            // inlined copy, because the showcase's copy and the smoke test's had already drifted —
+            // one asserted the hub's prerequisite and the other did not.
+            "private fun openNavigationHub()",
+            ".onNodeWithTag(SITESKIN_NAV_HUB_TAG).assertIsDisplayed().assertIsEnabled().performClick()",
             "SITESKIN_DOCK_HUB_TAG",
             "SITESKIN_HUB_DRAWER_TAG",
             // `CI-009`'s #110 moved the tag prefix behind `BloomReferenceContract`, and this list
@@ -145,8 +162,13 @@ class ExpressiveBloomJourneyContractTest {
             "findStorefrontProductLink()",
             "scrollStorefrontTowardsProduct()",
             "By.text(PRODUCT_LINK_TEXT).clickable(true)",
-            "SITESKIN_DOCK_BACK_TAG",
-            "SITESKIN_DOCK_FORWARD_TAG",
+            // `UX-024`: the dock no longer offers Back or Forward, so the smoke traversal reaches
+            // them through the header's navigation hub. Re-stated rather than dropped — losing the
+            // history half of this journey is exactly what a shortened marker list would hide.
+            "private fun openNavigationHub()",
+            ".onNodeWithTag(SITESKIN_NAV_HUB_TAG).assertIsDisplayed().assertIsEnabled().performClick()",
+            "SITESKIN_BACK_TAG",
+            "SITESKIN_FORWARD_TAG",
             "SITESKIN_DOCK_HUB_TAG",
             "waitForProductLink(isPresent = false)",
             "waitForProductLink(isPresent = true)",

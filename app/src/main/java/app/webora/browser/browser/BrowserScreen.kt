@@ -75,7 +75,12 @@ import app.webora.browser.siteskin.SiteSkinDock
 import app.webora.browser.siteskin.IntegratedBrowserMenuSheet
 import app.webora.browser.siteskin.SiteSkinConsentModel
 import app.webora.browser.siteskin.ExpressiveSiteSkinPresentation
+import app.webora.browser.siteskin.BrowserNavigationAction
+import app.webora.browser.siteskin.BrowserNavigationCommand
+import app.webora.browser.siteskin.BrowserNavigationHubState
+import app.webora.browser.siteskin.IntegratedOverlay
 import app.webora.browser.siteskin.SiteSkinTopBar
+import app.webora.browser.siteskin.browserNavigationActions
 import app.webora.browser.siteskin.SiteSkinTopBarModel
 import app.webora.browser.siteskin.brandMonogram
 import app.webora.browser.siteskin.BrowserMenuCommand
@@ -131,7 +136,12 @@ internal fun BrowserScreen(
     var book by remember { mutableStateOf(RendererPageBook()) }
     var discoveryOwner by remember { mutableStateOf(activeTabId) }
     var pendingConsent by remember { mutableStateOf<Pair<Long, SiteSkinCandidate>?>(null) }
-    var siteActionsExpanded by remember { mutableStateOf(false) }
+    // One value, not one boolean per overlay. `UX-022` recorded the cost of the alternative — a
+    // surface with its own flag needs all three resets again, and the failure is a stale overlay
+    // composed over the next origin's page — and `UX-024` adds a third overlay, so the bet would
+    // otherwise be taken twice. Holding one value also makes "only one open at a time" what the type
+    // says rather than what two assignments have to remember in both directions.
+    var overlay by remember { mutableStateOf<IntegratedOverlay?>(null) }
     var browserMenuVisible by remember { mutableStateOf(false) }
     var tabsVisible by remember { mutableStateOf(false) }
     var settingsVisible by remember { mutableStateOf(false) }
@@ -215,7 +225,7 @@ internal fun BrowserScreen(
                     // foreground tab's consent dialog and close its open menu.
                     if (pendingConsent?.first == effect.tabId) pendingConsent = null
                     if (effect.tabId == activeTabId) {
-                        siteActionsExpanded = false
+                        overlay = null
                         browserMenuVisible = false
                     }
                     if (siteSkinEnabled) manifestDiscovery.onPageStarted(effect.url, effect.generation)
@@ -230,7 +240,7 @@ internal fun BrowserScreen(
     val downloadMessages = stringResource(R.string.download_started) to stringResource(R.string.download_failed)
     val integrated = state.mode as? BrowserMode.Integrated
     LaunchedEffect(activeTabId, integrated?.configuration) {
-        siteActionsExpanded = false
+        overlay = null
         browserMenuVisible = false
     }
     val currentBrandAsset = integrated?.configuration?.let { configuration ->
@@ -314,7 +324,7 @@ internal fun BrowserScreen(
             ResolvedAction.Refresh -> controller.reload()
             ResolvedAction.OpenMenu -> {
                 browserMenuVisible = false
-                siteActionsExpanded = true
+                overlay = IntegratedOverlay.SITE_HUB
             }
             null -> Unit
         }
@@ -331,7 +341,7 @@ internal fun BrowserScreen(
         },
         onRendererEvent = applyRendererEvent,
         onHome = {
-            siteActionsExpanded = false
+            overlay = null
             browserMenuVisible = false
             session = session.updateActive { BrowserState() }
         },
@@ -342,15 +352,14 @@ internal fun BrowserScreen(
         },
         onFileChooser = onFileChooser,
         brandAsset = currentBrandAsset,
-        siteActionsExpanded = siteActionsExpanded,
-        onSiteActionsToggle = {
+        overlay = overlay,
+        onOverlayChange = { requested ->
             browserMenuVisible = false
-            siteActionsExpanded = !siteActionsExpanded
+            overlay = requested
         },
-        onSiteActionsDismiss = { siteActionsExpanded = false },
         onSiteSelect = dispatchSiteItem,
         onOpenBrowserMenu = {
-            siteActionsExpanded = false
+            overlay = null
             browserMenuVisible = true
         },
         onTabs = { tabsVisible = true },
@@ -430,7 +439,7 @@ internal fun BrowserScreen(
                 pendingConsent = null
                 pendingExternal = null
                 pendingExternalUrl = null
-                siteActionsExpanded = false
+                overlay = null
                 browserMenuVisible = false
             },
             onDismiss = { tabsVisible = false },
@@ -674,6 +683,72 @@ private fun ExternalNavigationDialog(
     )
 }
 
+/**
+ * The integrated header, assembled from the four closed inputs `SKIN-002` named.
+ *
+ * Lifted out of `RegularBrowser` by `UX-024` so that function stays under detekt's complexity
+ * ceiling once the navigation hub's dispatch joined it. Its contents are otherwise unchanged.
+ */
+@Composable
+private fun ProtectedIntegratedTopBar(
+    mode: BrowserMode.Integrated,
+    identity: SecurityPresentation,
+    brandAsset: BrandAsset?,
+    navigation: BrowserNavigationHubState,
+) {
+    val asset = brandAsset ?: BrandAsset.Monogram(
+        brandMonogram(mode.configuration.site.shortName, mode.configuration.site.name),
+    )
+    SiteSkinTopBar(
+        model = SiteSkinTopBarModel.from(mode.configuration, asset, identity),
+        presentation = ExpressiveSiteSkinPresentation.from(
+            configuration = mode.configuration,
+            darkTheme = isSystemInDarkTheme(),
+            reducedMotion = reducedMotionEnabled(LocalContext.current),
+        ),
+        navigation = navigation,
+    )
+}
+
+/**
+ * The hub's state, projected from the one overlay value.
+ *
+ * A factory rather than an inline constructor call so `RegularBrowser` stays under detekt's
+ * cognitive-complexity ceiling, and so the projection from [IntegratedOverlay] to this surface's
+ * boolean has one owner — the same reason `SiteSkinDock`'s reader derives its own from the same
+ * value rather than from a second flag.
+ */
+private fun integratedNavigationHub(
+    actions: List<BrowserNavigationAction>,
+    overlay: IntegratedOverlay?,
+    onOverlayChange: (IntegratedOverlay?) -> Unit,
+    onCommand: (BrowserNavigationCommand) -> Unit,
+) = BrowserNavigationHubState(
+    actions = actions,
+    expanded = overlay == IntegratedOverlay.BROWSER_NAVIGATION,
+    onExpandedChange = { open -> onOverlayChange(if (open) IntegratedOverlay.BROWSER_NAVIGATION else null) },
+    onCommand = onCommand,
+)
+
+/**
+ * The one place a browser navigation command becomes a browser operation.
+ *
+ * Exhaustive, so a fourth command is a compile error here rather than a bubble whose tap does
+ * nothing. Every arm is a call that already had a call site before `UX-024`: this adds no second
+ * dispatch path, and there is no route by which a site item could arrive — those carry
+ * `NavigationItem` and go through `ActionResolver`, which this function never names.
+ */
+private fun dispatchBrowserNavigation(
+    command: BrowserNavigationCommand,
+    onBack: () -> Unit,
+    onForward: () -> Unit,
+    onRefresh: () -> Unit,
+) = when (command) {
+    BrowserNavigationCommand.BACK -> onBack()
+    BrowserNavigationCommand.FORWARD -> onForward()
+    BrowserNavigationCommand.REFRESH -> onRefresh()
+}
+
 @Composable
 @Suppress("LongMethod")
 internal fun RegularBrowser(
@@ -688,9 +763,8 @@ internal fun RegularBrowser(
     onDownload: (String) -> Unit,
     onFileChooser: (String, (String?) -> Unit) -> Unit,
     brandAsset: BrandAsset?,
-    siteActionsExpanded: Boolean,
-    onSiteActionsToggle: () -> Unit,
-    onSiteActionsDismiss: () -> Unit,
+    overlay: IntegratedOverlay?,
+    onOverlayChange: (IntegratedOverlay?) -> Unit,
     onSiteSelect: (NavigationItem) -> Unit,
     onOpenBrowserMenu: () -> Unit,
     onTabs: () -> Unit,
@@ -717,26 +791,19 @@ internal fun RegularBrowser(
                     onAddressChanged = onAddressEdited,
                     onSubmit = { resolveAddressInput(state.addressText)?.let(controller::navigate) },
                 )
-            TopChrome.PROTECTED_INTEGRATED -> {
-                val mode = checkNotNull(integrated)
-                val identity = checkNotNull(security)
-                val asset = brandAsset ?: BrandAsset.Monogram(
-                    brandMonogram(mode.configuration.site.shortName, mode.configuration.site.name),
-                )
-                val presentation = ExpressiveSiteSkinPresentation.from(
-                    configuration = mode.configuration,
-                    darkTheme = isSystemInDarkTheme(),
-                    reducedMotion = reducedMotionEnabled(LocalContext.current),
-                )
-                SiteSkinTopBar(
-                    model = SiteSkinTopBarModel.from(mode.configuration, asset, identity),
-                    presentation = presentation,
-                    canGoBack = canNavigateBack,
-                    onBack = onBack,
-                    canRefresh = canRefresh,
-                    onRefresh = onRefresh,
-                )
-            }
+            TopChrome.PROTECTED_INTEGRATED -> ProtectedIntegratedTopBar(
+                mode = checkNotNull(integrated),
+                identity = checkNotNull(security),
+                brandAsset = brandAsset,
+                navigation = integratedNavigationHub(
+                    actions = browserNavigationActions(canNavigateBack, state.canGoForward, canRefresh),
+                    overlay = overlay,
+                    onOverlayChange = onOverlayChange,
+                    onCommand = { command ->
+                        dispatchBrowserNavigation(command, onBack, controller::goForward, onRefresh)
+                    },
+                ),
+            )
         }
         BrowserStatusRegion(state)
         Box(Modifier.fillMaxWidth().weight(1f).testTag(BROWSER_CONTENT_TAG)) {
@@ -781,28 +848,26 @@ internal fun RegularBrowser(
             )
             SiteSkinDock(
                 presentation = presentation,
-                canGoBack = canNavigateBack,
-                canGoForward = state.canGoForward,
-                onBack = onBack,
-                onForward = controller::goForward,
                 siteActions = chrome.actionBouquet(),
                 hubSurface = hubSurface,
-                siteActionsExpanded = siteActionsExpanded,
-                onSiteActionsToggle = onSiteActionsToggle,
-                onSiteActionsDismiss = onSiteActionsDismiss,
+                siteActionsExpanded = overlay == IntegratedOverlay.SITE_HUB,
+                onSiteActionsToggle = {
+                    onOverlayChange(if (overlay == IntegratedOverlay.SITE_HUB) null else IntegratedOverlay.SITE_HUB)
+                },
+                onSiteActionsDismiss = { onOverlayChange(null) },
                 onSiteSelect = onSiteSelect,
                 onTabs = onTabs,
                 onMore = onOpenBrowserMenu,
                 brandAsset = hubAsset,
             )
             SiteSkinHubHost(
-                visible = siteActionsExpanded,
+                visible = overlay == IntegratedOverlay.SITE_HUB,
                 surface = hubSurface,
                 model = chrome,
                 identity = SiteSkinHubIdentity.from(integrated.configuration.site.name, hubAsset),
                 colors = presentation.colors,
                 onSelect = onSiteSelect,
-                onDismiss = onSiteActionsDismiss,
+                onDismiss = { onOverlayChange(null) },
             )
         } else {
             BrowserNavigationShell(
