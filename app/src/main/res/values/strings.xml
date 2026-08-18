@@ -48,6 +48,7 @@
     <string name="siteskin_browser_menu_heading">Webora controls</string>
     <string name="siteskin_quick_actions">Quick actions</string>
     <string name="siteskin_open_hub">Open site navigation</string>
+    <string name="siteskin_more_from_site">More from this site</string>
     <string name="siteskin_consent_title">Allow %1$s to customise Webora?</string>
     <string name="siteskin_consent_message">The site can customise navigation and appearance. The address and security indicator stay under Webora control.</string>
     <string name="siteskin_consent_site_heading">Requested by this site</string>
