@@ -73,6 +73,57 @@ class BrowserChromeContractTest {
     }
 
     @Test
+    fun `the reload decision has one owner and both chromes reach it`() {
+        // `BROWSE-011`. The same shape as the transport-label case below, and filed for the same
+        // reason: the regular dock and the integrated header are two surfaces offering one command,
+        // so a rule written at each call site is a rule that can be re-pointed in one of them with
+        // nothing failing. The regular arm used to carry `state.displayedUrl.isNotBlank()` and
+        // `controller::reload` inline; both now come from `refreshAction`.
+        val screen = executableLines(source("app/webora/browser/browser/BrowserScreen.kt"))
+
+        assertTrue(
+            "the browser must dispatch reload through the one decision",
+            screen.contains("when (val action = refreshAction(state))"),
+        )
+        // Both chromes reach it, asserted positively: the regular dock's two reload arguments name
+        // the shared values rather than anything computed beside them, and the integrated header
+        // receives the same pair. A negative on one old spelling would be satisfied by writing the
+        // rule a second way, which is the mistake `BROWSE-009` records about `update(activeTabId)`.
+        assertTrue("the regular dock's enabled state is the shared one", screen.contains("canReload = canRefresh"))
+        assertTrue("and so is its callback", screen.contains("onReload = onRefresh"))
+        assertTrue("the integrated header receives the same pair", screen.contains("canRefresh = canRefresh"))
+        assertTrue("and the same callback", screen.contains("onRefresh = onRefresh"))
+        assertFalse(
+            "the regular dock must not reach the renderer directly for reload",
+            screen.contains("onReload = controller::reload"),
+        )
+
+        // And the decision itself lives in exactly one file. `ResolvedAction.Refresh` is deliberately
+        // excluded: that is the *site's* item, dispatched through `ActionResolver`, and collapsing it
+        // into the browser's command would make a manifest able to reach browser chrome.
+        val owners = listOf(
+            "app/webora/browser/browser/RefreshAction.kt",
+            "app/webora/browser/browser/BrowserScreen.kt",
+            "app/webora/browser/browser/BrowserChrome.kt",
+            "app/webora/browser/siteskin/SiteSkinTopBar.kt",
+        ).filter { decidesReload(executableLines(source(it))) }
+
+        assertEquals(listOf("app/webora/browser/browser/RefreshAction.kt"), owners)
+        assertFalse(
+            "negative control: dispatching a decision must not read as owning it",
+            decidesReload("when (action) { is RefreshAction.Retry -> navigate(action.url) }"),
+        )
+        assertTrue(
+            "negative control: a second file constructing one must be detected",
+            decidesReload("val a = if (state.loadFailure != null) RefreshAction.Retry(u) else null"),
+        )
+        assertTrue(
+            "and the real owner must be detected",
+            decidesReload(executableLines(source("app/webora/browser/browser/RefreshAction.kt"))),
+        )
+    }
+
+    @Test
     fun `the transport label mapping has one owner`() {
         // UX-021 shipped this `when` twice, verbatim, in regular chrome and the integrated chip,
         // while its own documentation claimed one guarantee could not be worded two ways. Sharing
@@ -91,6 +142,34 @@ class BrowserChromeContractTest {
             mapsTransport("when (t) { TransportSecurity.SECURE -> R.string.security_secure }"),
         )
     }
+
+    /**
+     * Does this text *decide* what refreshing means, as opposed to dispatching a decision?
+     *
+     * Keyed on **constructing** a `RefreshAction`, which is the decision itself. The first version
+     * of this predicate looked for `loadFailure` beside a `navigate(` and a `displayedUrl` and
+     * reported `BrowserScreen` as a second owner — all three appear there for unrelated reasons,
+     * including `BrowserErrorPage`'s own Retry. Co-occurrence in a whole file is not a mechanism.
+     *
+     * A `when` branch (`is RefreshAction.Retry ->`) is matching, not constructing, so the dispatcher
+     * is correctly not an owner — otherwise this would forbid the wiring it exists to require.
+     */
+    private fun decidesReload(source: String): Boolean =
+        source.contains("RefreshAction.Retry(") ||
+            Regex("""return\s+RefreshAction\.(Reload|None)""").containsMatchIn(source)
+
+    /**
+     * Source with comment lines removed. `BROWSE-009`: a scan reads executable lines, never
+     * `readText()`, or the prose above an assertion will satisfy or violate it on the code's behalf.
+     * This file's new case names `onReload = controller::reload` in a comment, and would fail its own
+     * assertion without this.
+     */
+    private fun executableLines(file: File): String = file.readLines()
+        .filterNot { line ->
+            val trimmed = line.trimStart()
+            trimmed.startsWith("*") || trimmed.startsWith("//") || trimmed.startsWith("/*")
+        }
+        .joinToString("\n")
 
     private fun mapsTransport(source: String): Boolean =
         source.lines()

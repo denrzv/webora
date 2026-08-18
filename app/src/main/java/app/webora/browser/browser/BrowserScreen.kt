@@ -803,10 +803,14 @@ internal fun RegularBrowser(
             BrowserNavigationShell(
                 canGoBack = canNavigateBack,
                 canGoForward = state.canGoForward,
-                canReload = state.displayedUrl.isNotBlank(),
+                // The same decision the integrated header's Refresh reaches. `UX-021` records what
+                // two copies of one rule cost: regular chrome and the integrated trust chip each
+                // carried a verbatim `when`, and a re-pointed branch in one file drifted from the
+                // other with nothing failing.
+                canReload = canRefresh,
                 onBack = onBack,
                 onForward = controller::goForward,
-                onReload = controller::reload,
+                onReload = onRefresh,
                 onHome = onHome,
                 onTabs = onTabs,
                 onSettings = onSettings,

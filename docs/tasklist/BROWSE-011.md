@@ -89,7 +89,7 @@ a control that fails nothing is a finding, not a formality.
       failed**: the applied-tag case and the shared-tile case. `UX-020`'s lesson holds — the
       constant's declaration alone would have satisfied a bare `contains`.
 
-- [ ] TASK-4: give both modes the one decision
+- [x] TASK-4: give both modes the one decision
   - Modified: `app/src/main/java/app/webora/browser/browser/BrowserScreen.kt`
   - Modified: `app/src/test/java/app/webora/browser/browser/BrowserChromeContractTest.kt`
   - `dispatchRefresh` beside `navigateBack`; `RegularBrowser` passes `canRefresh`/`onRefresh` to
@@ -106,8 +106,17 @@ a control that fails nothing is a finding, not a formality.
     - `:app:compileDebugAndroidTestKotlin` — the gate does not compile `androidTest`, and `CI-003`
       records a compile error surviving a green `scripts/pre-commit-check.sh`.
   - Negative controls:
-    - Reintroduce `onReload = controller::reload` in the regular arm → the single-owner case must
-      fail. Result: _to record_.
+    - Reintroduce `onReload = controller::reload` and the inline `canReload` rule in the regular
+      arm → **1 of 8 failed**, the single-owner case.
+    - Construct a second `RefreshAction` in `SiteSkinTopBar.kt` → **1 of 8 failed**, the same case.
+    - Finding, in the task: the first `decidesReload` predicate keyed on `loadFailure` +
+      `navigate(` + `displayedUrl` and reported `BrowserScreen` as a second owner — all three occur
+      there for unrelated reasons, `BrowserErrorPage`'s own Retry among them. Co-occurrence across a
+      whole file is not a mechanism; it is now keyed on *constructing* a `RefreshAction`, which a
+      `when` branch does not do. The call-site half was also rewritten from two negatives on old
+      spellings into positive assertions that both chromes name the shared values — a negative on
+      one spelling is satisfied by writing the rule a second way, which is `BROWSE-009`'s
+      `update(activeTabId)` lesson.
 
 - [ ] TASK-5: prove a refresh cannot cross a tab
   - Modified: `app/src/androidTest/java/app/webora/browser/browser/TabRendererIsolationTest.kt`
