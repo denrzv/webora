@@ -118,6 +118,62 @@ class RendererHostContractTest {
         assertFalse(host.contains("var attachedWebView"))
     }
 
+    @Test
+    fun `refresh dispatches to one renderer and writes no browser state`() {
+        // `BROWSE-011`, at the layer the gate can reach. A refresh is a *request* to a renderer, so
+        // the only thing it may touch is that renderer — every observable consequence has to arrive
+        // back through the four framework callbacks and `routeRendererEvent`, addressed by the id
+        // fixed when the renderer was built. A dispatcher that wrote session state directly would
+        // be writing it for whichever tab was selected at the time, which is exactly the cross-tab
+        // defect `BROWSE-009` removed, arriving through a new control.
+        //
+        // The instrumented half — that the write really lands on the other tab's page — is in
+        // `TabRendererIsolationTest`, and is evidence rather than a gate claim.
+        val screen = source("app/webora/browser/browser/BrowserScreen.kt").readText()
+
+        assertTrue("the refresh dispatcher must exist", refreshDispatchesToTheRenderer(screen))
+        assertFalse(
+            "negative control: a dispatcher that writes session state must be rejected",
+            refreshDispatchesToTheRenderer(
+                "val dispatchRefresh = { when (val action = refreshAction(state)) { " +
+                    "RefreshAction.Reload -> { session = session.updateActive { it }; controller.reload() } " +
+                    "is RefreshAction.Retry -> controller.navigate(action.url) " +
+                    "RefreshAction.None -> Unit } }",
+            ),
+        )
+        assertFalse(
+            "negative control: a dispatcher that resolves its own controller must be rejected",
+            refreshDispatchesToTheRenderer(
+                "val dispatchRefresh = { when (val action = refreshAction(state)) { " +
+                    "RefreshAction.Reload -> controllers.getValue(session.activeId).reload() " +
+                    "is RefreshAction.Retry -> controller.navigate(action.url) " +
+                    "RefreshAction.None -> Unit } }",
+            ),
+        )
+    }
+
+    /**
+     * The refresh dispatcher reaches the renderer it was handed, and nothing else.
+     *
+     * `controller` and `state` are `RegularBrowser`'s parameters — the selected tab's, resolved once
+     * at composition. `BROWSE-009` permits that for a *user action*: a tap belongs to the tab on
+     * screen. What it forbids is resolving an id at delivery time, so the dispatcher may not name
+     * `activeId` or reach into the controller map; and it may not write session state at all,
+     * because a refresh's consequences are observations and observations have one route.
+     */
+    private fun refreshDispatchesToTheRenderer(source: String): Boolean {
+        val dispatcher = code(source)
+            .substringAfter("val dispatchRefresh = {", "")
+            .substringBefore("val canNavigateBack")
+        if (dispatcher.isBlank()) return false
+        return dispatcher.contains("when (val action = refreshAction(state))") &&
+            dispatcher.contains("controller.reload()") &&
+            dispatcher.contains("controller.navigate(action.url)") &&
+            !dispatcher.contains("session") &&
+            !dispatcher.contains("activeId") &&
+            !dispatcher.contains("controllers")
+    }
+
     private fun hostIsKeyedByTab(source: String): Boolean {
         val region = source.indexOf("testTag(BROWSER_CONTENT_TAG)")
         val key = source.indexOf("key(controller.tabId)")

@@ -118,8 +118,15 @@ a control that fails nothing is a finding, not a formality.
       one spelling is satisfied by writing the rule a second way, which is `BROWSE-009`'s
       `update(activeTabId)` lesson.
 
-- [ ] TASK-5: prove a refresh cannot cross a tab
+- [x] TASK-5: prove a refresh cannot cross a tab
   - Modified: `app/src/androidTest/java/app/webora/browser/browser/TabRendererIsolationTest.kt`
+  - Modified: `app/src/test/java/app/webora/browser/browser/RendererHostContractTest.kt`
+  - Scope change, deliberate: the plan gave this task instrumented coverage only, which no local
+    gate runs and which therefore has no runnable negative control. A gate-level half was added
+    beside it — the dispatcher may not name `activeId`, may not reach the controller map, and may
+    not write session state, because a refresh's consequences are observations and observations
+    have one route. `BROWSE-009`'s own lesson: the guard that reached `main` was the one the gate
+    could not drive.
   - Refreshing tab A leaves tab B's displayed URL, loading flag, history capability and `BrowserMode`
     untouched, including when the user switches to B while A's reload is in flight.
   - Acceptance:
@@ -129,8 +136,14 @@ a control that fails nothing is a finding, not a formality.
   - Tests: `TabRendererIsolationTest`; instrumented, so recorded as evidence and never as a gate
     claim.
   - Negative controls:
-    - Resolve the refresh target through `session.activeId` at delivery time → the switched-tab case
-      must fail. Result: _to record_.
+    - Resolve the controller through `controllers.getValue(session.activeId)` in the dispatcher →
+      **1 of 5 failed** in `RendererHostContractTest`, the ownership case.
+    - Have the dispatcher write session state (`session = session.updateActive { … }`) → **1 of 5
+      failed**, the same case. Both run in the JVM gate.
+    - The instrumented case cannot be run here (no device) and is published as hosted evidence,
+      never as a gate claim — the standing rule from `CI-002` through `CI-005`. It compiles under
+      `:app:compileDebugAndroidTestKotlin`, which is checked explicitly because
+      `scripts/pre-commit-check.sh` does not compile `androidTest`.
 
 - [ ] TASK-6: write down what this decided
   - Modified: `CLAUDE.md`, `docs/ROADMAP.md`

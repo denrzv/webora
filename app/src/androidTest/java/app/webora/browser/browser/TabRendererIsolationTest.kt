@@ -103,6 +103,48 @@ class TabRendererIsolationTest {
         }
     }
 
+    @Test
+    fun refreshingOneTabLeavesTheOtherTabsPageAndStateAlone() {
+        // `BROWSE-011`. A browser command reaching the wrong renderer is `BROWSE-009`'s defect
+        // arriving through a new control, and the state that makes it visible is a *failed* tab:
+        // its refresh re-issues a navigation, so a mis-addressed one replaces the other tab's page
+        // rather than quietly re-fetching the same bytes.
+        val failing = closedLoopbackUrl()
+        navigate(failing)
+        waitForErrorPage()
+
+        // Tab B ends up with real content at a different URL, so any leak from A is observable.
+        openTabs()
+        composeRule.onNodeWithTag(NEW_TAB_TAG).performClick()
+        navigate(closedLoopbackUrl())
+        waitForErrorPage()
+        loadSuccessPage()
+        waitForNoErrorPage()
+
+        selectTab(FIRST_TAB)
+        waitForErrorPage()
+        composeRule.onNodeWithContentDescription(reloadLabel).performClick()
+
+        // Switched away while A's retry is still in flight: the late callbacks it produces are
+        // addressed to A by the id fixed when its renderer was built, and must not settle on B.
+        selectTab(SECOND_TAB)
+        waitForNoErrorPage()
+        composeRule.runOnIdle {
+            assertEquals(SUCCESS_URL, attachedWebViews().single().url)
+        }
+
+        // And A's own failure is still A's, re-observed through the ordinary event pipeline.
+        selectTab(FIRST_TAB)
+        waitForErrorPage()
+
+        selectTab(SECOND_TAB)
+        waitForNoErrorPage()
+        composeRule.runOnIdle {
+            assertEquals(1, attachedWebViews().size)
+            assertEquals(SUCCESS_URL, attachedWebViews().single().url)
+        }
+    }
+
     private fun navigate(url: String) {
         composeRule.onNodeWithText(addressLabel).performTextInput(url)
         composeRule.onNodeWithText(addressLabel).performImeAction()
@@ -158,6 +200,9 @@ class TabRendererIsolationTest {
     private val appName: String get() = composeRule.activity.getString(R.string.app_name)
     private val tabsLabel: String get() = composeRule.activity.getString(R.string.tabs)
     private val closeLabel: String get() = composeRule.activity.getString(R.string.close)
+
+    /** The one name this command has, in the regular dock and the integrated header alike. */
+    private val reloadLabel: String get() = composeRule.activity.getString(R.string.reload)
 
     private companion object {
         const val FIRST_TAB = 1L
