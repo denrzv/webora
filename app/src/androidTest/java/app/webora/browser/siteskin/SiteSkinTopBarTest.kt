@@ -133,6 +133,16 @@ class SiteSkinTopBarTest {
             compose.onNodeWithText(LONG_TITLE, substring = true)
                 .assertIsDisplayed()
                 .assertWidthIsAtLeast(TITLE_FLOOR)
+
+            // The assertion that catches the inline cap surviving the wrap.
+            //
+            // `SECURITY_CHIP_FLOOR` is 140 dp and could not: a chip still capped at
+            // `SECURITY_CHIP_MAX_WIDTH` measures exactly 160 dp, clears the floor, and shows
+            // `example.c…` — the ellipsis this ticket exists to remove, on a green test. Requiring
+            // *more* than the inline cap is the direct statement that the cap is no longer binding
+            // here, and it is why `SiteSkinIdentityRow` passes `Dp.Unspecified`.
+            compose.onNodeWithTag(SITESKIN_SECURITY_TAG)
+                .assertWidthIsAtLeast(SECURITY_CHIP_MAX_WIDTH + 1.dp)
         }
     }
 

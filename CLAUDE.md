@@ -1728,6 +1728,66 @@ not in the renderer host, and never by destroying the renderer on Home.
 so it proves the *decision* handles an in-page URL, while only the source scan can see that the
 wiring producing one still exists. Neither layer covers that row alone.
 
+### The trust chip takes its own row rather than rationing one (UX-023)
+
+`UX-021` left the integrated brand row holding four things — browser Back, the site's logo, the
+site's title, and the trust chip — and at 200% font scale on a 320 dp host it cannot hold them. The
+20 dp gutters leave 280 dp; Back, the logo and three gaps take **116**; so the title and the chip
+share **164**. The chip is unweighted and declared after the weighted column, so it measures first
+and the title absorbs the shortfall: at 200% a 13-character domain wants ~198 dp, the chip truncates
+to `example.c…` **and the site's title measures to zero**.
+
+**Two candidates were rejected on measurement, not taste.** Dropping the subtitle frees a *vertical*
+line for a horizontal failure. Shrinking the logo frees 16 dp against a ~34 dp shortfall, and
+weakens the guarantee `extremeAspectRatioBitmapCannotResizeLogoSlot` exists for. Only wrapping the
+chip to its own row removes it from the horizontal budget instead of rationing it.
+
+**The trigger is width and font scale, never content — and that is the security property, not a
+style preference.** The two site-controlled values in that row are the manifest's title and
+subtitle. A rule phrased as *"wrap when the title is long"* lets a website decide which row the
+browser's trust mark lands on, which is `HARDEN-002`'s impersonation surface reached through layout
+instead of text. `headerIdentityPlacement(availableWidth, fontScale, domainLength)` takes two
+platform facts and the length of the browser-derived registrable domain, and its negative control is
+adding a `title` parameter.
+
+**`UX-021`'s guarantee gets stronger in the new branch.** Inline it rests on declaration order — the
+chip follows the weighted title, so a long title yields to it. In the wrapped row there is no site
+content at all for a title to compete with. `both identity placements keep the chip away from site
+content` is the branch-complete statement; the ordering assertion survives as the in-row check, and
+it is worth knowing that it is fragile: it locates the chip by the file's *first*
+`SiteSkinSecurityChip(`, so declaring the new row above `BrandRow` inverted it for a reason having
+nothing to do with the guarantee.
+
+**The review found the defect the tests could not, and it is the one to remember.**
+`SECURITY_CHIP_MAX_WIDTH` is `widthIn(max = 160.dp)` on the chip itself, so the wrapped row gave the
+chip 280 dp of space **and still capped it at 160** — a taller header showing the same truncated
+domain, with every test green. `SECURITY_CHIP_FLOOR` is 140 dp, and **a width floor below the cap can
+never detect the cap**: a chip pinned at exactly 160 clears it comfortably. The cap is now a
+parameter and the wrapped row passes `Dp.Unspecified` — the constant exists to stop the chip starving
+the title *in the brand row*, and on a row with no title it has nothing to ration. The new assertion
+requires *more* than the inline cap, which is the direct statement that it is not binding there.
+
+This does not reopen `UX-021`'s refusal to raise that constant. There the binding constraint is
+available width and a larger cap trades the site's title for one character of domain; here there is
+no title on the row and no trade. That asymmetry is why the wrap was the fix and the constant was not.
+
+**A 16-character domain now wraps at 100% on a 320 dp host**, which is a default-scale layout change
+and the right one — inline it left the title 22 dp, an ellipsis and nothing else. The hosted
+screenshot emulator is 360 dp, where `denrzv.github.io` stays inline, so `CI-009`/`CI-010`'s frames
+are unaffected.
+
+Two assertions passed for the wrong reason before they were fixed, both in ways already recorded
+here: `one width read` counted bare `BoxWithConstraints` and scored the **import** (`UX-020`'s assert
+the application, not the declaration), and the title check was `onNodeWithText(...).assertIsDisplayed()`,
+which `UX-009` established passes over a title clipped to nothing because semantics keeps full text
+and unclipped bounds. It is a 100 dp bounds floor now.
+
+This is the first responsive layout in the browser — nothing under `src/main/java` read
+`BoxWithConstraints`, `fontScale` or `LocalConfiguration` before it — so it is also the pattern the
+next such surface will copy. It deliberately takes the shape `rendererMountAction`, `refreshAction`
+and `resolveHubPresentation` already use: a pure decision the JVM gate drives, plus a thin composable
+that reads the platform value. The rendered half needs a device; the decision does not.
+
 ### A hint chooses among the browser's own components (UX-022)
 
 The bouquet showed **five items across all three collections**, and `SPEC.md` §8 permits twenty

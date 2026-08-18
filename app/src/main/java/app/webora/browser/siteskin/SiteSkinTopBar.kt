@@ -33,6 +33,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.webora.browser.R
@@ -179,7 +180,13 @@ private fun SiteSkinIdentityRow(security: SecurityPresentation) {
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
     ) {
-        SiteSkinSecurityChip(security)
+        // `Dp.Unspecified`, not the inline cap. `SECURITY_CHIP_MAX_WIDTH` exists to stop the chip
+        // starving the site's title *in the brand row*; on a row with no title it has nothing to
+        // ration, and leaving it applied would cap the chip at 160 dp while a 13-character domain
+        // needs ~208 at 200% — the ellipsis this ticket exists to remove, surviving the wrap that
+        // was supposed to remove it. The enclosing `Row`'s own constraint still bounds the chip, so
+        // dropping the modifier's cap does not let it overflow the header.
+        SiteSkinSecurityChip(security, maxWidth = Dp.Unspecified)
     }
 }
 
@@ -304,7 +311,7 @@ private fun BrandLogo(asset: BrandAsset, colors: SiteSkinColorScheme) {
  * `when` is exhaustive so a fifth transport state is a compile error rather than a silent neutral.
  */
 @Composable
-private fun SiteSkinSecurityChip(security: SecurityPresentation) {
+private fun SiteSkinSecurityChip(security: SecurityPresentation, maxWidth: Dp = SECURITY_CHIP_MAX_WIDTH) {
     val secure = security.transportSecurity == TransportSecurity.SECURE
     val transport = transportLabel(security.transportSecurity)
     val description = stringResource(R.string.security_description, transport, security.registrableDomain)
@@ -317,7 +324,7 @@ private fun SiteSkinSecurityChip(security: SecurityPresentation) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         modifier = Modifier
-            .widthIn(max = SECURITY_CHIP_MAX_WIDTH)
+            .widthIn(max = maxWidth)
             .clip(RoundedCornerShape(WeboraRadius.PILL))
             .background(MaterialTheme.colorScheme.primaryContainer)
             .padding(horizontal = 8.dp, vertical = 4.dp)
@@ -378,4 +385,7 @@ private val SECURITY_SHIELD_SIZE = 16.dp
  * What the review was right about is that the old `width > 0f` assertion could not tell a chip
  * showing one character from a healthy one; the instrumented floor now can.
  */
-private val SECURITY_CHIP_MAX_WIDTH = 160.dp
+// `internal` so the instrumented case that proves this cap no longer binds on the wrapped row can
+// name the constant instead of restating 160 dp — a copy of it in a test is a second place for the
+// two to drift.
+internal val SECURITY_CHIP_MAX_WIDTH = 160.dp
