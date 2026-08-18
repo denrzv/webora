@@ -153,6 +153,16 @@ private fun InspectorAppliedSection(applied: InspectorAppliedChrome) {
         stringResource(R.string.inspector_active_item),
         inspectorValue(applied.activeNavigationId).ifEmpty { stringResource(R.string.inspector_no_match) },
     )
+    // Requested and composed, as two rows rather than one.
+    // A site owner debugging a hint needs to see that the browser received `bouquet` and composed
+    // the drawer anyway — one row saying `DRAWER` cannot express that, and one row saying
+    // `bouquet -> DRAWER` concatenates a value with a label, which `DEVX-001` forbids for a reason
+    // that applies here even though both halves happen to be browser-owned enums today.
+    InspectorRow(
+        stringResource(R.string.inspector_hub_requested),
+        applied.hub.requested?.name ?: stringResource(R.string.inspector_hub_not_declared),
+    )
+    InspectorRow(stringResource(R.string.inspector_hub_effective), applied.hub.effective.name)
     applied.counts.forEach { count ->
         InspectorRow(
             count.collection.name,

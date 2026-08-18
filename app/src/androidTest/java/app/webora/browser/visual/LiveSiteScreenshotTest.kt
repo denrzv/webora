@@ -29,7 +29,7 @@ import app.webora.browser.inspector.BrandAssetStage
 import app.webora.browser.inspector.BrandAssetTrace
 import app.webora.browser.inspector.inspectorRecorder
 import app.webora.browser.siteskin.EXPRESSIVE_HEADER_TAG
-import app.webora.browser.siteskin.SITESKIN_ACTION_BOUQUET_TAG
+import app.webora.browser.siteskin.SITESKIN_HUB_DRAWER_TAG
 import app.webora.browser.siteskin.SITESKIN_BACK_TAG
 import app.webora.browser.siteskin.SITESKIN_DOCK_HUB_TAG
 import app.webora.browser.siteskin.SITESKIN_DOCK_TAG
@@ -76,18 +76,33 @@ class LiveSiteScreenshotTest {
             brandAsset?.stage,
         )
 
-        captureBloomActionBouquet()
+        captureBloomHub()
         captureBloomProfile()
         captureGoogleRegularBrowsing()
     }
 
-    private fun captureBloomActionBouquet() {
+    /**
+     * The native hub, which `UX-022` made a full-window drawer.
+     *
+     * **No page-content requirement, and that is not a weakening.** `RenderedContentPolicy` asks
+     * whether `BROWSER_CONTENT_TAG`'s rectangle is non-uniform, and the drawer's own window covers
+     * it — so the check would measure the drawer, find it gloriously non-uniform and pass for the
+     * wrong reason. That is `CI-005`'s defect exactly: a region something else owns. The consent
+     * frame has been in this category since `CI-001` for the same reason.
+     *
+     * What replaces it is stricter than what a pixel fraction could say about this frame: the
+     * drawer's own tag, and every one of the reference integration's five trusted action ids
+     * present as a row. A blank or half-composed hub fails those, where a fraction over a covered
+     * rectangle could not.
+     */
+    private fun captureBloomHub() {
         composeRule.onNodeWithTag(SITESKIN_DOCK_HUB_TAG).assertIsDisplayed().performClick()
-        waitUntilNodeExists(hasTestTag(SITESKIN_ACTION_BOUQUET_TAG))
+        waitUntilNodeExists(hasTestTag(SITESKIN_HUB_DRAWER_TAG))
+        composeRule.onNodeWithTag(SITESKIN_HUB_DRAWER_TAG).assertIsDisplayed()
         BloomReferenceContract.ACTION_IDS.forEach { id ->
             composeRule.onNodeWithTag(BloomReferenceContract.actionTag(id)).assertIsDisplayed()
         }
-        captureDeviceScreenshot("04-bloom-actions.png", requirePageContent = true)
+        captureDeviceScreenshot("04-bloom-actions.png")
     }
 
     private fun captureBloomProfile() {
@@ -96,7 +111,7 @@ class LiveSiteScreenshotTest {
         )
             .assertIsDisplayed()
             .performClick()
-        waitUntilNodeAbsent(hasTestTag(SITESKIN_ACTION_BOUQUET_TAG))
+        waitUntilNodeAbsent(hasTestTag(SITESKIN_HUB_DRAWER_TAG))
         require(
             uiDevice.wait(Until.hasObject(By.text(PROFILE_PAGE_HEADING)), LIVE_SITE_TIMEOUT_MILLIS),
         ) { "Bloom did not expose the $PROFILE_PAGE_HEADING profile page" }
@@ -131,7 +146,7 @@ class LiveSiteScreenshotTest {
         composeRule.onNodeWithTag(SITESKIN_SECURITY_TAG).assertDoesNotExist()
         composeRule.onNodeWithTag(EXPRESSIVE_HEADER_TAG).assertDoesNotExist()
         composeRule.onNodeWithTag(SITESKIN_DOCK_TAG).assertDoesNotExist()
-        composeRule.onNodeWithTag(SITESKIN_ACTION_BOUQUET_TAG).assertDoesNotExist()
+        composeRule.onNodeWithTag(SITESKIN_HUB_DRAWER_TAG).assertDoesNotExist()
         composeRule.onNodeWithTag(SITESKIN_QUICK_ACTIONS_TAG).assertDoesNotExist()
         captureDeviceScreenshot("06-google-regular.png", requirePageContent = true)
     }
@@ -230,7 +245,7 @@ class LiveSiteScreenshotTest {
     /** Browser-owned overlays inside the WebView rectangle must never satisfy the rendered-page gate. */
     private fun chromeInsidePageRegion(region: Rect?): List<Rect> {
         if (region == null) return emptyList()
-        return listOf(SITESKIN_QUICK_ACTIONS_TAG, SITESKIN_ACTION_BOUQUET_TAG).flatMap { tag ->
+        return listOf(SITESKIN_QUICK_ACTIONS_TAG, SITESKIN_HUB_DRAWER_TAG).flatMap { tag ->
             composeRule.onAllNodes(hasTestTag(tag))
                 .fetchSemanticsNodes()
                 .map { node ->

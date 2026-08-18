@@ -2,12 +2,15 @@ package app.webora.browser.inspector
 
 import androidx.compose.ui.graphics.Color
 import app.webora.browser.siteskin.BrandAsset
+import app.webora.browser.siteskin.HubSurface
 import app.webora.browser.siteskin.SiteConsentDecision
 import app.webora.browser.siteskin.SiteSkinChromeModel
 import app.webora.browser.siteskin.SiteSkinColorScheme
 import app.webora.browser.siteskin.SiteSkinItemModel
 import app.webora.browser.siteskin.SiteSkinTheme
 import app.webora.browser.siteskin.scheme
+import app.webora.browser.siteskin.hubSurface
+import dev.siteskin.core.model.HubPresentation
 import dev.siteskin.core.model.SiteSkinConfiguration
 import dev.siteskin.core.origin.SiteOrigin
 import java.util.Locale
@@ -44,8 +47,26 @@ internal data class InspectorAppliedChrome(
     val activeNavigationId: String?,
     val counts: List<InspectorItemCount>,
     val navigation: List<InspectorItem>,
+    val hub: InspectorHub,
     val theme: InspectorTheme,
 )
+
+/**
+ * The hub the site asked for, beside the one the browser composes.
+ *
+ * [requested] is `null` when the manifest declared no `presentation` object at all — the distinction
+ * core's nullable holder exists to preserve, and the one a site owner most needs here: "I asked for
+ * the default" and "I forgot to ask" produce the same drawer and are different things to be told.
+ * A wrongly-spelled hint is a third case and shows as `AUTO` with `SS-W-PRESENTATION-UNKNOWN` in the
+ * record's diagnostics, which is the only account of what was corrected — `DEVX-001`'s
+ * `trusted`-not-`requested` rule, since the holder has already been normalized by the time it
+ * arrives here.
+ *
+ * [effective] is `resolveHubPresentation`'s answer, read from the same function the dock reads. A
+ * second copy of that mapping would be a panel that agrees with itself and disagrees with the
+ * browser.
+ */
+internal data class InspectorHub(val requested: HubPresentation?, val effective: HubSurface)
 
 /**
  * How many items a collection has in the trusted configuration, and how many the chrome renders.
@@ -180,6 +201,10 @@ private fun appliedChrome(
         navigation = chrome.bottomNavigation.map {
             InspectorItem(it.id, it.label, it.item.action.type, it.isActive)
         },
+        hub = InspectorHub(
+            requested = configuration.presentation?.hub,
+            effective = configuration.hubSurface(),
+        ),
         theme = theme(configuration, darkTheme),
     )
 }

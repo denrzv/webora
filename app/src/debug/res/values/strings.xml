@@ -44,6 +44,9 @@
     <string name="inspector_diagnostics">Diagnostics</string>
 
     <string name="inspector_site_name">Site name</string>
+    <string name="inspector_hub_requested">Hub requested</string>
+    <string name="inspector_hub_effective">Hub composed</string>
+    <string name="inspector_hub_not_declared">not declared</string>
     <string name="inspector_site_id">Site id</string>
     <string name="inspector_home_url">Home URL</string>
     <string name="inspector_active_item">Active navigation item</string>

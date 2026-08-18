@@ -24,7 +24,7 @@ import app.webora.browser.R
 import app.webora.browser.browser.BROWSER_NAVIGATION_SHELL_TAG
 import app.webora.browser.browser.BROWSER_SECURITY_TAG
 import app.webora.browser.siteskin.EXPRESSIVE_HEADER_TAG
-import app.webora.browser.siteskin.SITESKIN_ACTION_BOUQUET_TAG
+import app.webora.browser.siteskin.SITESKIN_HUB_DRAWER_TAG
 import app.webora.browser.siteskin.SITESKIN_BACK_TAG
 import app.webora.browser.siteskin.SITESKIN_DOCK_BACK_TAG
 import app.webora.browser.siteskin.SITESKIN_DOCK_FORWARD_TAG
@@ -74,14 +74,14 @@ class LiveSiteNavigationSmokeTest {
         requireIntegratedChrome()
 
         composeRule.onNodeWithTag(SITESKIN_DOCK_HUB_TAG).assertIsDisplayed().performClick()
-        waitUntilNodeExists(hasTestTag(SITESKIN_ACTION_BOUQUET_TAG))
+        waitUntilNodeExists(hasTestTag(SITESKIN_HUB_DRAWER_TAG))
         BloomReferenceContract.ACTION_IDS.forEach { id ->
             composeRule.onNodeWithTag(BloomReferenceContract.actionTag(id)).assertIsDisplayed()
         }
         composeRule.onNodeWithTag(
             BloomReferenceContract.actionTag(BloomReferenceContract.HOME_ACTION_ID),
         ).performClick()
-        waitUntilNodeAbsent(hasTestTag(SITESKIN_ACTION_BOUQUET_TAG))
+        waitUntilNodeAbsent(hasTestTag(SITESKIN_HUB_DRAWER_TAG))
         requireIntegratedChrome()
 
         returnFromBloomHistoryToHome()
@@ -204,7 +204,7 @@ class LiveSiteNavigationSmokeTest {
         composeRule.onNodeWithTag(SITESKIN_SECURITY_TAG).assertDoesNotExist()
         composeRule.onNodeWithTag(EXPRESSIVE_HEADER_TAG).assertDoesNotExist()
         composeRule.onNodeWithTag(SITESKIN_DOCK_TAG).assertDoesNotExist()
-        composeRule.onNodeWithTag(SITESKIN_ACTION_BOUQUET_TAG).assertDoesNotExist()
+        composeRule.onNodeWithTag(SITESKIN_HUB_DRAWER_TAG).assertDoesNotExist()
     }
 
     private fun isHome(): Boolean =

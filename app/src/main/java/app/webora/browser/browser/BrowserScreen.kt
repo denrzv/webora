@@ -80,7 +80,10 @@ import app.webora.browser.siteskin.SiteSkinTopBarModel
 import app.webora.browser.siteskin.brandMonogram
 import app.webora.browser.siteskin.BrowserMenuCommand
 import app.webora.browser.siteskin.browserMenuCommands
+import app.webora.browser.siteskin.SiteSkinHubHost
+import app.webora.browser.siteskin.SiteSkinHubIdentity
 import app.webora.browser.siteskin.actionBouquet
+import app.webora.browser.siteskin.hubSurface
 import app.webora.browser.inspector.InspectorBrowserState
 import app.webora.browser.inspector.SiteSkinInspectorHost
 import app.webora.browser.inspector.SiteSkinTraceRecorder
@@ -746,6 +749,13 @@ internal fun RegularBrowser(
                 reducedMotion = reducedMotionEnabled(LocalContext.current),
             )
             val chrome = SiteSkinChromeModel.from(integrated.configuration, state.displayedUrl)
+            // Recomputed from the browser-observed URL on every recomposition, so a page start
+            // within the origin re-projects the active route with no separate invalidation. The
+            // surface is the browser's decision over the site's hint, taken in one place.
+            val hubSurface = integrated.configuration.hubSurface()
+            val hubAsset = brandAsset ?: BrandAsset.Monogram(
+                brandMonogram(integrated.configuration.site.shortName, integrated.configuration.site.name),
+            )
             SiteSkinDock(
                 presentation = presentation,
                 canGoBack = canNavigateBack,
@@ -753,15 +763,23 @@ internal fun RegularBrowser(
                 onBack = onBack,
                 onForward = controller::goForward,
                 siteActions = chrome.actionBouquet(),
+                hubSurface = hubSurface,
                 siteActionsExpanded = siteActionsExpanded,
                 onSiteActionsToggle = onSiteActionsToggle,
                 onSiteActionsDismiss = onSiteActionsDismiss,
                 onSiteSelect = onSiteSelect,
                 onTabs = onTabs,
                 onMore = onOpenBrowserMenu,
-                brandAsset = brandAsset ?: BrandAsset.Monogram(
-                    brandMonogram(integrated.configuration.site.shortName, integrated.configuration.site.name),
-                ),
+                brandAsset = hubAsset,
+            )
+            SiteSkinHubHost(
+                visible = siteActionsExpanded,
+                surface = hubSurface,
+                model = chrome,
+                identity = SiteSkinHubIdentity.from(integrated.configuration.site.name, hubAsset),
+                colors = presentation.colors,
+                onSelect = onSiteSelect,
+                onDismiss = onSiteActionsDismiss,
             )
         } else {
             BrowserNavigationShell(

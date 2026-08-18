@@ -54,25 +54,49 @@ class HubSurfaceTest {
     /**
      * `AUTO` routes through the policy; no call site compiles its own default.
      *
-     * `resolveHubPresentation` and `hubSurface` are the only executable references to
-     * `HubPresentation` in the app. Anything else reading the enum is a second reader deciding for
-     * itself what an absent hint means, which is exactly the drift this function exists to
-     * prevent — and the failure mode is silent, because both copies agree on the day the second
-     * one is written.
+     * The rule is about *deciding*, not about touching. `DEVX-001`'s inspector legitimately holds a
+     * `HubPresentation?` and prints its name — showing a site owner what was requested beside what
+     * was composed is the whole reason the nullable holder exists, and displaying a value decides
+     * nothing. Naming an enum **constant** is what a decision looks like, so that is what this
+     * forbids outside the policy.
+     *
+     * The first version of this test banned the type instead and failed on the inspector, which was
+     * correct code. A rule stated one level too coarse fails honest call sites and teaches people to
+     * widen it; stated at the mechanism, it has nothing to widen.
      */
     @Test
-    fun `the hint is read in exactly one file`() {
-        val readers = sourceRoots()
+    fun `only the policy branches on the hint`() {
+        val constant = Regex("""HubPresentation\.[A-Z_]+""")
+        val deciders = sourceRoots()
             .flatMap { it.walkTopDown().filter { file -> file.extension == "kt" } }
-            .filter { "HubPresentation" in executableLines(it) }
+            .filter { constant.containsMatchIn(executableLines(it)) }
             .map { it.name }
             .toSet()
 
         assertEquals(
-            "Only the policy may read core's hint enum; every other surface takes a HubSurface",
+            "Only HubSurface.kt may branch on a hint value; every other surface takes a HubSurface",
             setOf("HubSurface.kt"),
-            readers,
+            deciders,
         )
+    }
+
+    /**
+     * And the policy is the only thing that turns a hint into a surface.
+     *
+     * A second function with the same signature would satisfy the constant rule above by delegating
+     * once and then drifting. `resolveHubPresentation` and its one `hubSurface()` extension are the
+     * whole seam.
+     */
+    @Test
+    fun `the hint to surface mapping is declared once`() {
+        val declarations = sourceRoots()
+            .flatMap { it.walkTopDown().filter { file -> file.extension == "kt" } }
+            .sumOf { file ->
+                Regex("""fun\s+\w*[Hh]ub\w*\([^)]*HubPresentation""")
+                    .findAll(executableLines(file)).count()
+            }
+
+        assertEquals("exactly one function maps a hint to a surface", 1, declarations)
     }
 
     /**

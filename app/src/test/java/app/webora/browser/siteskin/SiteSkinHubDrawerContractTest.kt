@@ -183,7 +183,56 @@ class SiteSkinHubDrawerContractTest {
         }
     }
 
+    /**
+     * One hub visibility state, read by both surfaces.
+     *
+     * `UX-015` made hub state "visibility only" with three resets — page generation, active
+     * tab/configuration change, and loss of `PROTECTED_INTEGRATED`. A drawer with its own flag would
+     * need all three again, and the failure is silent and specific: a tab switch tears down the
+     * dock while a drawer nobody reset stays composed over the next origin's page.
+     *
+     * The gate cannot drive this — the state is a `remember` inside `BrowserScreen` — so the
+     * assertion is that no second one is declared. Its negative control is adding
+     * `var hubDrawerVisible by remember { mutableStateOf(false) }`, which is exactly the change the
+     * rule forbids and exactly what someone would write.
+     */
+    @Test
+    fun `the hub has one visibility state and both surfaces read it`() {
+        val source = browserScreenSource()
+
+        val declarations = Regex("""var\s+\w+\s+by\s+remember\s*\{\s*mutableStateOf""")
+            .findAll(source)
+            .count { match -> "Expanded" in source.substring(match.range.first, match.range.last + 1) }
+        assertEquals("siteActionsExpanded is the only hub visibility state", 1, declarations)
+
+        assertTrue("the dock reads it", "siteActionsExpanded = siteActionsExpanded" in source)
+        assertTrue("the drawer host reads the same flag", "visible = siteActionsExpanded" in source)
+        listOf("drawerVisible", "hubVisible", "hubDrawerVisible", "drawerExpanded").forEach {
+            assertFalse("$it would be a second hub state with its own resets to forget", it in source)
+        }
+    }
+
+    /**
+     * The surface is decided once, from the trusted configuration, at the composition that uses it.
+     *
+     * Both readers take the same `hubSurface` value rather than each calling the policy, so they
+     * cannot disagree about which surface is open — and neither can be handed a literal.
+     */
+    @Test
+    fun `both surfaces are told the same resolved surface`() {
+        val source = browserScreenSource()
+
+        assertTrue("val hubSurface = integrated.configuration.hubSurface()" in source)
+        assertTrue("hubSurface = hubSurface" in source)
+        assertTrue("surface = hubSurface" in source)
+        assertFalse("a literal here would bypass the policy", "HubSurface.DRAWER" in source)
+        assertFalse("a literal here would bypass the policy", "HubSurface.BOUQUET" in source)
+    }
+
     private companion object {
+        fun browserScreenSource(): String =
+            stripComments(File("src/main/java/app/webora/browser/browser/BrowserScreen.kt"))
+
         /**
          * `HubGroup`'s body alone.
          *
@@ -205,9 +254,11 @@ class SiteSkinHubDrawerContractTest {
             return source.substring(start, if (next >= 0) next else source.length)
         }
 
-        fun drawerSource(): String {
-            val file = File("src/main/java/app/webora/browser/siteskin/SiteSkinHubDrawer.kt")
-            check(file.exists()) { "drawer source not found at ${file.absolutePath}" }
+        fun drawerSource(): String =
+            stripComments(File("src/main/java/app/webora/browser/siteskin/SiteSkinHubDrawer.kt"))
+
+        fun stripComments(file: File): String {
+            check(file.exists()) { "source not found at ${file.absolutePath}" }
             return file.readLines()
                 .filterNot { line ->
                     val trimmed = line.trimStart()

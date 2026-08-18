@@ -38,6 +38,7 @@ class SiteSkinDockTest {
                     onBack = { invoked += "back" },
                     onForward = { invoked += "forward" },
                     siteActions = emptyList(),
+                    hubSurface = HubSurface.BOUQUET,
                     siteActionsExpanded = false,
                     onSiteActionsToggle = { invoked += "hub" },
                     onSiteActionsDismiss = {},
@@ -76,6 +77,10 @@ class SiteSkinDockTest {
                 onBack = {},
                 onForward = {},
                 siteActions = model.actionBouquet(),
+                // These cases are about the bouquet, so they name it. `UX-022` made the surface a
+                // decision, and a dock test that let the default choose would be testing whichever
+                // surface the policy happens to prefer today.
+                hubSurface = HubSurface.BOUQUET,
                 siteActionsExpanded = true,
                 onSiteActionsToggle = {},
                 onSiteActionsDismiss = { dismissed = true },
@@ -110,7 +115,8 @@ class SiteSkinDockTest {
         var dismissals = 0
         compose.setContent {
             SiteSkinDock(
-                presentation(false, false), true, true, {}, {}, model().actionBouquet(), expanded, {},
+                presentation(false, false), true, true, {}, {}, model().actionBouquet(),
+                HubSurface.BOUQUET, expanded, {},
                 onSiteActionsDismiss = {
                     dismissals += 1
                     expanded = false
@@ -129,8 +135,8 @@ class SiteSkinDockTest {
         val bitmap = Bitmap.createBitmap(8, 8, Bitmap.Config.ARGB_8888)
         compose.setContent {
             SiteSkinDock(
-                presentation(false, false), true, true, {}, {}, emptyList(), false, {}, {}, {}, {}, {},
-                BrandAsset.BitmapAsset(bitmap),
+                presentation(false, false), true, true, {}, {}, emptyList(), HubSurface.BOUQUET,
+                false, {}, {}, {}, {}, {}, BrandAsset.BitmapAsset(bitmap),
             )
         }
 

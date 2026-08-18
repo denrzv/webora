@@ -49,6 +49,7 @@ internal fun SiteSkinDock(
     onBack: () -> Unit,
     onForward: () -> Unit,
     siteActions: List<SiteSkinItemModel>,
+    hubSurface: HubSurface,
     siteActionsExpanded: Boolean,
     onSiteActionsToggle: () -> Unit,
     onSiteActionsDismiss: () -> Unit,
@@ -75,7 +76,11 @@ internal fun SiteSkinDock(
             asset = brandAsset,
             label = stringResource(R.string.siteskin_open_hub),
             actions = siteActions,
-            expanded = siteActionsExpanded,
+            // The bouquet is a `Popup` anchored to this button, so it can only be composed here.
+            // The drawer is a `Dialog` in its own window and is composed beside the dock by
+            // `SiteSkinHubHost`. Both read the same single hub state with its three existing
+            // resets; only one is ever composed, because `hubSurface` is a total decision.
+            expanded = siteActionsExpanded && hubSurface == HubSurface.BOUQUET,
             onToggle = onSiteActionsToggle,
             onDismiss = onSiteActionsDismiss,
             onSelect = onSiteSelect,

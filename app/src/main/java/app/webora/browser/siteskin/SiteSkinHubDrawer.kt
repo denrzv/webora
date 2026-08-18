@@ -114,6 +114,29 @@ internal fun SiteSkinHubDrawer(
 }
 
 /**
+ * Composes the drawer when it is the resolved surface, and nothing otherwise.
+ *
+ * The condition lives here rather than at the call site so each hub surface owns its own visibility
+ * test beside itself — `SiteSkinDock` holds the mirror-image one for the bouquet. Both read the same
+ * [visible] flag, which is the browser's single hub state with its three existing resets; neither
+ * introduces a second one, so the two surfaces cannot both be open and cannot disagree about being
+ * closed.
+ */
+@Composable
+internal fun SiteSkinHubHost(
+    visible: Boolean,
+    surface: HubSurface,
+    model: SiteSkinChromeModel,
+    identity: SiteSkinHubIdentity,
+    colors: SiteSkinColorScheme,
+    onSelect: (NavigationItem) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    if (!visible || surface != HubSurface.DRAWER) return
+    SiteSkinHubDrawer(model, identity, colors, onSelect, onDismiss)
+}
+
+/**
  * The drawer body, separated from its window so the JVM gate and instrumentation can drive it
  * directly — the `PrivacySettingsDialog`/`PrivacySettingsScreen` split, for the same reason.
  *
