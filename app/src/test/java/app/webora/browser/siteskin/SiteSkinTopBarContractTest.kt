@@ -106,6 +106,75 @@ class SiteSkinTopBarContractTest {
     }
 
     @Test
+    fun `the browser refresh control is browser-owned in every value it reads`() {
+        // `BROWSE-011`. The control sits inside a header a manifest paints, so the runtime can only
+        // show that it renders; a source scan is what shows no path exists from the SiteSkin palette
+        // or the site's model to its ground, its icon, its label or its callback. The negative
+        // control is a one-word edit: ground the tile on `presentation.colors.secondary`.
+        val control = declaration("private fun BrowserControlRow(")
+
+        assertTrue("the control must draw the compiled reload icon", "R.drawable.ic_reload" in control)
+        assertTrue("its name must be a browser-authored resource", "stringResource(R.string.reload)" in control)
+        FORBIDDEN_IN_CHIP.forEach { forbidden ->
+            assertFalse(
+                "a manifest-influenced value reached a browser command: '$forbidden'",
+                forbidden in control,
+            )
+        }
+    }
+
+    @Test
+    fun `browser controls in the header share one Webora-token sub-surface`() {
+        // `UX-014`: the header's colours are the site's, so a browser control drawn straight onto
+        // them reads as the site's — "the visual boundary is the ownership boundary". One
+        // declaration rather than two copies, for the reason `UX-021` records about a `when` that
+        // shipped twice and drifted.
+        val tile = declaration("private fun BrowserControlTile(")
+
+        assertTrue(
+            "the browser tile must ground on a Webora token",
+            "MaterialTheme.colorScheme.surfaceContainer" in tile,
+        )
+        assertFalse("no site colour may paint a browser control's tile", "presentation" in tile)
+        assertFalse("no site colour may paint a browser control's tile", "colors." in tile)
+
+        val source = executableLines(topBarFile())
+        assertTrue("Back must use the shared tile", "BrowserControlTile(SITESKIN_BACK_TAG)" in source)
+        assertTrue("Refresh must use the shared tile", "BrowserControlTile(SITESKIN_REFRESH_TAG)" in source)
+    }
+
+    @Test
+    fun `the refresh tag is applied to a node rather than merely declared`() {
+        // `UX-020`'s lesson again: the constant is declared in this same file, so a `contains` over
+        // the bare name would be satisfied by the declaration alone.
+        val source = executableLines(topBarFile())
+
+        assertTrue(
+            "SITESKIN_REFRESH_TAG must reach a node",
+            "BrowserControlTile(SITESKIN_REFRESH_TAG)" in source,
+        )
+        assertTrue("the tile is what applies it", "testTag(tag)" in declaration("private fun BrowserControlTile("))
+    }
+
+    @Test
+    fun `the browser control row does not compete with the brand row for width`() {
+        // `BROWSE-011`'s whole placement argument, as a structural fact. The brand row has 164 dp
+        // for the title and the trust chip at 320 dp; a browser control in *that* row truncates the
+        // domain and measures the site's title to zero. It is also why the control row must declare
+        // no weight: the assertion above locates the title column by the file's first
+        // `Modifier.weight(1f)`, and a second weighted child would make that depend on declaration
+        // order for an unrelated reason.
+        val control = declaration("private fun BrowserControlRow(")
+        val brand = declaration("private fun BrandRow(")
+
+        assertFalse("the control row must not introduce a second weighted child", "weight(" in control)
+        assertTrue("it is trailing-aligned instead", "Arrangement.End" in control)
+        assertFalse("no browser command may join the brand row", "BrowserControlRow(" in brand)
+        assertTrue("the brand row still carries Back", "BrowserBack(" in brand)
+        assertTrue("and still ends with the trust chip", "SiteSkinSecurityChip(" in brand)
+    }
+
+    @Test
     fun `the scan reads code and not prose`() {
         // Guards the guard. Every assertion above is a `contains` over this projection, so a
         // regression in `executableLines` would quietly turn the whole file into decoration. The
@@ -162,6 +231,21 @@ class SiteSkinTopBarContractTest {
          * The chip's own declaration, so a colour used legitimately elsewhere in the file — the brand
          * logo genuinely does read `colors.background` — cannot satisfy or violate the chip's rule.
          */
+        /**
+         * One top-level declaration's own text, so a value used legitimately elsewhere in the file
+         * cannot satisfy or violate its rule. `securityChipSource` is this, specialised; both stop
+         * at the next `private fun` rather than at a brace count, which is enough while every
+         * declaration in this file is top-level.
+         */
+        fun declaration(signature: String): String {
+            val source = executableLines(topBarFile())
+            val start = source.indexOf(signature)
+            check(start >= 0) { "declaration not found: $signature" }
+            val next = source.indexOf("\nprivate fun ", start + 1)
+            val end = if (next >= 0) next else source.length
+            return source.substring(start, end)
+        }
+
         fun securityChipSource(): String {
             val source = executableLines(topBarFile())
             val start = source.indexOf("private fun SiteSkinSecurityChip(")

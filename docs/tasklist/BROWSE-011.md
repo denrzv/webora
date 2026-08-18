@@ -27,6 +27,8 @@ a control that fails nothing is a finding, not a formality.
 - [x] TASK-2: one owner for what refreshing means
   - New: `app/src/main/java/app/webora/browser/browser/RefreshAction.kt`
   - New: `app/src/test/java/app/webora/browser/browser/PageRefreshTest.kt`
+  - Note: the file is named for its type, not the ticket — detekt's `MatchingDeclarationName`
+    requires a file with one top-level type to carry that type's name.
   - `RefreshAction` (`Reload`, `Retry(url)`, `None`) and `refreshAction(BrowserState)`. Pure, closed,
     reading only `displayedUrl` and `loadFailure`. Not wired to anything yet.
   - Acceptance:
@@ -45,10 +47,20 @@ a control that fails nothing is a finding, not a formality.
       parity case, and only it. A control that fails one targeted case is what separates a
       guard from a broken file — `BROWSE-009` records the same discriminator requirement.
 
-- [ ] TASK-3: a browser-owned control row in the integrated header
+- [x] TASK-3: a browser-owned control row in the integrated header
   - Modified: `app/src/main/java/app/webora/browser/siteskin/SiteSkinTopBar.kt`
   - Modified: `app/src/test/java/app/webora/browser/siteskin/SiteSkinTopBarContractTest.kt`
   - Modified: `app/src/androidTest/java/app/webora/browser/siteskin/SiteSkinTopBarTest.kt`
+  - Modified: `app/src/test/java/app/webora/browser/siteskin/SiteSkinNavigationContractTest.kt`,
+    `app/src/androidTest/java/app/webora/browser/browser/BrowserSiteSkinLayoutTest.kt`
+  - Finding, in the task: `browserOwnedBack` required `MaterialTheme.colorScheme.surfaceContainer`
+    *inside* `BrowserBack`, which was the same thing as the rule only while Back was the header's
+    one browser control. The shared tile made Back's guarantee true one declaration away and the
+    scan went red on code that had not weakened. Fixed by following the indirection, not by
+    dropping the clause — `BROWSE-009`: forbid the mechanism, not a spelling. Its own negative
+    control was also passing for the wrong reason (the fragment lacked the `BrandLogo` marker the
+    slice ended at, so it returned `false` before evaluating anything); the slice now ends at
+    end-of-input and the control fails on its merits.
   - `SiteSkinTopBar` becomes a `Column` of the extracted-verbatim `BrandRow` and a new
     `BrowserControlRow` holding Refresh, trailing-aligned. Back's tile generalises into one shared
     `BrowserControlTile`. New `canRefresh` / `onRefresh` parameters, neither defaulted.
@@ -67,10 +79,15 @@ a control that fails nothing is a finding, not a formality.
       when `canRefresh` is false; description distinct from the chip's; at 320 dp × 200 % font scale
       both the control and the chip stay inside the host and the chip keeps its 140 dp floor.
   - Negative controls:
-    - Ground the tile on `presentation.colors.secondary` → the isolation case must fail.
-      Result: _to record_.
-    - Drop `testTag(SITESKIN_REFRESH_TAG)` from the node while keeping the constant → the applied-tag
-      case must fail. Result: _to record_.
+    - Ground the tile on `presentation.colors.secondary` → **3 of 11 failed**: the ownership,
+      shared-tile and no-weight cases. The first attempt at this control did not compile, which is
+      not a passing control — it exercises nothing. Threading the colour through the call sites is
+      what made it a real violation, and the difference is invisible in a grep for `FAILED`.
+    - Move the control into the brand row → **1 of 11 failed**, and only the placement case. One
+      targeted failure is what separates a guard from a broken file.
+    - Point the refresh tile at `SITESKIN_BACK_TAG` while keeping the constant declared → **2 of 11
+      failed**: the applied-tag case and the shared-tile case. `UX-020`'s lesson holds — the
+      constant's declaration alone would have satisfied a bare `contains`.
 
 - [ ] TASK-4: give both modes the one decision
   - Modified: `app/src/main/java/app/webora/browser/browser/BrowserScreen.kt`

@@ -251,6 +251,16 @@ internal fun BrowserScreen(
         }
     }
 
+    // Built where `controller` and `state` are already the selected tab's, so there is no second
+    // place for a tab id to be resolved and no second navigation mechanism: both arms call methods
+    // that already had call sites before this ticket.
+    val dispatchRefresh = {
+        when (val action = refreshAction(state)) {
+            RefreshAction.Reload -> controller.reload()
+            is RefreshAction.Retry -> controller.navigate(action.url)
+            RefreshAction.None -> Unit
+        }
+    }
     val canNavigateBack = state.mode.canNavigateBack()
     val navigateBack = {
         navigateBrowserBack(
@@ -341,6 +351,8 @@ internal fun BrowserScreen(
         onTabs = { tabsVisible = true },
         onSettings = { settingsVisible = true },
         onInspector = { inspectorVisible = true },
+        canRefresh = refreshAction(state) != RefreshAction.None,
+        onRefresh = dispatchRefresh,
         isFavourite = currentIsFavourite,
         onToggleFavourite = toggleFavourite,
         modifier = browserModifier,
@@ -681,6 +693,10 @@ internal fun RegularBrowser(
     // nothing is the same failure the offered list exists to prevent, one layer down.
     onSettings: () -> Unit,
     onInspector: () -> Unit,
+    // Browser-owned Reload, for both chromes. A tap is a user action, which `BROWSE-009` permits to
+    // be addressed to the selected tab; it is renderer *observations* that may not be.
+    canRefresh: Boolean,
+    onRefresh: () -> Unit,
     isFavourite: Boolean = false,
     onToggleFavourite: () -> Unit = {},
     modifier: Modifier,
@@ -712,6 +728,8 @@ internal fun RegularBrowser(
                     presentation = presentation,
                     canGoBack = canNavigateBack,
                     onBack = onBack,
+                    canRefresh = canRefresh,
+                    onRefresh = onRefresh,
                 )
             }
         }
