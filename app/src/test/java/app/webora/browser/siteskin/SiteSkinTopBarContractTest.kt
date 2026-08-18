@@ -1,6 +1,7 @@
 package app.webora.browser.siteskin
 
 import java.io.File
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -172,6 +173,59 @@ class SiteSkinTopBarContractTest {
         assertFalse("no browser command may join the brand row", "BrowserControlRow(" in brand)
         assertTrue("the brand row still carries Back", "BrowserBack(" in brand)
         assertTrue("and still ends with the trust chip", "SiteSkinSecurityChip(" in brand)
+    }
+
+    /**
+     * Both placements keep the trust chip away from site content, and this is the branch-complete
+     * statement of `UX-021`'s guarantee.
+     *
+     * The assertion above covers the `INLINE` branch by declaration order — the chip follows the
+     * weighted title, so a long title yields to it. `UX-023` added a second branch, and order says
+     * nothing there. In `OWN_ROW` the chip sits in a row that contains no model text at all, so a
+     * manifest cannot compete with it by any mechanism; that is stronger than the ordering rule, and
+     * this is where it is written down.
+     *
+     * Worth keeping because the ordering assertion is genuinely fragile: it locates the chip by the
+     * file's *first* `SiteSkinSecurityChip(`, so declaring the identity row earlier in the file
+     * breaks it for a reason that has nothing to do with the guarantee. That happened during
+     * implementation — the plan predicted the assertion would pass unedited and it did not, until
+     * the declaration moved below `BrandRow`.
+     */
+    @Test
+    fun `both identity placements keep the chip away from site content`() {
+        val identityRow = declaration("private fun SiteSkinIdentityRow(")
+        val brand = declaration("private fun BrandRow(")
+
+        assertTrue("the wrapped row draws the chip", "SiteSkinSecurityChip(" in identityRow)
+        listOf("model.title", "model.subtitle", "model.brandAsset", "BrandLogo(", "Text(").forEach {
+            assertFalse("$it must not share the wrapped identity row", it in identityRow)
+        }
+
+        assertTrue("the inline chip is still conditional on the browser's decision", "if (inlineIdentity)" in brand)
+        assertFalse("and the brand row still declares no weight for it", "SiteSkinSecurityChip(\n" in brand)
+    }
+
+    /**
+     * The header asks the decision; it does not re-derive one.
+     *
+     * One `BoxWithConstraints` and one `LocalDensity` read, both feeding `headerIdentityPlacement`.
+     * A second width or scale read here would be a second answer to the same question, free to
+     * disagree with the first — `UX-021`'s "one `when`, one owner" applied to a layout rule.
+     */
+    @Test
+    fun `the header reads width and scale once and asks the decision`() {
+        val source = executableLines(topBarFile())
+
+        // The call, not the mention: an `import` line is not a read, and counting bare
+        // `BoxWithConstraints` scores the import too. `UX-020`'s rule — assert the application, not
+        // the declaration — which that ticket learned from a tag check satisfied by its own constant.
+        assertEquals("one width read", 1, source.split("BoxWithConstraints(").size - 1)
+        assertEquals("one font-scale read", 1, source.split("LocalDensity.current.fontScale").size - 1)
+        assertEquals("one placement decision", 1, source.split("headerIdentityPlacement(").size - 1)
+        assertTrue(
+            "and it is fed the browser-derived domain, never manifest text",
+            "model.security.registrableDomain.length" in source,
+        )
     }
 
     @Test

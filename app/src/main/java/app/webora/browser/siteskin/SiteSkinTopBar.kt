@@ -4,6 +4,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -22,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.res.painterResource
@@ -78,26 +80,40 @@ internal fun SiteSkinTopBar(
     modifier: Modifier = Modifier,
 ) {
     ExpressiveSiteSkinHeader(presentation, modifier) {
-        Column(Modifier.fillMaxWidth()) {
-            BrandRow(model, presentation, canGoBack, onBack)
-            BrowserControlRow(canRefresh, onRefresh)
+        // The one responsive read in the browser, and both of its inputs are platform facts.
+        // `maxWidth` is the header's content width — gutters already removed — and `fontScale` is
+        // the user's text-size setting. Neither is anything a website can influence, which is the
+        // whole security property of `headerIdentityPlacement`; see its KDoc.
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val placement = headerIdentityPlacement(
+                availableWidth = maxWidth,
+                fontScale = LocalDensity.current.fontScale,
+                domainLength = model.security.registrableDomain.length,
+            )
+            Column(Modifier.fillMaxWidth()) {
+                BrandRow(
+                    model = model,
+                    presentation = presentation,
+                    canGoBack = canGoBack,
+                    onBack = onBack,
+                    inlineIdentity = placement == HeaderIdentityPlacement.INLINE,
+                )
+                if (placement == HeaderIdentityPlacement.OWN_ROW) {
+                    SiteSkinIdentityRow(model.security)
+                }
+                BrowserControlRow(canRefresh, onRefresh)
+            }
         }
     }
 }
 
-/**
- * The site's half of the header, plus the browser controls that must precede it.
- *
- * Lifted into its own declaration by `BROWSE-011` so the containing function stays under detekt's
- * `LongMethod` ceiling. Its contents are otherwise unchanged, which is the point: every structural
- * assertion `UX-021` left behind reads this row.
- */
 @Composable
 private fun BrandRow(
     model: SiteSkinTopBarModel,
     presentation: ExpressiveSiteSkinPresentation,
     canGoBack: Boolean,
     onBack: () -> Unit,
+    inlineIdentity: Boolean,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -128,15 +144,52 @@ private fun BrandRow(
                 )
             }
         }
-        Spacer(Modifier.width(8.dp))
         // Declared *after* the flexible title column and given no weight, so the title yields
         // width to it rather than the other way round. A manifest controls the title's length;
         // if the order were reversed, a long enough one would push the browser's own trust mark
         // out of the header, which is precisely the surface a site must not be able to move.
-        SiteSkinSecurityChip(model.security)
+        //
+        // `UX-023`: when the row cannot hold both, the chip moves to `SiteSkinIdentityRow` rather
+        // than rationing width with the title. The condition is browser-owned — width and font
+        // scale — never the length of what the site asked to be called.
+        if (inlineIdentity) {
+            Spacer(Modifier.width(8.dp))
+            SiteSkinSecurityChip(model.security)
+        }
     }
 }
 
+/**
+ * The trust chip alone, on a row that carries no site content whatsoever.
+ *
+ * Composed only when [headerIdentityPlacement] says the brand row cannot hold it. It is a separate
+ * row rather than a passenger in `BROWSE-011`'s control row on a named mechanism: that row asserts
+ * it declares no weight and uses `Arrangement.End`, because the contract test locates the brand
+ * row's flexible title column by the file's *first* `Modifier.weight(1f)`. Joining it would need
+ * either a conditional arrangement or a weighted child, and both make a live assertion depend on
+ * something unrelated to what it asserts.
+ *
+ * `UX-021`'s guarantee is that a manifest-supplied title cannot push the browser's trust mark out of
+ * the header. Here it holds by construction rather than by declaration order — there is no site
+ * content in this row for a title to compete with.
+ */
+@Composable
+private fun SiteSkinIdentityRow(security: SecurityPresentation) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+    ) {
+        SiteSkinSecurityChip(security)
+    }
+}
+
+/**
+ * The site's half of the header, plus the browser controls that must precede it.
+ *
+ * Lifted into its own declaration by `BROWSE-011` so the containing function stays under detekt's
+ * `LongMethod` ceiling. Its contents are otherwise unchanged, which is the point: every structural
+ * assertion `UX-021` left behind reads this row.
+ */
 /**
  * The browser's controls, on their own line inside a header the site paints.
  *
