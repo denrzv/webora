@@ -160,6 +160,44 @@ class SiteSkinTopBarTest {
     }
 
     /**
+     * The 40 dp `UX-024` returned to the page, measured rather than scanned.
+     *
+     * `the standalone refresh row is gone and does not return` reads the source and compares the set
+     * of rows the header composes against the three it has ever composed. That catches
+     * `BrowserControlRow` coming back and would not catch a differently-named second browser row, or
+     * a hub that grew vertical chrome of its own. `UX-009` is the precedent: an assertion about where
+     * a value *came from* answered a different question from whether it *fits*, and only running the
+     * real layout told them apart.
+     *
+     * The bound is deliberately loose rather than exact. Content is 20 dp of gutter + a 48 dp brand
+     * row + 20 dp of reserved curve = 88 dp against `EXPRESSIVE_HEADER_MIN_HEIGHT`'s 96, so the
+     * header should measure its floor — but title and subtitle metrics can move the brand row, and
+     * an exact assertion would be flaky for a reason unrelated to what it asserts. A second browser
+     * row costs 48 dp, so anything under the old 136 dp separates the two layouts with room to spare.
+     */
+    @Test fun theHeaderNoLongerReservesARowForASingleBrowserCommand() {
+        compose.setContent {
+            val density = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale = 1f)) {
+                Box(Modifier.width(320.dp).testTag(FIXTURE_TAG)) { topBar() }
+            }
+        }
+
+        val header = compose.onNodeWithTag(EXPRESSIVE_HEADER_TAG).fetchSemanticsNode().boundsInRoot
+        val height = with(compose.density) { header.height.toDp() }
+
+        assertTrue(
+            "the header must not have regrown a browser control row: measured $height",
+            height < TWO_ROW_HEADER_HEIGHT,
+        )
+        // Paired so the bound cannot pass by the header failing to compose at all — a zero-height
+        // node clears any upper bound, which is how an assertion of this shape goes green for the
+        // worst possible reason.
+        compose.onNodeWithTag(SITESKIN_BRAND_TAG).assertIsDisplayed()
+        compose.onNodeWithTag(SITESKIN_NAV_HUB_TAG).assertIsDisplayed().assertHeightIsAtLeast(48.dp)
+    }
+
+    /**
      * The anti-vacuity guard for the wrap: at 100% it must **not** fire.
      *
      * A rule that always wrapped would satisfy every assertion in the case above while adding a
@@ -327,6 +365,13 @@ class SiteSkinTopBarTest {
         )
 
     private companion object {
+        /**
+         * What the header measured with `BROWSE-011`'s row: 20 dp gutter + 48 brand + 48 controls +
+         * 20 curve. `UX-024` removed the third band, and `EXPRESSIVE_HEADER_MIN_HEIGHT`'s 96 dp floor
+         * absorbs the removal, so the two layouts are 40 dp apart and any bound between them works.
+         */
+        val TWO_ROW_HEADER_HEIGHT = 136.dp
+
         const val FIXTURE_TAG = "siteskin_top_fixture"
         const val LONG_TITLE = "A very long trusted brand title that must not replace security identity"
 
