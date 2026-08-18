@@ -74,7 +74,17 @@ class SiteSkinTopBarTest {
         assertEquals(1, backCount)
     }
 
-    @Test fun compactLargeTextKeepsBrowserIdentityInsideTheBrandRow() {
+    /**
+     * At 200% on a 320 dp host the chip is on its own row, and both it and the title survive.
+     *
+     * Renamed rather than deleted: `UX-023` moved the identity *out* of the brand row at this exact
+     * scale and width, so the old name became a claim the layout no longer makes. Everything it
+     * asserted still holds — the chip stays inside the header and inside the host, and the
+     * `SECURITY_CHIP_FLOOR` assertion is untouched, which is criterion 6 — and the two additions are
+     * what the wrap is for: the domain renders without an ellipsis, and the site's title is still
+     * there rather than measured to zero.
+     */
+    @Test fun compactLargeTextGivesBrowserIdentityItsOwnRow() {
         listOf(false to false, true to false, true to true).forEach { (darkTheme, reducedMotion) ->
             compose.setContent {
                 val density = LocalDensity.current
@@ -112,7 +122,56 @@ class SiteSkinTopBarTest {
             // 160 dp is what the chip resolves to here (cap-bound, with 164 dp available), so 140
             // leaves margin while failing if the cap or the row budget is meaningfully shrunk.
             compose.onNodeWithTag(SITESKIN_SECURITY_TAG).assertWidthIsAtLeast(SECURITY_CHIP_FLOOR)
+
+            // `UX-023`'s two criteria, and the reason the wrap exists. Inline, these fought over
+            // 164 dp: the chip truncated to roughly `example.c…` and the title measured to zero.
+            val brand = compose.onNodeWithTag(SITESKIN_BRAND_TAG).fetchSemanticsNode().boundsInRoot
+            assertTrue(
+                "the chip must sit below the brand row, not inside it: $brand $identity",
+                identity.top >= brand.bottom,
+            )
+            compose.onNodeWithText(LONG_TITLE, substring = true)
+                .assertIsDisplayed()
+                .assertWidthIsAtLeast(TITLE_FLOOR)
+
+            // The assertion that catches the inline cap surviving the wrap.
+            //
+            // `SECURITY_CHIP_FLOOR` is 140 dp and could not: a chip still capped at
+            // `SECURITY_CHIP_MAX_WIDTH` measures exactly 160 dp, clears the floor, and shows
+            // `example.c…` — the ellipsis this ticket exists to remove, on a green test. Requiring
+            // *more* than the inline cap is the direct statement that the cap is no longer binding
+            // here, and it is why `SiteSkinIdentityRow` passes `Dp.Unspecified`.
+            compose.onNodeWithTag(SITESKIN_SECURITY_TAG)
+                .assertWidthIsAtLeast(SECURITY_CHIP_MAX_WIDTH + 1.dp)
         }
+    }
+
+    /**
+     * The anti-vacuity guard for the wrap: at 100% it must **not** fire.
+     *
+     * A rule that always wrapped would satisfy every assertion in the case above while adding a
+     * permanent row to the layout everyone else sees. This is the case that fails if
+     * `headerIdentityPlacement` is made unconditional, and it is deliberately the same fixture at
+     * the same width — only the font scale differs, so the scale is provably what moved the chip.
+     */
+    @Test fun defaultTextKeepsBrowserIdentityInsideTheBrandRow() {
+        compose.setContent {
+            val density = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale = 1f)) {
+                Box(Modifier.width(320.dp).testTag(FIXTURE_TAG)) {
+                    topBar(presentation = presentation(darkTheme = false, reducedMotion = false))
+                }
+            }
+        }
+
+        val brand = compose.onNodeWithTag(SITESKIN_BRAND_TAG).fetchSemanticsNode().boundsInRoot
+        val identity = compose.onNodeWithTag(SITESKIN_SECURITY_TAG).fetchSemanticsNode().boundsInRoot
+
+        compose.onNodeWithTag(SITESKIN_SECURITY_TAG).assertIsDisplayed()
+        assertTrue(
+            "at default scale the chip belongs inside the brand row: $brand $identity",
+            identity.top >= brand.top && identity.bottom <= brand.bottom,
+        )
     }
 
     @Test fun everyTransportStateKeepsTheBrowserAuthoredIdentityNode() {
@@ -217,7 +276,7 @@ class SiteSkinTopBarTest {
 
     private fun model(asset: BrandAsset, transport: TransportSecurity = TransportSecurity.SECURE) =
         SiteSkinTopBarModel(
-            title = "A very long trusted brand title that must not replace security identity",
+            title = LONG_TITLE,
             subtitle = "Fresh today",
             brandAsset = asset,
             security = SecurityPresentation("example.co.uk", transport),
@@ -225,6 +284,19 @@ class SiteSkinTopBarTest {
 
     private companion object {
         const val FIXTURE_TAG = "siteskin_top_fixture"
+        const val LONG_TITLE = "A very long trusted brand title that must not replace security identity"
+
+        /**
+         * A real floor for the site's title, for `UX-021`'s reason one element along.
+         *
+         * At 200% on a 320 dp host the wrapped layout leaves the title column 164 dp, so 100 dp
+         * leaves margin while failing if the chip ever competes for that width again. It has to be a
+         * bounds assertion rather than `onNodeWithText(...).assertIsDisplayed()`: `UX-009` recorded
+         * that clipping happens in the parent's draw while the semantics tree keeps the node's full
+         * text and unclipped bounds, so a text-presence check passes over a title that measured to
+         * zero — which is precisely the failure this ticket removes.
+         */
+        val TITLE_FLOOR = 100.dp
         val CONFIGURATION = SiteSkinValidator.validate(
             """{"schemaVersion":"1.0","site":{"id":"site","name":"Site"},"branding":{"primaryColor":"#3F51B5","secondaryColor":"#5C6BC0","backgroundColor":"#FFFFFF","textColor":"#000000"}}"""
                 .byteInputStream(),

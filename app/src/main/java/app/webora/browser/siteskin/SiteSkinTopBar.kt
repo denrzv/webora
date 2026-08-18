@@ -4,6 +4,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -22,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.res.painterResource
@@ -31,6 +33,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.webora.browser.R
@@ -78,26 +81,40 @@ internal fun SiteSkinTopBar(
     modifier: Modifier = Modifier,
 ) {
     ExpressiveSiteSkinHeader(presentation, modifier) {
-        Column(Modifier.fillMaxWidth()) {
-            BrandRow(model, presentation, canGoBack, onBack)
-            BrowserControlRow(canRefresh, onRefresh)
+        // The one responsive read in the browser, and both of its inputs are platform facts.
+        // `maxWidth` is the header's content width — gutters already removed — and `fontScale` is
+        // the user's text-size setting. Neither is anything a website can influence, which is the
+        // whole security property of `headerIdentityPlacement`; see its KDoc.
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val placement = headerIdentityPlacement(
+                availableWidth = maxWidth,
+                fontScale = LocalDensity.current.fontScale,
+                domainLength = model.security.registrableDomain.length,
+            )
+            Column(Modifier.fillMaxWidth()) {
+                BrandRow(
+                    model = model,
+                    presentation = presentation,
+                    canGoBack = canGoBack,
+                    onBack = onBack,
+                    inlineIdentity = placement == HeaderIdentityPlacement.INLINE,
+                )
+                if (placement == HeaderIdentityPlacement.OWN_ROW) {
+                    SiteSkinIdentityRow(model.security)
+                }
+                BrowserControlRow(canRefresh, onRefresh)
+            }
         }
     }
 }
 
-/**
- * The site's half of the header, plus the browser controls that must precede it.
- *
- * Lifted into its own declaration by `BROWSE-011` so the containing function stays under detekt's
- * `LongMethod` ceiling. Its contents are otherwise unchanged, which is the point: every structural
- * assertion `UX-021` left behind reads this row.
- */
 @Composable
 private fun BrandRow(
     model: SiteSkinTopBarModel,
     presentation: ExpressiveSiteSkinPresentation,
     canGoBack: Boolean,
     onBack: () -> Unit,
+    inlineIdentity: Boolean,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -128,15 +145,58 @@ private fun BrandRow(
                 )
             }
         }
-        Spacer(Modifier.width(8.dp))
         // Declared *after* the flexible title column and given no weight, so the title yields
         // width to it rather than the other way round. A manifest controls the title's length;
         // if the order were reversed, a long enough one would push the browser's own trust mark
         // out of the header, which is precisely the surface a site must not be able to move.
-        SiteSkinSecurityChip(model.security)
+        //
+        // `UX-023`: when the row cannot hold both, the chip moves to `SiteSkinIdentityRow` rather
+        // than rationing width with the title. The condition is browser-owned — width and font
+        // scale — never the length of what the site asked to be called.
+        if (inlineIdentity) {
+            Spacer(Modifier.width(8.dp))
+            SiteSkinSecurityChip(model.security)
+        }
     }
 }
 
+/**
+ * The trust chip alone, on a row that carries no site content whatsoever.
+ *
+ * Composed only when [headerIdentityPlacement] says the brand row cannot hold it. It is a separate
+ * row rather than a passenger in `BROWSE-011`'s control row on a named mechanism: that row asserts
+ * it declares no weight and uses `Arrangement.End`, because the contract test locates the brand
+ * row's flexible title column by the file's *first* `Modifier.weight(1f)`. Joining it would need
+ * either a conditional arrangement or a weighted child, and both make a live assertion depend on
+ * something unrelated to what it asserts.
+ *
+ * `UX-021`'s guarantee is that a manifest-supplied title cannot push the browser's trust mark out of
+ * the header. Here it holds by construction rather than by declaration order — there is no site
+ * content in this row for a title to compete with.
+ */
+@Composable
+private fun SiteSkinIdentityRow(security: SecurityPresentation) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+    ) {
+        // `Dp.Unspecified`, not the inline cap. `SECURITY_CHIP_MAX_WIDTH` exists to stop the chip
+        // starving the site's title *in the brand row*; on a row with no title it has nothing to
+        // ration, and leaving it applied would cap the chip at 160 dp while a 13-character domain
+        // needs ~208 at 200% — the ellipsis this ticket exists to remove, surviving the wrap that
+        // was supposed to remove it. The enclosing `Row`'s own constraint still bounds the chip, so
+        // dropping the modifier's cap does not let it overflow the header.
+        SiteSkinSecurityChip(security, maxWidth = Dp.Unspecified)
+    }
+}
+
+/**
+ * The site's half of the header, plus the browser controls that must precede it.
+ *
+ * Lifted into its own declaration by `BROWSE-011` so the containing function stays under detekt's
+ * `LongMethod` ceiling. Its contents are otherwise unchanged, which is the point: every structural
+ * assertion `UX-021` left behind reads this row.
+ */
 /**
  * The browser's controls, on their own line inside a header the site paints.
  *
@@ -251,7 +311,7 @@ private fun BrandLogo(asset: BrandAsset, colors: SiteSkinColorScheme) {
  * `when` is exhaustive so a fifth transport state is a compile error rather than a silent neutral.
  */
 @Composable
-private fun SiteSkinSecurityChip(security: SecurityPresentation) {
+private fun SiteSkinSecurityChip(security: SecurityPresentation, maxWidth: Dp = SECURITY_CHIP_MAX_WIDTH) {
     val secure = security.transportSecurity == TransportSecurity.SECURE
     val transport = transportLabel(security.transportSecurity)
     val description = stringResource(R.string.security_description, transport, security.registrableDomain)
@@ -264,7 +324,7 @@ private fun SiteSkinSecurityChip(security: SecurityPresentation) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         modifier = Modifier
-            .widthIn(max = SECURITY_CHIP_MAX_WIDTH)
+            .widthIn(max = maxWidth)
             .clip(RoundedCornerShape(WeboraRadius.PILL))
             .background(MaterialTheme.colorScheme.primaryContainer)
             .padding(horizontal = 8.dp, vertical = 4.dp)
@@ -325,4 +385,7 @@ private val SECURITY_SHIELD_SIZE = 16.dp
  * What the review was right about is that the old `width > 0f` assertion could not tell a chip
  * showing one character from a healthy one; the instrumented floor now can.
  */
-private val SECURITY_CHIP_MAX_WIDTH = 160.dp
+// `internal` so the instrumented case that proves this cap no longer binds on the wrapped row can
+// name the constant instead of restating 160 dp — a copy of it in a test is a second place for the
+// two to drift.
+internal val SECURITY_CHIP_MAX_WIDTH = 160.dp
