@@ -53,3 +53,18 @@ internal fun browserNavigationActions(
     BrowserNavigationAction(BrowserNavigationCommand.FORWARD, canGoForward),
     BrowserNavigationAction(BrowserNavigationCommand.REFRESH, canRefresh),
 )
+
+/**
+ * Everything the integrated navigation hub needs, as one browser-constructed value.
+ *
+ * A holder rather than four parameters because `BrandRow` would otherwise cross detekt's
+ * `LongParameterList` ceiling and acquire a suppression — and because it states the boundary in one
+ * place: a hub is a compiled action list plus browser callbacks, and there is no field here through
+ * which a manifest value could arrive.
+ */
+internal data class BrowserNavigationHubState(
+    val actions: List<BrowserNavigationAction>,
+    val expanded: Boolean,
+    val onExpandedChange: (Boolean) -> Unit,
+    val onCommand: (BrowserNavigationCommand) -> Unit,
+)

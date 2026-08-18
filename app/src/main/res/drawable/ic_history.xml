@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Browser-owned icon for UX-024's navigation hub, drawn to the same contract as the rest of the
+    set: 24-unit viewport, 1.9 stroke, round caps and joins, strokes only and one declared colour.
+
+    A history glyph rather than a chevron, an overflow or a menu. The hub holds Back, Forward and
+    Refresh, which are the history family, so the collapsed control names the *group*; drawing it as
+    ic_back would make it read as a direct Back button, which is the misleading affordance the
+    ticket exists to remove.
+
+    The declared colour never reaches the screen. Compose's Icon applies ColorFilter.tint over the
+    whole painter, so the call site's token decides the colour.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M4 12a8 8 0 1 0 2.5-5.8"
+        android:strokeColor="#FF000000"
+        android:strokeWidth="1.9"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M4 4v4h4"
+        android:strokeColor="#FF000000"
+        android:strokeWidth="1.9"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M12 8v4.3l3 1.8"
+        android:strokeColor="#FF000000"
+        android:strokeWidth="1.9"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

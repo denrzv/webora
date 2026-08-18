@@ -200,15 +200,28 @@ class SiteSkinHubDrawerContractTest {
     fun `the hub has one visibility state and both surfaces read it`() {
         val source = browserScreenSource()
 
-        val declarations = Regex("""var\s+\w+\s+by\s+remember\s*\{\s*mutableStateOf""")
+        // `UX-024` strengthened this rather than replacing it. The rule was "one flag for two site
+        // surfaces"; a third overlay — the browser navigation bouquet — would have made the second
+        // boolean this test forbids, so the flag became one nullable `IntegratedOverlay` and the
+        // rule became "one state for all three". Exclusion is now what the type says instead of what
+        // a pair of assignments has to remember in both directions.
+        val declarations = Regex("""var\s+\w+\s+by\s+remember\s*\{\s*mutableStateOf<IntegratedOverlay\?>""")
             .findAll(source)
-            .count { match -> "Expanded" in source.substring(match.range.first, match.range.last + 1) }
-        assertEquals("siteActionsExpanded is the only hub visibility state", 1, declarations)
+            .count()
+        assertEquals("one overlay state serves every integrated overlay", 1, declarations)
 
-        assertTrue("the dock reads it", "siteActionsExpanded = siteActionsExpanded" in source)
-        assertTrue("the drawer host reads the same flag", "visible = siteActionsExpanded" in source)
-        listOf("drawerVisible", "hubVisible", "hubDrawerVisible", "drawerExpanded").forEach {
-            assertFalse("$it would be a second hub state with its own resets to forget", it in source)
+        assertTrue("the dock reads it", "siteActionsExpanded = overlay == IntegratedOverlay.SITE_HUB" in source)
+        assertTrue("the drawer host reads the same value", "visible = overlay == IntegratedOverlay.SITE_HUB" in source)
+        assertTrue(
+            "and so does the browser navigation bouquet",
+            "expanded = overlay == IntegratedOverlay.BROWSER_NAVIGATION" in source,
+        )
+        listOf(
+            "drawerVisible", "hubVisible", "hubDrawerVisible", "drawerExpanded",
+            // The two spellings this ticket would most plausibly have introduced.
+            "navigationExpanded by", "siteActionsExpanded by",
+        ).forEach {
+            assertFalse("$it would be a second overlay state with its own resets to forget", it in source)
         }
     }
 
