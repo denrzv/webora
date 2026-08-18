@@ -1,5 +1,6 @@
 package dev.siteskin.core
 
+import dev.siteskin.core.model.HubPresentation
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import org.junit.Assert.assertEquals
@@ -105,6 +106,83 @@ class SecurityValidatorTest {
             "toolbar":{"title":"$title"}}""",
         )
         assertEquals("a".repeat(63) + "e\u0301", result.configuration!!.toolbar!!.title)
+    }
+
+    @Test fun `every recognised hub token normalizes to its closed enum value`() {
+        mapOf(
+            "auto" to HubPresentation.AUTO,
+            "bouquet" to HubPresentation.BOUQUET,
+            "drawer" to HubPresentation.DRAWER,
+        ).forEach { (token, expected) ->
+            val result = validate(
+                """{"schemaVersion":"1.0","site":{"id":"shop","name":"Shop"},
+                "presentation":{"hub":"$token"}}""",
+            )
+            assertEquals(token, expected, result.configuration!!.presentation!!.hub)
+            assertEquals(token, emptyList<DiagnosticCode>(), result.diagnostics.map { it.code })
+        }
+    }
+
+    /**
+     * The three ways of arriving at `AUTO`, kept apart on purpose.
+     *
+     * A wrongly-cased token is the interesting row: `HUBS` is a lookup and not a case-insensitive
+     * comparison, so `"Drawer"` is an unrecognised value and warns. Lower-casing at read time would
+     * make two spellings of one token — the leading-zero `schemaVersion` mistake `SPEC-002` fixed
+     * by narrowing the grammar rather than normalizing, and the same reasoning applies to a field
+     * whose whole grammar is `^[a-z]…`.
+     */
+    @Test fun `unknown wrongly-cased and absent hub values all reach AUTO`() {
+        val declared = validate(
+            """{"schemaVersion":"1.0","site":{"id":"shop","name":"Shop"},
+            "presentation":{"hub":"Drawer"}}""",
+        )
+        assertEquals(HubPresentation.AUTO, declared.configuration!!.presentation!!.hub)
+        assertEquals(listOf(DiagnosticCode.PRESENTATION_UNKNOWN), declared.diagnostics.map { it.code })
+        assertEquals("/presentation/hub", declared.diagnostics.single().pointer)
+
+        val emptyObject = validate(
+            """{"schemaVersion":"1.0","site":{"id":"shop","name":"Shop"},"presentation":{}}""",
+        )
+        assertEquals(HubPresentation.AUTO, emptyObject.configuration!!.presentation!!.hub)
+        assertEquals(emptyList<DiagnosticCode>(), emptyObject.diagnostics.map { it.code })
+
+        val absent = validate(MINIMAL)
+        assertNull(absent.configuration!!.presentation)
+        assertEquals(HubPresentation.AUTO, absent.configuration!!.hubPresentation)
+    }
+
+    /**
+     * The accessor exists so no consumer writes `?: AUTO`, and a declared `auto` must be
+     * indistinguishable from an absent object *to a consumer* while staying distinguishable in the
+     * canonical result. Both halves are asserted here, because collapsing them in the model is the
+     * change that would rewrite every pinned `.expected.json`.
+     */
+    @Test fun `the accessor collapses an absent object and a declared auto`() {
+        val absent = validate(MINIMAL).configuration!!
+        val declared = validate(
+            """{"schemaVersion":"1.0","site":{"id":"shop","name":"Shop"},
+            "presentation":{"hub":"auto"}}""",
+        ).configuration!!
+
+        assertEquals(absent.hubPresentation, declared.hubPresentation)
+        assertNull(absent.presentation)
+        assertNotNull(declared.presentation)
+    }
+
+    /**
+     * A hub value structurally cannot carry a resource reference, and the refusal is the schema's
+     * pattern rather than the security layer's allow-list. This asserts the security half only:
+     * whatever reaches the normalizer, the trusted model holds an enum and never a site-authored
+     * string, so no consumer can be handed a URL by this field.
+     */
+    @Test fun `a resource-like hub value never survives as a string`() {
+        val result = validate(
+            """{"schemaVersion":"1.0","site":{"id":"shop","name":"Shop"},
+            "presentation":{"hub":"https://evil.example/x"}}""",
+        )
+        assertEquals(HubPresentation.AUTO, result.configuration!!.presentation!!.hub)
+        assertEquals(listOf(DiagnosticCode.PRESENTATION_UNKNOWN), result.diagnostics.map { it.code })
     }
 
     private fun validate(body: String): SecurityValidationResult = SecurityValidator.validate(

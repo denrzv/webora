@@ -1,0 +1,9 @@
+{
+  "schemaVersion": "1.0",
+  "site": { "id": "bloom-flowers", "name": "Bloom Flowers", "homeUrl": "/" },
+  "presentation": { "hub": "carousel" },
+  "bottomNavigation": [
+    { "id": "home", "label": "Home", "icon": "home",
+      "action": { "type": "internal_url", "url": "/" } }
+  ]
+}

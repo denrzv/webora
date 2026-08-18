@@ -201,14 +201,19 @@ The following are additive, and MUST NOT bump the major:
    `SS-E-ACTION-UNKNOWN` and keeps the rest of the manifest — which is exactly the behaviour
    [`ADR-007`](../docs/adr/README.md) specifies, and the reason it specifies it.
 3. **Adding an `icon` name.** An older reader substitutes a generic glyph with `SS-W-ICON-UNKNOWN`.
-4. **Adding a diagnostic code** whose disposition is `warn` or `drop-item`.
-5. **Raising a limit** in [§8](#8-limits). A `1.1` manifest with 8 navigation items renders 5 on a
+4. **Adding a `presentation` hint value.** An older reader falls back to `auto` with
+   `SS-W-PRESENTATION-UNKNOWN` and chooses for itself — which is what `auto` asks for anyway, so the
+   degraded result is one the site already declared itself content with.
+5. **Adding a diagnostic code** whose disposition is `warn` or `drop-item`.
+6. **Raising a limit** in [§8](#8-limits). A `1.1` manifest with 8 navigation items renders 5 on a
    `1.0` reader, truncated with `SS-W-LIMIT-TRUNCATED` — degraded, not wrong. Site owners SHOULD
    assume older readers truncate.
-6. **Adding a discovery mechanism.** A `<link rel="siteskin">` element, for instance, would be
+7. **Adding a discovery mechanism.** A `<link rel="siteskin">` element, for instance, would be
    additive: a reader that does not know it still finds `/.well-known/siteskin.json`, so no manifest
    becomes unreachable. (This is an illustration of the rule, not a commitment to ship it.)
-7. **Adding an OPTIONAL top-level section**, on the same basis as (1).
+8. **Adding an OPTIONAL top-level section**, on the same basis as (1). `presentation` was added to
+   `1.0` inside the free-change window of [§4.5](#45-the-free-change-window-and-the-changes-taken-inside-it);
+   a section added after it is a minor bump.
 
 A minor bump is a **declaration of intent, not a request for permission.** Nothing is unlocked by
 declaring `1.1`: a `1.0` reader given a `1.1` document does not acquire `1.1` behaviour, and a site
@@ -399,6 +404,36 @@ The pattern is the security requirement: it structurally prevents an icon field 
 or any other resource reference. An icon name the browser does not recognise MUST fall back to a
 generic browser-owned icon with `SS-W-ICON-UNKNOWN`; it MUST NOT reject the manifest, for the same
 reason an unknown action type does not (see [§7](#7-actions)).
+
+`presentation` is an OPTIONAL object of hints. Every value in it selects among presentations the
+browser already implements; nothing in it may supply a dimension, colour, shape, asset, URL,
+callback or duration, and a browser MUST NOT treat it as a general style channel. A hint is a
+**preference, not an instruction**: the browser decides whether it can be honoured, and it remains
+free to present a hinted surface differently, or to ignore the hint entirely on a device or in an
+accessibility configuration where the alternative is unsuitable.
+
+`presentation.hub` is an OPTIONAL string naming how the site's navigation and actions are gathered
+when the user opens the browser's site hub:
+
+```json
+"presentation": { "hub": "drawer" }
+```
+
+It MUST match `^[a-z][a-z0-9_]{0,31}$`. The v1 vocabulary is:
+
+| Value | Meaning |
+|---|---|
+| `auto` | No preference; the browser chooses. This is the behaviour of an absent field. |
+| `bouquet` | Prefer a compact radial arrangement of the site's quick actions. |
+| `drawer` | Prefer a start-side list presenting navigation, quick actions and the extended menu. |
+
+As with `icon`, the pattern rather than an enumeration is the structural requirement, and for the
+same reason: a hub value the browser does not recognise MUST fall back to `auto` with
+`SS-W-PRESENTATION-UNKNOWN`, and it MUST NOT drop an item or reject the manifest. The proportionality
+argument is sharper here than for `icon` — a hint decides only which of the browser's own components
+the user sees, so discarding a whole working integration over a typo in it would be absurd. A site
+with a `menu` longer than a compact presentation can show SHOULD request `drawer`, since a browser
+that honours the hint is the one that can guarantee every entry is reachable.
 
 ## 6. There is no `showDomain`
 
@@ -595,6 +630,7 @@ machine-readable registry is [`diagnostics.json`](diagnostics.json); this table 
 | `SS-W-CONTRAST-CORRECTED` | security | warn | supplied colour adjusted for legibility |
 | `SS-W-FIELD-UNKNOWN` | security | warn | field not in this schema version, ignored |
 | `SS-W-ICON-UNKNOWN` | security | warn | icon name not recognised, generic glyph substituted |
+| `SS-W-PRESENTATION-UNKNOWN` | security | warn | presentation hint not recognised, `auto` substituted |
 
 The `E`/`W` prefix indicates severity to a reader; **the disposition, not the prefix, determines
 behaviour.** `SS-E-ACTION-UNKNOWN` is an error the site should fix, and it drops one item rather
@@ -632,6 +668,7 @@ The canonical result has this shape and this field order:
     "logoUrl": "https://…"
   },
   "toolbar": { "title": "…", "subtitle": "…" },
+  "presentation": { "hub": "drawer" },
   "bottomNavigation": [
     { "id": "…", "label": "…", "icon": "…",
       "action": { "type": "internal_url", "url": "https://…" },
@@ -652,6 +689,14 @@ describe the same field differently depending on who is reading:
 - A collection that is emptied by dropped items is present as `[]`, not omitted. The distinction
   matters: `[]` means "the site asked for navigation and none of it survived", and per
   [§10](#10-dispositions) that is not the same as never having asked.
+
+`presentation` follows the general rule and is **omitted when the manifest did not declare it** —
+including when it declared only fields this version does not define. It is NOT filled in with
+`{"hub": "auto"}`, even though a browser treats the two identically. A manifest that declares
+`"hub": "auto"`, one that declares a hub value the browser corrected to `auto`, and one that
+declares nothing are three different documents, and only the first two said anything a site owner
+can be shown. A canonical result that materialised the default would erase that distinction and
+would also change the pinned result of every existing manifest in the corpus.
 
 ## 13. Conformance corpus
 

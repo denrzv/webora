@@ -19,6 +19,7 @@ class SiteSkinManifestDtoTest {
         assertEquals("#112233", manifest.branding?.primaryColor)
         assertEquals("/logo.png", manifest.branding?.logoUrl)
         assertEquals(ToolbarDto("Bloom", "Fresh"), manifest.toolbar)
+        assertEquals(PresentationDto("drawer"), manifest.presentation)
         assertEquals("home", manifest.bottomNavigation?.single()?.id)
         assertEquals("internal_url", manifest.bottomNavigation?.single()?.action?.type)
         assertEquals(listOf("/", "/catalog/**"), manifest.bottomNavigation?.single()?.match)
@@ -34,6 +35,7 @@ class SiteSkinManifestDtoTest {
         assertNull(manifest.schemaVersion)
         assertNull(manifest.site)
         assertNull(manifest.branding)
+        assertNull(manifest.presentation)
         assertNull(manifest.bottomNavigation)
     }
 
@@ -54,6 +56,7 @@ class SiteSkinManifestDtoTest {
               "site":{"id":"bloom","name":"Bloom Flowers","shortName":"Bloom","homeUrl":"/"},
               "branding":{"primaryColor":"#112233","secondaryColor":"#223344","backgroundColor":"#ffffff","textColor":"#000000","logoUrl":"/logo.png"},
               "toolbar":{"title":"Bloom","subtitle":"Fresh"},
+              "presentation":{"hub":"drawer"},
               "bottomNavigation":[{"id":"home","label":"Home","icon":"home","action":{"type":"internal_url","url":"/"},"match":["/","/catalog/**"]}],
               "menu":[{"id":"menu-home","label":"Menu home","action":{"type":"home"}}],
               "quickActions":[{"id":"phone","label":"Call","icon":"call","action":{"type":"phone","value":"+10000000000"}}]

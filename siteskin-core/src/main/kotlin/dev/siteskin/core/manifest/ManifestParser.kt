@@ -175,13 +175,20 @@ internal sealed interface ManifestDocumentResult {
 
 private object UnknownFieldScanner {
     private val rootFields = setOf(
-        "schemaVersion", "site", "branding", "toolbar", "bottomNavigation", "menu", "quickActions",
+        "schemaVersion", "site", "branding", "toolbar", "presentation", "bottomNavigation", "menu",
+        "quickActions",
     )
     private val siteFields = setOf("id", "name", "shortName", "homeUrl")
     private val brandingFields = setOf(
         "primaryColor", "secondaryColor", "backgroundColor", "textColor", "logoUrl",
     )
     private val toolbarFields = setOf("title", "subtitle")
+
+    // The third structural copy of the manifest shape, after the JSON schema and
+    // ManifestStructure. Nothing cross-checks the three, so a field added to the other two and
+    // forgotten here emits SS-W-FIELD-UNKNOWN on `/presentation` for every conforming manifest —
+    // a protocol diagnostic accusing a correct document.
+    private val presentationFields = setOf("hub")
     private val itemFields = setOf("id", "label", "icon", "action", "match")
     private val actionFields = setOf("type", "url", "value")
 
@@ -228,6 +235,7 @@ private object UnknownFieldScanner {
             "site" -> inspectObject(value, path, siteFields, warnings)
             "branding" -> inspectObject(value, path, brandingFields, warnings)
             "toolbar" -> inspectObject(value, path, toolbarFields, warnings)
+            "presentation" -> inspectObject(value, path, presentationFields, warnings)
             "bottomNavigation", "menu", "quickActions" -> inspectItems(value, path, warnings)
             "action" -> inspectObject(value, path, actionFields, warnings)
         }

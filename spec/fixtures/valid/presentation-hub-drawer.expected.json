@@ -1,0 +1,15 @@
+{
+  "origin": "https://bloomflowers.example",
+  "note": "The happy path for `presentation.hub`. A recognised token normalizes to the closed enum with no diagnostic at all, and `presentation` appears in the canonical result because the manifest declared it. The companion assertion is what this fixture cannot show on its own: every other fixture here omits `presentation` from its result, which is how a browser tells 'the site asked for the default' from 'the site said nothing'. A non-nullable holder would put a `presentation` object into all of them, including bloom-flowers.expected.json, whose body is pinned by SHA-256 in two repositories.",
+  "diagnostics": [],
+  "result": {
+    "schemaVersion": "1.0",
+    "origin": "https://bloomflowers.example",
+    "site": { "id": "bloom-flowers", "name": "Bloom Flowers", "homeUrl": "https://bloomflowers.example/" },
+    "presentation": { "hub": "drawer" },
+    "bottomNavigation": [
+      { "id": "home", "label": "Home", "icon": "home",
+        "action": { "type": "internal_url", "url": "https://bloomflowers.example/" } }
+    ]
+  }
+}
