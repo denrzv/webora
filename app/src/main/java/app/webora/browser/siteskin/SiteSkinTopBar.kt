@@ -41,62 +41,137 @@ import app.webora.browser.browser.WeboraIconButton
 import app.webora.browser.design.WeboraColors
 import app.webora.browser.design.WeboraRadius
 
+/**
+ * Integrated top chrome: the site's identity row, then the browser's own control row.
+ *
+ * **Two rows, and the second one is `BROWSE-011`'s answer to a measurement.** Issue #116 sketched
+ * Refresh as a trailing icon in the brand row. On the 320 dp host this repository treats as its
+ * floor that row has 280 dp, of which Back, the logo and three gaps take 116 — leaving 164 dp for
+ * the weighted title and the unweighted trust chip. A 48 dp control plus its gap takes that to 108,
+ * while the chip alone wants about 121 for a domain like `denrzv.github.io`. The chip is unweighted
+ * and measures first, so it truncates and the site's title measures to *zero* — at default font
+ * scale. `UX-023` already records that this row cannot hold four things at 200%; a fifth is not the
+ * direction.
+ *
+ * So the browser's controls get their own row and the brand row is not edited at all, which is what
+ * keeps `SITESKIN_SECURITY_TAG`, the chip's ground, its width floor and its declaration order
+ * meaning exactly what they meant when `UX-021` accepted them.
+ *
+ * Back stays in the brand row. `UX-008` and `UX-014` require integrated top chrome to carry a
+ * leading Back affordance before site branding; moving it down here to pay for Refresh's width
+ * would have been width-neutral and is a navigation-contract reversal, not a side effect of adding
+ * a reload command.
+ *
+ * Neither [canRefresh] nor [onRefresh] is defaulted. `DEVX-003`: an offered browser command whose
+ * handler does nothing is the failure the offered list exists to prevent, and a default no-op puts
+ * that one forgetful call site away.
+ */
 @Composable
+@Suppress("LongParameterList")
 internal fun SiteSkinTopBar(
     model: SiteSkinTopBarModel,
     presentation: ExpressiveSiteSkinPresentation,
     canGoBack: Boolean,
     onBack: () -> Unit,
+    canRefresh: Boolean,
+    onRefresh: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     ExpressiveSiteSkinHeader(presentation, modifier) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().testTag(SITESKIN_BRAND_TAG),
+        Column(Modifier.fillMaxWidth()) {
+            BrandRow(model, presentation, canGoBack, onBack)
+            BrowserControlRow(canRefresh, onRefresh)
+        }
+    }
+}
+
+/**
+ * The site's half of the header, plus the browser controls that must precede it.
+ *
+ * Lifted into its own declaration by `BROWSE-011` so the containing function stays under detekt's
+ * `LongMethod` ceiling. Its contents are otherwise unchanged, which is the point: every structural
+ * assertion `UX-021` left behind reads this row.
+ */
+@Composable
+private fun BrandRow(
+    model: SiteSkinTopBarModel,
+    presentation: ExpressiveSiteSkinPresentation,
+    canGoBack: Boolean,
+    onBack: () -> Unit,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().testTag(SITESKIN_BRAND_TAG),
+    ) {
+        BrowserBack(canGoBack, onBack)
+        Spacer(Modifier.width(8.dp))
+        BrandLogo(model.brandAsset, presentation.colors)
+        Spacer(Modifier.width(12.dp))
+        Column(
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.weight(1f),
         ) {
-            BrowserBack(canGoBack, onBack)
-            Spacer(Modifier.width(8.dp))
-            BrandLogo(model.brandAsset, presentation.colors)
-            Spacer(Modifier.width(12.dp))
-            Column(
-                verticalArrangement = Arrangement.Center,
-                modifier = Modifier.weight(1f),
-            ) {
+            Text(
+                text = model.title,
+                color = presentation.colors.onBackground,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            model.subtitle?.let {
                 Text(
-                    text = model.title,
+                    it,
                     color = presentation.colors.onBackground,
-                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 12.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                model.subtitle?.let {
-                    Text(
-                        it,
-                        color = presentation.colors.onBackground,
-                        fontSize = 12.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
             }
-            Spacer(Modifier.width(8.dp))
-            // Declared *after* the flexible title column and given no weight, so the title yields
-            // width to it rather than the other way round. A manifest controls the title's length;
-            // if the order were reversed, a long enough one would push the browser's own trust mark
-            // out of the header, which is precisely the surface a site must not be able to move.
-            SiteSkinSecurityChip(model.security)
+        }
+        Spacer(Modifier.width(8.dp))
+        // Declared *after* the flexible title column and given no weight, so the title yields
+        // width to it rather than the other way round. A manifest controls the title's length;
+        // if the order were reversed, a long enough one would push the browser's own trust mark
+        // out of the header, which is precisely the surface a site must not be able to move.
+        SiteSkinSecurityChip(model.security)
+    }
+}
+
+/**
+ * The browser's controls, on their own line inside a header the site paints.
+ *
+ * Trailing-aligned by `Arrangement.End` rather than by a weighted spacer, and this is deliberate:
+ * `SiteSkinTopBarContractTest` locates the brand row's flexible title column by the *first*
+ * `Modifier.weight(1f)` in this file, and a second weighted child would make that assertion depend
+ * on declaration order for a reason unrelated to what it asserts.
+ *
+ * The row is composed unconditionally. There is no count, flag, list index or model field through
+ * which a manifest could empty it, reorder it or add to it — the reason the isolation test asserts
+ * on this declaration's text rather than on a runtime absence.
+ */
+@Composable
+private fun BrowserControlRow(canRefresh: Boolean, onRefresh: () -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.End,
+        modifier = Modifier.fillMaxWidth().testTag(SITESKIN_CONTROLS_TAG),
+    ) {
+        BrowserControlTile(SITESKIN_REFRESH_TAG) {
+            WeboraIconButton(
+                icon = R.drawable.ic_reload,
+                // The same name regular chrome gives this command. `DEVX-003`: one command does not
+                // acquire two names because it is drawn on a second surface.
+                contentDescription = stringResource(R.string.reload),
+                onClick = onRefresh,
+                enabled = canRefresh,
+            )
         }
     }
 }
 
 @Composable
 private fun BrowserBack(canGoBack: Boolean, onBack: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainer)
-            .testTag(SITESKIN_BACK_TAG),
-    ) {
+    BrowserControlTile(SITESKIN_BACK_TAG) {
         WeboraIconButton(
             icon = R.drawable.ic_back,
             contentDescription = stringResource(R.string.back),
@@ -104,6 +179,30 @@ private fun BrowserBack(canGoBack: Boolean, onBack: () -> Unit) {
             enabled = canGoBack,
         )
     }
+}
+
+/**
+ * One declaration for the browser-owned sub-surface every browser control in this header sits on.
+ *
+ * `UX-014` records why the tile exists at all: the header's colours are the site's, so a browser
+ * control drawn straight onto them would read as the site's too — *"the visual boundary is the
+ * ownership boundary"*. It reads `MaterialTheme.colorScheme.surfaceContainer` and nothing from
+ * [SiteSkinColorScheme]; `UX-021`'s trust chip grounds elsewhere for a reason specific to the
+ * measured `secure`/`notSecure` pair, and that difference is not an inconsistency to tidy away.
+ *
+ * Shared rather than copied because `UX-021` records what two copies of one rule cost: regular
+ * chrome and the integrated chip each carried a verbatim `when`, and a re-pointed branch in one
+ * file drifted from the other with nothing failing.
+ */
+@Composable
+private fun BrowserControlTile(tag: String, content: @Composable () -> Unit) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .testTag(tag),
+        content = { content() },
+    )
 }
 
 @Composable
@@ -197,6 +296,8 @@ internal const val SITESKIN_LOGO_TAG = "siteskin_logo"
 internal const val SITESKIN_SECURITY_TAG = "siteskin_security"
 internal const val SITESKIN_BACK_TAG = "siteskin_back"
 internal const val SITESKIN_BRAND_TAG = "siteskin_brand"
+internal const val SITESKIN_CONTROLS_TAG = "siteskin_browser_controls"
+internal const val SITESKIN_REFRESH_TAG = "siteskin_refresh"
 internal val LOGO_SLOT_SIZE = 40.dp
 
 /**

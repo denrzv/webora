@@ -99,6 +99,29 @@ class RendererMountActionTest {
         assertEquals(null, controller.hostedUrl)
     }
 
+    @Test fun `refreshing a page in place does not move the browser's record of it`() {
+        // `BROWSE-011`, and the invariant its own acceptance criterion was reaching for before
+        // `/review` FINDING-1 restated it. `reload()` re-fetches the page the renderer already has,
+        // so the browser's record of where that renderer is must not move — `rendererMountAction`
+        // reads exactly this value on every mount, and a `reload()` that wrote `WebView.getUrl()`
+        // into it would reintroduce the reload-on-switch defect `BROWSE-010` removed, from a
+        // framework value that after a failure "may be the failed URL, the previously committed URL
+        // or `about:blank`".
+        //
+        // The retry path is deliberately not asserted here: it goes through `navigate`, which is
+        // *supposed* to move the record, and does so under the case above.
+        val controller = BrowserWebViewController(tabId = 1L)
+        controller.navigate(PAGE)
+
+        controller.reload()
+
+        assertEquals(PAGE, controller.hostedUrl)
+        assertEquals(
+            RendererMountAction.Ready,
+            rendererMountAction(hosted = controller.hostedUrl, target = PAGE, isLoading = false),
+        )
+    }
+
     private companion object {
         const val PAGE = "https://example.com/"
         const val OTHER = "https://other.example/"

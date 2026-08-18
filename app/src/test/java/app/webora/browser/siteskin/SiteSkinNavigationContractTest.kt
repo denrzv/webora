@@ -120,17 +120,47 @@ class SiteSkinNavigationContractTest {
         )
     }
 
+    /**
+     * Integrated Back is a browser command on a browser-owned ground, wherever that ground is
+     * declared.
+     *
+     * `BROWSE-011` is why this follows an indirection instead of matching one spelling. The rule had
+     * been `MaterialTheme.colorScheme.surfaceContainer` *inside* `BrowserBack`, which was the same
+     * thing as the rule only while Back was the header's one browser control. Adding Refresh gave
+     * the two commands a shared `BrowserControlTile`, and Back's guarantee became just as true one
+     * declaration away — while this assertion, reading a spelling, went red on code that had not
+     * weakened. `BROWSE-009`: forbid the mechanism, not a spelling.
+     *
+     * So the tile is checked where it is declared, and Back is required to reach its ground through
+     * it. A Back that paints its own surface is still rejected, by the `colors.` clause and by the
+     * missing tile — two independent reasons, which is the direction to be wrong in.
+     */
     private fun browserOwnedBack(source: String): Boolean {
-        val start = source.indexOf("private fun BrowserBack(")
-        val end = source.indexOf("private fun BrandLogo(", start)
-        if (start < 0 || end < 0) return false
-        val back = source.substring(start, end)
+        val back = declaration(source, "private fun BrowserBack(") ?: return false
+        val tile = declaration(source, "private fun BrowserControlTile(")
+        val browserGround = tile?.contains("MaterialTheme.colorScheme.surfaceContainer") == true &&
+            !tile.contains("colors.")
         return back.contains("WeboraIconButton(") &&
             back.contains("R.drawable.ic_back") &&
             back.contains("stringResource(R.string.back)") &&
-            back.contains("MaterialTheme.colorScheme.surfaceContainer") &&
-            back.contains("testTag(SITESKIN_BACK_TAG)") &&
+            back.contains("BrowserControlTile(SITESKIN_BACK_TAG)") &&
+            browserGround &&
             !back.contains("colors.")
+    }
+
+    /**
+     * One top-level declaration's text, ending at the next `private fun` or at the end of input.
+     *
+     * The end-of-input case is load-bearing for the negative control above, which is a one-line
+     * fragment with nothing after it: the previous helper ended the slice at `private fun BrandLogo(`
+     * and returned `false` for the fragment because that marker was absent, so the control was
+     * passing for a reason unrelated to the violation it describes.
+     */
+    private fun declaration(source: String, signature: String): String? {
+        val start = source.indexOf(signature)
+        if (start < 0) return null
+        val next = source.indexOf("private fun ", start + signature.length)
+        return source.substring(start, if (next >= 0) next else source.length)
     }
 
     private fun source(relative: String): File = File(

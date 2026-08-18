@@ -52,7 +52,7 @@ References:
 - [x] TASK-2: record the Back exposure as its own backlog entry
   - PRD criterion 6: the Home-round-trip Back contract is decided as a second defect, not changed
     here, with the reasoning and the `BROWSE-008` dependency written down.
-  - Result: added `BROWSE-011` to `docs/BACKLOG.md` — Home is or is not a history root, decided
+  - Result: added `BROWSE-012` to `docs/BACKLOG.md` — Home is or is not a history root, decided
     beside `BROWSE-008`'s Back ordering rather than in the renderer host, with the three reasons this
     ticket did not change it and the `clearHistory()` post-commit timing that makes every remedy
     device-verifiable only.

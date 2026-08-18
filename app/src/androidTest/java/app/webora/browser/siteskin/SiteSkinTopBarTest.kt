@@ -145,6 +145,60 @@ class SiteSkinTopBarTest {
         compose.onNodeWithText("example.co.uk").assertIsDisplayed()
     }
 
+    @Test fun browserRefreshIsAnAccessibleBrowserActionDistinctFromTheTrustMark() {
+        // Issue requirements 9 and 12. The trust chip is a status display and the refresh control is
+        // an action; a screen reader must be able to tell them apart, and the chip must not have
+        // become tappable by sharing a row with something that is.
+        var refreshes = 0
+        compose.setContent { topBar(onRefresh = { refreshes++ }) }
+
+        compose.onNodeWithTag(SITESKIN_CONTROLS_TAG).assertIsDisplayed()
+        compose.onNodeWithTag(SITESKIN_REFRESH_TAG)
+            .assertIsDisplayed()
+            .assertHeightIsAtLeast(48.dp)
+            .assertWidthIsAtLeast(48.dp)
+        compose.onNodeWithContentDescription("Reload").assertIsEnabled().performClick()
+        assertEquals(1, refreshes)
+
+        // Same name the regular dock gives this command, and not the chip's sentence.
+        compose.onNodeWithTag(SITESKIN_SECURITY_TAG)
+            .assertContentDescriptionEquals("Secure connection to example.co.uk")
+    }
+
+    @Test fun browserRefreshIsVisibleAndDisabledWithNothingToReload() {
+        // Issue requirement 7: visible-and-disabled, never absent. An absent control moves under
+        // the user's finger as state changes; `UX-016` made the same choice for the regular dock.
+        var refreshes = 0
+        compose.setContent { topBar(canRefresh = false, onRefresh = { refreshes++ }) }
+
+        compose.onNodeWithTag(SITESKIN_REFRESH_TAG).assertIsDisplayed()
+        compose.onNodeWithContentDescription("Reload").assertIsNotEnabled()
+        assertEquals(0, refreshes)
+    }
+
+    @Test fun theControlRowDoesNotTakeWidthFromBrowserIdentity() {
+        // The whole reason `BROWSE-011` put Refresh on its own line. If it had gone in the brand
+        // row, the chip would truncate and the site's title would measure to zero at this width —
+        // so the assertion that matters is that the chip's floor from `UX-021` still holds with the
+        // control composed, at the same 320 dp and 200% the measurement was taken at.
+        compose.setContent {
+            val density = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale = 2f)) {
+                Box(Modifier.width(320.dp).testTag(FIXTURE_TAG)) { topBar() }
+            }
+        }
+
+        val fixture = compose.onNodeWithTag(FIXTURE_TAG).fetchSemanticsNode().boundsInRoot
+        val refresh = compose.onNodeWithTag(SITESKIN_REFRESH_TAG).fetchSemanticsNode().boundsInRoot
+
+        compose.onNodeWithTag(SITESKIN_SECURITY_TAG).assertIsDisplayed().assertWidthIsAtLeast(SECURITY_CHIP_FLOOR)
+        compose.onNodeWithTag(SITESKIN_REFRESH_TAG).assertIsDisplayed().assertHeightIsAtLeast(48.dp)
+        assertTrue(
+            "the refresh control must stay inside the 320 dp host: $fixture $refresh",
+            refresh.right <= fixture.right && refresh.left >= fixture.left,
+        )
+    }
+
     @Composable
     private fun topBar(
         asset: BrandAsset = BrandAsset.Monogram("B"),
@@ -152,7 +206,9 @@ class SiteSkinTopBarTest {
         onBack: () -> Unit = {},
         presentation: ExpressiveSiteSkinPresentation = presentation(false, false),
         transport: TransportSecurity = TransportSecurity.SECURE,
-    ) = SiteSkinTopBar(model(asset, transport), presentation, canGoBack, onBack)
+        canRefresh: Boolean = true,
+        onRefresh: () -> Unit = {},
+    ) = SiteSkinTopBar(model(asset, transport), presentation, canGoBack, onBack, canRefresh, onRefresh)
 
     private val SECURITY_CHIP_FLOOR = 140.dp
 

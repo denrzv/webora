@@ -58,6 +58,8 @@ class BrowserSiteSkinLayoutTest {
                     onTabs = {},
                     onSettings = {},
                     onInspector = {},
+                    canRefresh = true,
+                    onRefresh = {},
                     modifier = Modifier.fillMaxSize(),
                 )
             }
@@ -102,6 +104,8 @@ class BrowserSiteSkinLayoutTest {
                     onTabs = {},
                     onSettings = {},
                     onInspector = {},
+                    canRefresh = true,
+                    onRefresh = {},
                     modifier = Modifier.fillMaxSize(),
                 )
             }

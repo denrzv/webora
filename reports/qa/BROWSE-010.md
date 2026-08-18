@@ -67,7 +67,7 @@ Verified on `0d0f0a6`, branch `claude/bloom-flowers-reference-y5ybs7`, based on 
   — the terminal state this ticket removes — from "waiting with a live load" without reading
   `WebView.getProgress()`, which is the framework dependency the decision exists to avoid. An honest
   extra request beats the fabricated completion the first implementation used.
-- **Back after a Home round trip** — Deliberately unchanged, and filed as `BROWSE-011`. `loadUrl`
+- **Back after a Home round trip** — Deliberately unchanged, and filed as `BROWSE-012`. `loadUrl`
   appends, so the renderer still holds the pre-Home entries and Back from the new page can reach one
   the tab's state has forgotten. PRD criterion 6 required an explicit decision, not a change.
 

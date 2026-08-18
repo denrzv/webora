@@ -251,6 +251,16 @@ internal fun BrowserScreen(
         }
     }
 
+    // Built where `controller` and `state` are already the selected tab's, so there is no second
+    // place for a tab id to be resolved and no second navigation mechanism: both arms call methods
+    // that already had call sites before this ticket.
+    val dispatchRefresh = {
+        when (val action = refreshAction(state)) {
+            RefreshAction.Reload -> controller.reload()
+            is RefreshAction.Retry -> controller.navigate(action.url)
+            RefreshAction.None -> Unit
+        }
+    }
     val canNavigateBack = state.mode.canNavigateBack()
     val navigateBack = {
         navigateBrowserBack(
@@ -275,7 +285,12 @@ internal fun BrowserScreen(
             BrowserNavigationShell(
                 canGoBack = false,
                 canGoForward = false,
-                canReload = false,
+                // Asks the shared decision rather than restating its answer. It is `false` here
+                // either way — that is the point: Home is the one state with no committed page, so
+                // stating it separately left `RefreshAction.None` unreachable in production and the
+                // two answers free to drift. History and Home are genuinely `false` by composition;
+                // reload is a decision, and there is one place that makes it.
+                canReload = refreshAction(state) != RefreshAction.None,
                 onBack = {},
                 onForward = {},
                 onReload = {},
@@ -341,6 +356,8 @@ internal fun BrowserScreen(
         onTabs = { tabsVisible = true },
         onSettings = { settingsVisible = true },
         onInspector = { inspectorVisible = true },
+        canRefresh = refreshAction(state) != RefreshAction.None,
+        onRefresh = dispatchRefresh,
         isFavourite = currentIsFavourite,
         onToggleFavourite = toggleFavourite,
         modifier = browserModifier,
@@ -681,6 +698,10 @@ internal fun RegularBrowser(
     // nothing is the same failure the offered list exists to prevent, one layer down.
     onSettings: () -> Unit,
     onInspector: () -> Unit,
+    // Browser-owned Reload, for both chromes. A tap is a user action, which `BROWSE-009` permits to
+    // be addressed to the selected tab; it is renderer *observations* that may not be.
+    canRefresh: Boolean,
+    onRefresh: () -> Unit,
     isFavourite: Boolean = false,
     onToggleFavourite: () -> Unit = {},
     modifier: Modifier,
@@ -712,6 +733,8 @@ internal fun RegularBrowser(
                     presentation = presentation,
                     canGoBack = canNavigateBack,
                     onBack = onBack,
+                    canRefresh = canRefresh,
+                    onRefresh = onRefresh,
                 )
             }
         }
@@ -785,10 +808,14 @@ internal fun RegularBrowser(
             BrowserNavigationShell(
                 canGoBack = canNavigateBack,
                 canGoForward = state.canGoForward,
-                canReload = state.displayedUrl.isNotBlank(),
+                // The same decision the integrated header's Refresh reaches. `UX-021` records what
+                // two copies of one rule cost: regular chrome and the integrated trust chip each
+                // carried a verbatim `when`, and a re-pointed branch in one file drifted from the
+                // other with nothing failing.
+                canReload = canRefresh,
                 onBack = onBack,
                 onForward = controller::goForward,
-                onReload = controller::reload,
+                onReload = onRefresh,
                 onHome = onHome,
                 onTabs = onTabs,
                 onSettings = onSettings,
