@@ -1728,6 +1728,94 @@ not in the renderer host, and never by destroying the renderer on Home.
 so it proves the *decision* handles an in-page URL, while only the source scan can see that the
 wiring producing one still exists. Neither layer covers that row alone.
 
+### A hint chooses among the browser's own components (UX-022)
+
+The bouquet showed **five items across all three collections**, and `SPEC.md` §8 permits twenty
+`menu` entries alone. A site publishing a real menu had fifteen entries the browser had fetched,
+validated, origin-bound, bounded and then simply never offered. `presentation.hub` lets a site ask
+for a different surface, and `AUTO` now resolves to the drawer — the presentation that can promise
+every permitted entry is reachable, so a site that says nothing gets the one that cannot silently
+hide its own navigation.
+
+**The hint widens nothing.** Its whole value space is three tokens, closed at the validator, so by
+the time any UI sees it an unknown token is indistinguishable from an absent one. It names a
+component the browser already compiles and carries no dimension, colour, shape, asset, URL, callback
+or duration. `SPEC.md` §5 says so normatively, and a runtime sweep is what proves it: one manifest
+validated per spelling at the boundary, with origin, home URL, browser menu, every normalized item,
+every *resolved* action and every colour role compared across the set. Compared, not sampled — that
+is what covers the field nobody thought to check. Its anti-vacuity guard is the load-bearing half:
+delete `presentation` from `SecurityValidator` and every configuration becomes identical, leaving the
+sweep green forever, so a second case asserts the hint really does move the surface.
+
+**Pattern, never `enum`, and the proportionality argument is sharper than `icon`'s.** An enum makes
+`"drawr"` `SS-E-SCHEMA-INVALID` and discards a working integration — `ADR-007`'s refusal — and here
+the discarded manifest is being thrown away over which of Webora's own components the user sees. All
+three structural copies move together: the published schema, `ManifestStructure`, and
+`UnknownFieldScanner.rootFields`. The third is cross-checked by nothing, and omitting it emits
+`SS-W-FIELD-UNKNOWN` on `/presentation` for every conforming manifest — a protocol diagnostic
+accusing a correct document.
+
+**The holder on `SiteSkinConfiguration` is nullable, and the test that catches a non-null default is
+`bloom-flowers`.** A materialised `{"hub": "auto"}` would enter the canonical result of *every*
+manifest in the corpus, including the one whose body is SHA-256 pinned in two repositories. That is
+also the distinction the inspector needs: "I asked for the default" and "I forgot to ask" produce the
+same drawer and are different things to tell a site owner, which is why the panel shows `Hub
+requested` and `Hub composed` as two rows and never one arrow. `hubPresentation` collapses null and
+`AUTO` so no consumer writes `?: AUTO` twice and one of them eventually writes something else.
+
+**`HubSurface` is a different type from core's `HubPresentation`, deliberately.** Core's is what a
+site *asked for*; the app's is what the browser *decided*. One enum for both makes those two
+questions indistinguishable at every call site, and the bug worth catching is a surface composed
+because a manifest named it rather than because the browser chose it. `resolveHubPresentation` is a
+function rather than a cast because a hint is a preference: a future device or accessibility
+condition overriding an explicit `bouquet` belongs in that one place, not at a call site.
+
+**The rule about who may read the hint was first stated one level too coarse, and that is worth
+keeping.** `the hint is read in exactly one file` failed on `InspectorSnapshot.kt` — correct code,
+holding a `HubPresentation?` in order to print it. Displaying a value decides nothing. Restated at
+the mechanism: no file outside the policy may name a `HubPresentation` **constant**. A rule stated
+too coarse fails honest call sites and teaches people to widen it; stated at the mechanism there is
+nothing to widen.
+
+**A `Dialog(usePlatformDefaultWidth = false)`, not `ModalNavigationDrawer`,** and the deciding
+property is structural rather than visual: the dialog is its own window, so Back is consumed before
+`BrowserBackHandler` sees it. `ModalNavigationDrawer` shares the browser's window and would need its
+own back handler racing the browser's — a second answer to `BROWSE-002`'s single Back contract.
+`BrowserBack.kt` was not touched. Start-side comes from `Alignment.CenterStart`, which resolves
+against layout direction, so RTL is correct with no physical constant anywhere in the file.
+
+`actionBouquet()` keeps its name, order, dedup and cap, and the drawer is asserted not to consult it:
+reusing it inherits the truncation this ticket removes, and changing it changes the bouquet.
+`SiteSkinChromeModelTest` passes unedited. One hub visibility state with `UX-015`'s three existing
+resets serves both surfaces — a drawer with its own flag would need all three again, and the failure
+is silent and specific: a tab switch tears down the dock while a drawer nobody reset stays composed
+over the next origin's page.
+
+**The hub carries no origin and no TLS state.** `UX-021`'s chip is visible in the browser-owned
+header the whole time the drawer is open; a second identity surface inside a site-coloured panel puts
+the browser's trust mark on a ground the site chose, which is `UX-021`'s own colour argument one
+surface along.
+
+**`CI-009`'s frame 04 changed subject, and `requirePageContent` was removed from it — this is the
+decision to check any future diff against.** Bloom declares no `presentation`, so the hub frame now
+photographs a full-window modal. `RenderedContentPolicy` asks whether `BROWSER_CONTENT_TAG`'s
+rectangle is non-uniform; the drawer's window covers that rectangle, and a drawer is gloriously
+non-uniform — keeping the check would measure the drawer and pass for the wrong reason, which is
+`CI-005`'s defect verbatim. Removing a check that has become meaningless is not weakening one that
+still applies, and what replaces it is stricter for that frame: the drawer's tag displayed plus all
+five trusted action ids present as rows. A blank hub fails those; a fraction over a covered rectangle
+could not. `ExpressiveBloomJourneyContractTest` now pins *which* check each frame carries, with the
+modal frames named rather than derived, so this is not a hole to opt out through. Hosted acceptance
+must be re-taken.
+
+**Two negative controls that did not fail taught more than the ones that did.** Replacing
+`if (item.isNavigation)` with `if (true)` compiled, ran and passed the whole suite — criterion 14 had
+no guard at all, four tickets after `UX-015` wrote the rule. And the plan's own TASK-4 control
+described a case that does not exist: `siteActionsExpanded` is a `remember` inside a composable, so
+"a tab-switch case must fail" named no test. Its naive form does not even compile, because the reader
+is in a different composable from the declaration — and a control that fails to compile is not a
+passing control, a difference invisible in a grep for `FAILED`.
+
 ### A shield is a claim, so the signal had to become honest first (UX-021)
 
 `SKIN-002` gave integrated chrome a full-width `Secure · domain` row, and `securityPresentation`

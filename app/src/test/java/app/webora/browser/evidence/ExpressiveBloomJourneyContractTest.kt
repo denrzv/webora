@@ -13,11 +13,26 @@ class ExpressiveBloomJourneyContractTest {
         val source = source(SCREENSHOT_SOURCE)
 
         assertEquals(CANONICAL_FRAMES, capturedFrames(source))
-        CANONICAL_FRAMES.drop(2).forEach { frame ->
+        // A frame depicting the page must prove the page drew; a frame depicting a full-window
+        // modal must prove the modal composed. `UX-022` moved 04 across that line: the hub is now a
+        // drawer in its own window covering `BROWSER_CONTENT_TAG`'s rectangle, so a rendered-content
+        // check there would measure the drawer and pass for the wrong reason — `CI-005`'s defect,
+        // not `CI-003`'s guarantee. Requiring the *right* check per frame is what keeps this from
+        // becoming a place to opt out of one.
+        (CANONICAL_FRAMES - MODAL_FRAMES).drop(1).forEach { frame ->
             assertTrue(
                 "$frame must require rendered page content",
                 source.contains("captureDeviceScreenshot(\"$frame\", requirePageContent = true)"),
             )
+        }
+        MODAL_FRAMES.forEach { frame ->
+            assertFalse(
+                "$frame covers the page region, so a rendered-content check there measures the modal",
+                source.contains("captureDeviceScreenshot(\"$frame\", requirePageContent = true)"),
+            )
+        }
+        MODAL_FRAME_ASSERTIONS.forEach { marker ->
+            assertTrue("a modal frame must assert its own surface instead: $marker", source.contains(marker))
         }
         SHOWCASE_MARKERS.forEach { marker -> assertTrue("missing showcase marker: $marker", source.contains(marker)) }
     }
@@ -92,9 +107,25 @@ class ExpressiveBloomJourneyContractTest {
             "src/androidTest/java/app/webora/browser/visual/LiveSiteHostedSuite.kt",
         )
 
+        /** Frames whose subject is a full-window modal rather than the page behind it. */
+        val MODAL_FRAMES = listOf("02-siteskin-consent.png", "04-bloom-actions.png")
+
+        /**
+         * What a modal frame asserts in place of a pixel fraction.
+         *
+         * Both are stricter than the check they replace for the frame they cover: a heading that is
+         * present, and a hub whose every trusted row is displayed. Neither can be satisfied by an
+         * empty surface, which is what the fraction was there to catch.
+         */
+        val MODAL_FRAME_ASSERTIONS = listOf(
+            "onNodeWithText(consentTitle).assertIsDisplayed()",
+            "onNodeWithTag(SITESKIN_HUB_DRAWER_TAG).assertIsDisplayed()",
+            "BloomReferenceContract.ACTION_IDS.forEach",
+        )
+
         val SHOWCASE_MARKERS = listOf(
             "SITESKIN_DOCK_HUB_TAG",
-            "SITESKIN_ACTION_BOUQUET_TAG",
+            "SITESKIN_HUB_DRAWER_TAG",
             // `CI-009`'s #110 moved the tag prefix behind `BloomReferenceContract`, and this list
             // still required the literal it replaced — so `main` was red before `BROWSE-010` began.
             // The markers follow the mechanism rather than the spelling: the showcase must still

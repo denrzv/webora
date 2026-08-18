@@ -45,6 +45,9 @@ public enum class DiagnosticCode(public val value: String) {
 
     /** An unrecognized icon was replaced with a generic glyph. */
     ICON_UNKNOWN("SS-W-ICON-UNKNOWN"),
+
+    /** An unrecognized hub presentation hint was replaced with `auto`. */
+    PRESENTATION_UNKNOWN("SS-W-PRESENTATION-UNKNOWN"),
 }
 
 /** One diagnostic produced while validating an untrusted manifest. */
@@ -103,6 +106,7 @@ private object ManifestStructure {
     private val identifierPattern = Regex("^[a-z0-9][a-z0-9_-]{0,63}$")
     private val colorPattern = Regex("^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
     private val iconPattern = Regex("^[a-z][a-z0-9_]{0,31}$")
+    private val hubPattern = Regex("^[a-z][a-z0-9_]{0,31}$")
     private val actionTypePattern = Regex("^[a-z][a-z_]{0,31}$")
     private val matchPattern = Regex("^/([^/].*)?$")
 
@@ -112,6 +116,7 @@ private object ManifestStructure {
             root.requiredObject("site", ::validSite) &&
             root.optionalObject("branding", ::validBranding) &&
             root.optionalObject("toolbar", ::validToolbar) &&
+            root.optionalObject("presentation", ::validPresentation) &&
             root.optionalArray("bottomNavigation", ::validNavigation) &&
             root.optionalArray("menu", ::validNavigation) &&
             root.optionalArray("quickActions", ::validNavigation)
@@ -132,6 +137,13 @@ private object ManifestStructure {
 
     private fun validToolbar(toolbar: JsonObject): Boolean =
         toolbar.optionalString("title") && toolbar.optionalString("subtitle")
+
+    // Pattern, never a value set. The pattern carries the structural property — a hub hint cannot be
+    // a URL — while the closed vocabulary is enforced in the security layer, exactly as `icon` is.
+    // Listing the three tokens here would make a typo'd value SS-E-SCHEMA-INVALID and discard a
+    // working integration over a presentation preference.
+    private fun validPresentation(presentation: JsonObject): Boolean =
+        presentation.optionalString("hub", hubPattern)
 
     private fun validNavigation(items: JsonArray): Boolean = items.all { item ->
         val navigation = item as? JsonObject ?: return@all false

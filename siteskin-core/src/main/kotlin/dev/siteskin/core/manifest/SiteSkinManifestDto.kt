@@ -9,6 +9,7 @@ public data class SiteSkinManifestDto(
     public val site: SiteDto? = null,
     public val branding: BrandingDto? = null,
     public val toolbar: ToolbarDto? = null,
+    public val presentation: PresentationDto? = null,
     public val bottomNavigation: List<NavigationItemDto>? = null,
     public val menu: List<NavigationItemDto>? = null,
     public val quickActions: List<NavigationItemDto>? = null,
@@ -38,6 +39,18 @@ public data class BrandingDto(
 public data class ToolbarDto(
     public val title: String? = null,
     public val subtitle: String? = null,
+)
+
+/**
+ * Untrusted presentation hints.
+ *
+ * A hint names a component the browser already compiles. It carries no dimension, colour, asset,
+ * URL or callback, and there is deliberately no generic key/value map here — that would be a second
+ * manifest-controlled surface with no allow-list behind it.
+ */
+@Serializable
+public data class PresentationDto(
+    public val hub: String? = null,
 )
 
 /** Untrusted navigation, menu, or quick-action item. */

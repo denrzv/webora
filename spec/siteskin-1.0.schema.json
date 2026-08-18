@@ -38,6 +38,13 @@
         "subtitle": { "type": "string" }
       }
     },
+    "presentation": {
+      "type": "object",
+      "description": "Optional presentation hints. Additive under SPEC.md 4.2(1), so adding it is a minor bump and no existing manifest migrates. Every value here selects among components the browser already compiles; nothing here can supply a dimension, colour, asset, URL or callback.",
+      "properties": {
+        "hub": { "$ref": "#/$defs/hubPresentation" }
+      }
+    },
     "bottomNavigation": { "type": "array", "items": { "$ref": "#/$defs/navigationItem" } },
     "menu": { "type": "array", "items": { "$ref": "#/$defs/navigationItem" } },
     "quickActions": { "type": "array", "items": { "$ref": "#/$defs/navigationItem" } }
@@ -55,6 +62,11 @@
     "icon": {
       "type": "string",
       "description": "Deliberately a pattern and NOT an enum. The pattern is what delivers the security property: an icon field structurally cannot carry a URL or any other resource reference. Enumerating the names here would make a typo'd icon SS-E-SCHEMA-INVALID and discard the whole manifest, which contradicts the reasoning ADR-007 gives for unknown action types. An unrecognised name degrades to a generic glyph with SS-W-ICON-UNKNOWN.",
+      "pattern": "^[a-z][a-z0-9_]{0,31}(?![\\s\\S])"
+    },
+    "hubPresentation": {
+      "type": "string",
+      "description": "Deliberately a pattern and NOT an enum, for the reason $defs/icon gives one entry above. The pattern delivers the structural security property: a hub hint cannot carry a URL or any other resource reference. The closed vocabulary (auto, bouquet, drawer) is enforced by the security layer, which degrades an unrecognised value to auto with SS-W-PRESENTATION-UNKNOWN. Enumerating here would make a typo'd hint SS-E-SCHEMA-INVALID and discard a whole working integration over a presentation preference.",
       "pattern": "^[a-z][a-z0-9_]{0,31}(?![\\s\\S])"
     },
     "matchPattern": {

@@ -7,25 +7,70 @@ public class SiteSkinConfiguration private constructor(
     public val site: SiteConfiguration,
     public val branding: BrandingConfiguration?,
     public val toolbar: ToolbarConfiguration?,
+    public val presentation: PresentationConfiguration?,
     public val bottomNavigation: List<NavigationItem>?,
     public val menu: List<NavigationItem>?,
     public val quickActions: List<NavigationItem>?,
 ) {
+    /**
+     * The hub hint a consumer should act on, with an undeclared object and an explicit `auto`
+     * collapsed into one value.
+     *
+     * `presentation` is nullable because the canonical result must stay silent when the manifest
+     * was silent: a non-null default would add a `presentation` object to every `.expected.json`,
+     * including `bloom-flowers.expected.json`, whose body is pinned by SHA-256 in two
+     * repositories. That nullability is a serialization property and not something every reader
+     * should have to restate — without this accessor each one writes `?: AUTO` and one of them
+     * eventually writes something else.
+     */
+    public val hubPresentation: HubPresentation
+        get() = presentation?.hub ?: HubPresentation.AUTO
+
     internal companion object {
+        @Suppress("LongParameterList")
         fun create(
             schemaVersion: String,
             origin: String,
             site: SiteConfiguration,
             branding: BrandingConfiguration?,
             toolbar: ToolbarConfiguration?,
+            presentation: PresentationConfiguration?,
             bottomNavigation: List<NavigationItem>?,
             menu: List<NavigationItem>?,
             quickActions: List<NavigationItem>?,
         ): SiteSkinConfiguration = SiteSkinConfiguration(
-            schemaVersion, origin, site, branding, toolbar,
+            schemaVersion, origin, site, branding, toolbar, presentation,
             bottomNavigation?.toList(), menu?.toList(), quickActions?.toList(),
         )
     }
+}
+
+/**
+ * Trusted presentation hints.
+ *
+ * Present only when the manifest declared a `presentation` object, so a reader can tell "the site
+ * asked for the default" from "the site said nothing" — which the inspector's requested-versus-
+ * effective row needs and a collapsed value cannot recover.
+ */
+public class PresentationConfiguration internal constructor(public val hub: HubPresentation)
+
+/**
+ * The closed set of hub presentations a manifest may ask for.
+ *
+ * Closed at the validator, so by the time any UI sees this an unknown token is indistinguishable
+ * from an absent one. It names a component the browser already compiles and carries no dimension,
+ * colour, asset, URL or callback; how each value is presented, and what `AUTO` resolves to, are
+ * browser decisions made above this type.
+ */
+public enum class HubPresentation {
+    /** No preference — the browser chooses. */
+    AUTO,
+
+    /** The radial quick-action arrangement. */
+    BOUQUET,
+
+    /** The start-side list drawer. */
+    DRAWER,
 }
 
 /** Trusted site identity and same-origin home location. */

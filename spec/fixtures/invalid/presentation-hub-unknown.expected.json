@@ -1,0 +1,17 @@
+{
+  "origin": "https://bloomflowers.example",
+  "note": "A hub presentation the browser does not ship. It degrades to `auto` — the manifest is not rejected, no item is dropped, and the site keeps its whole integration. This is the `icon` argument one field along: an enum in siteskin-1.0.schema.json would make `carousel` SS-E-SCHEMA-INVALID and discard a working manifest over a presentation preference, which ADR-007 refuses for unknown action types. The pattern still carries the security property, since it structurally prevents `hub` from holding a URL. Note that the result keeps `presentation`: the site did declare the object, and the corrected value plus SS-W-PRESENTATION-UNKNOWN are the account of what changed — DEVX-001's `trusted`, not `requested`, distinction.",
+  "diagnostics": [
+    { "code": "SS-W-PRESENTATION-UNKNOWN", "disposition": "warn", "pointer": "/presentation/hub" }
+  ],
+  "result": {
+    "schemaVersion": "1.0",
+    "origin": "https://bloomflowers.example",
+    "site": { "id": "bloom-flowers", "name": "Bloom Flowers", "homeUrl": "https://bloomflowers.example/" },
+    "presentation": { "hub": "auto" },
+    "bottomNavigation": [
+      { "id": "home", "label": "Home", "icon": "home",
+        "action": { "type": "internal_url", "url": "https://bloomflowers.example/" } }
+    ]
+  }
+}

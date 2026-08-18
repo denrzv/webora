@@ -94,6 +94,12 @@
       "layer": "security",
       "disposition": "warn",
       "summary": "An icon name the browser does not recognise; a generic glyph is substituted. Not a schema enum, because that would make a typo'd icon name discard the whole manifest — the same argument ADR-007 makes for unknown action types."
+    },
+    {
+      "code": "SS-W-PRESENTATION-UNKNOWN",
+      "layer": "security",
+      "disposition": "warn",
+      "summary": "A presentation hint the browser does not recognise; the field falls back to auto and the browser chooses. Not a schema enum, for the reason SS-W-ICON-UNKNOWN gives: a hint selects among components the browser already compiles, so refusing a whole integration over a typo'd presentation preference is out of all proportion to what the field decides."
     }
   ]
 }

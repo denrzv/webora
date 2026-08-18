@@ -1,8 +1,10 @@
 package dev.siteskin.core
 
 import dev.siteskin.core.model.BrandingConfiguration
+import dev.siteskin.core.model.HubPresentation
 import dev.siteskin.core.model.NavigationItem
 import dev.siteskin.core.model.NormalizedAction
+import dev.siteskin.core.model.PresentationConfiguration
 import dev.siteskin.core.model.SiteConfiguration
 import dev.siteskin.core.model.SiteSkinConfiguration
 import dev.siteskin.core.model.ToolbarConfiguration
@@ -46,9 +48,11 @@ private class Normalizer(private val root: JsonObject, private val origin: Trust
         val menu = normalizeCollection("menu", SiteSkinLimits.MAX_MENU_ITEMS)
         val quick = normalizeCollection("quickActions", SiteSkinLimits.MAX_QUICK_ACTIONS)
         val toolbar = root.objectValueOrNull("toolbar")?.let(::normalizeToolbar)
+        val presentation = root.objectValueOrNull("presentation")?.let(::normalizePresentation)
         val branding = preparedBranding?.let(::normalizeColors)
         val configuration = SiteSkinConfiguration.create(
-            root.stringValue("schemaVersion"), origin.value, site, branding, toolbar, bottom, menu, quick,
+            root.stringValue("schemaVersion"), origin.value, site, branding, toolbar, presentation,
+            bottom, menu, quick,
         )
         return SecurityValidationResult(configuration, diagnostics.toList())
     }
@@ -95,6 +99,21 @@ private class Normalizer(private val root: JsonObject, private val origin: Trust
         value.stringValueOrNull("subtitle")
             ?.let { clamp(it, SiteSkinLimits.MAX_SUBTITLE_LENGTH, "/toolbar/subtitle") },
     )
+
+    // The `normalizeIcon` shape: an unrecognized token degrades to the neutral value with a `warn`
+    // diagnostic, never a drop and never a rejection. A site experimenting with a 1.1 presentation
+    // must not lose its whole integration, and the hint decides nothing a failure could be unsafe
+    // about — the browser was always free to choose.
+    private fun normalizePresentation(value: JsonObject): PresentationConfiguration =
+        PresentationConfiguration(normalizeHub(value))
+
+    private fun normalizeHub(value: JsonObject): HubPresentation {
+        val hub = value.stringValueOrNull("hub") ?: return HubPresentation.AUTO
+        return HUBS[hub] ?: run {
+            diagnostic(DiagnosticCode.PRESENTATION_UNKNOWN, "/presentation/hub")
+            HubPresentation.AUTO
+        }
+    }
 
     private fun normalizeCollection(name: String, limit: Int): List<NavigationItem>? {
         val source = root[name] as? JsonArray ?: return null
@@ -212,4 +231,12 @@ private val ACTION_TYPES = setOf(
 )
 private val ICONS = setOf(
     "home", "catalog", "flower", "grid_view", "shopping_cart", "person", "call", "share", "menu", "search",
+)
+
+// An allow-list, like ICONS and ACTION_TYPES beside it. The manifest spells the token; the enum is
+// what leaves this module, so no site-authored string reaches a consumer of the trusted model.
+private val HUBS = mapOf(
+    "auto" to HubPresentation.AUTO,
+    "bouquet" to HubPresentation.BOUQUET,
+    "drawer" to HubPresentation.DRAWER,
 )
