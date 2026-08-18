@@ -172,6 +172,12 @@ browser navigation, tabs, history and the transition between regular and integra
   requests *and* reports, never from a failure, and deliberately not from `WebView.getUrl()`. Its own
   review removed a synthetic completion the first implementation reported. Issue
   [#106](https://github.com/denrzv/webora/issues/106); the Back exposure it uncovered is `BROWSE-012`
+- [x] `BROWSE-011` A browser-owned Refresh for integrated pages — reload was reachable in integrated
+  mode only through a *site* action, so it appeared at a website's discretion. Now a browser-owned
+  control row inside the expressive header, with one `refreshAction` owning the decision for all
+  three docks. The issue's brand-row placement was disqualified by measurement: it starves the trust
+  chip and zeroes the site title at 320 dp and default font scale. Issue
+  [#116](https://github.com/denrzv/webora/issues/116); `CI-009` hosted acceptance is re-taken
 - [~] `CI-007` Canonical regular-browsing evidence — implementation landed, but hosted runs #30 and
   #31 stop after frames 01–03 because the first-page SiteSkin Back control cannot return to Home;
   acceptance resumes after `BROWSE-008`

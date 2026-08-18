@@ -1954,3 +1954,72 @@ the *test*: `assertTrue(identity.width > 0f)` passes on a chip showing one chara
 which is closer to the bare-shield layout this ticket deliberately rejected than to the one it chose.
 The instrumented assertion is now a 140 dp floor. The residual — one row cannot hold Back, a logo, a
 manifest title and a full domain at 200% — is a layout problem, filed as `UX-023`.
+
+### A browser command needed a row of its own (BROWSE-011)
+
+Reload existed everywhere except the one mode where the browser had given away the most screen.
+`UX-016` fixed the regular dock at Back/Forward/Reload/Home/Tabs/More; `UX-015` fixed the integrated
+dock at Back/Forward/Brand Hub/Tabs/More, and Reload is not among the five. The only refresh an
+integrated user could see was `ResolvedAction.Refresh` — a **site** action, present exactly when a
+manifest chooses to publish one. A browser command that appears at a website's discretion is not a
+browser command.
+
+**The placement was chosen by arithmetic, and the issue's own sketch is what it disqualified.**
+Issue #116 drew Refresh as a trailing icon in the brand row and pre-authorised another placement "if
+implementation evidence shows" a conflict with `UX-021`. On the 320 dp floor that row has 280 dp, of
+which Back, the logo and three gaps take 116 — leaving **164 dp for the weighted title and the
+unweighted trust chip**. A 48 dp control plus its gap takes that to 108, while the chip alone wants
+about 121 for a domain like `denrzv.github.io`. The chip measures first, so it truncates and the
+site's title measures to **zero** — at *default* font scale, not the 200% `UX-023` already covers.
+A sixth dock slot measures 46.7 dp against a 48 dp target. Replacing the header's Back is
+width-neutral and reverses `UX-008`/`UX-014`, which is a navigation-contract decision and not a side
+effect of adding Reload.
+
+So the browser's controls got their own row and **the brand row was not edited at all** — which is
+what keeps `SITESKIN_SECURITY_TAG`, the chip's ground, its 140 dp floor and its declaration order
+meaning what they meant when `UX-021` accepted them. The cost is ~48 dp of permanent chrome, taken
+deliberately: the alternative starves browser identity and the site's own name on the row that
+carries them.
+
+**A failed page is `Retry`, never `reload()`, and this is the decision to not simplify away.**
+`BROWSE-010` established that after a failed navigation `WebView.getUrl()` "may be the failed URL,
+the previously committed URL or `about:blank`" — so `WebView.reload()` there is a call whose target
+the browser cannot name, and naming the target is the whole job. `refreshAction(BrowserState)`
+returns `Retry(loadFailure.retryUrl)`, the same URL `BrowserErrorPage`'s Retry has navigated to since
+`BROWSE-004`, already restricted by `observeFailure` to the exact observed HTTP(S) round trip. A
+failure whose URL did not survive that restriction falls through to `Reload`, not `None` — losing a
+retry target is not the same as having no page.
+
+**One decision, three call sites**, per `UX-021`'s "one `when`, one owner". The integrated header,
+the regular dock and Home all derive from `refreshAction`; Home's literal `false` was a review
+finding, not a shortcut, because it left `RefreshAction.None` unreachable in production and the two
+answers free to drift. The contract test is keyed on *constructing* a `RefreshAction` — its first
+version keyed on `loadFailure` + `navigate(` + `displayedUrl` and reported `BrowserScreen` as a
+second owner, since all three occur there for unrelated reasons including `BrowserErrorPage`'s own
+Retry. **Co-occurrence across a whole file is not a mechanism.**
+
+**`reload()` must not rewrite `hostedUrl`, and nothing asserted that until this ticket's review.**
+`rendererMountAction` reads that value on every mount, so a `reload()` writing the framework's URL
+into it would reintroduce `BROWSE-010`'s reload-on-switch defect from the exact value `BROWSE-010`
+names as unreliable. The PRD's criterion 3 had forbidden `loadUrl` outright, was superseded by the
+plan's failure path, and was never reconciled — so the shipped code contradicted its own acceptance
+criterion. Both halves are fixed and the history is recorded rather than edited away.
+
+**Back and Refresh share one `BrowserControlTile`**, because `UX-014`'s rule — the header's colours
+are the site's, so a browser control drawn straight onto them reads as the site's — now has two
+readers. That refactor exposed a scan reading a spelling: `browserOwnedBack` required
+`MaterialTheme.colorScheme.surfaceContainer` *inside* `BrowserBack`, which was the same thing as the
+rule only while Back was the header's one control. It went red on code that had not weakened. Fixed
+by following the indirection, per `BROWSE-009`'s "forbid the mechanism, not a spelling" — and its own
+negative control turned out to be passing before it evaluated anything, because the test fragment
+lacked the marker its slice ended at.
+
+**The site's own `refresh` action deliberately survives.** A manifest is entitled to publish the
+item; the defect was that the *browser* had none. Suppressing it would be a validation-surface change
+needing its own ticket, and collapsing the two dispatch paths would let a manifest reach browser
+chrome — the opposite of this ticket.
+
+Nothing in the renderer, event-routing, discovery, consent, capture or protocol layers was edited, so
+every cross-tab and lifecycle requirement is met by **not** adding a second path. `CI-009`'s frame
+inventory and per-frame checks are unchanged; hosted acceptance is re-taken because the integrated
+frames photograph a header one row taller, not because a contract moved.

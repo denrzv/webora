@@ -145,7 +145,7 @@ a control that fails nothing is a finding, not a formality.
       `:app:compileDebugAndroidTestKotlin`, which is checked explicitly because
       `scripts/pre-commit-check.sh` does not compile `androidTest`.
 
-- [ ] TASK-6: write down what this decided
+- [x] TASK-6: write down what this decided
   - Modified: `CLAUDE.md`, `docs/ROADMAP.md`
   - The architecture note: why the brand row could not hold it (with the arithmetic), why the failure
     path is `Retry` and not `reload()`, and that `CI-009`'s hosted acceptance is re-taken rather than
