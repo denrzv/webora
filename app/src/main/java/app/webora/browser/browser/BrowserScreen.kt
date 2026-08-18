@@ -285,7 +285,12 @@ internal fun BrowserScreen(
             BrowserNavigationShell(
                 canGoBack = false,
                 canGoForward = false,
-                canReload = false,
+                // Asks the shared decision rather than restating its answer. It is `false` here
+                // either way — that is the point: Home is the one state with no committed page, so
+                // stating it separately left `RefreshAction.None` unreachable in production and the
+                // two answers free to drift. History and Home are genuinely `false` by composition;
+                // reload is a decision, and there is one place that makes it.
+                canReload = refreshAction(state) != RefreshAction.None,
                 onBack = {},
                 onForward = {},
                 onReload = {},

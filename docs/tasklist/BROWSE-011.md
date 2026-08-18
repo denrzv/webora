@@ -170,7 +170,7 @@ a control that fails nothing is a finding, not a formality.
     case. That is the exact regression `BROWSE-010` warns about, from the exact framework value
     it names, and nothing in the suite caught it before this case existed.
 
-- [ ] TASK-FIX-2: let Home ask the decision instead of restating its answer
+- [x] TASK-FIX-2: let Home ask the decision instead of restating its answer
   - Source: `/review` FINDING-2
   - Modified: `app/src/main/java/app/webora/browser/browser/BrowserScreen.kt`,
     `app/src/test/java/app/webora/browser/browser/BrowserChromeContractTest.kt`
@@ -180,4 +180,4 @@ a control that fails nothing is a finding, not a formality.
     - All three reload call sites derive from `refreshAction`.
     - The value is unchanged today; the agreement is structural rather than coincidental.
   - Tests: `BrowserChromeContractTest`.
-  - Negative control: restore the literal → the single-owner case must fail. Result: _to record_.
+  - Negative control: restore `canReload = false` → **1 of 8 failed**, the single-owner case.

@@ -1,6 +1,6 @@
 # Review: BROWSE-011
 Date: 2026-08-18
-Status: OPEN
+Status: RESOLVED
 
 Issue: [#116](https://github.com/denrzv/webora/issues/116)
 Reviewed at `e532391` on `claude/bloom-flowers-reference-y5ybs7`, based on `origin/main` `68ede98`.
@@ -41,7 +41,7 @@ issue is met by *not* adding a second path. The diff bears that out — `Rendere
 
 ## Findings
 
-### FINDING-1 · Medium · a superseded acceptance criterion still stands
+### FINDING-1 · Medium · a superseded acceptance criterion still stands (fixed, `TASK-FIX-1`)
 
 **File:** `docs/prd/BROWSE-011.prd.md:96` (criterion 3)
 
@@ -70,7 +70,7 @@ Nothing currently asserts it.
 Fix: restate criterion 3 at the mechanism, and pin the invariant with a JVM case.
 `BrowserWebViewController` is already constructed in `RendererMountActionTest`, so the case is cheap.
 
-### FINDING-2 · Low · the Home dock answers a question it could ask
+### FINDING-2 · Low · the Home dock answers a question it could ask (fixed, `TASK-FIX-2`)
 
 **File:** `app/src/main/java/app/webora/browser/browser/BrowserScreen.kt:278`
 

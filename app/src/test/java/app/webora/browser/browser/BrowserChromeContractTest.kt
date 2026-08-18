@@ -90,6 +90,14 @@ class BrowserChromeContractTest {
         // receives the same pair. A negative on one old spelling would be satisfied by writing the
         // rule a second way, which is the mistake `BROWSE-009` records about `update(activeTabId)`.
         assertTrue("the regular dock's enabled state is the shared one", screen.contains("canReload = canRefresh"))
+        // Home too. It is the only state with no committed page, so if it restates the answer as a
+        // literal then `RefreshAction.None` is unreachable in production — a branch nothing exercises
+        // outside its own unit test, and two `false`s free to drift apart. `/review` FINDING-2.
+        assertTrue(
+            "Home must ask the decision rather than restate its answer",
+            screen.contains("canReload = refreshAction(state) != RefreshAction.None"),
+        )
+        assertFalse("no call site may state the reload answer as a literal", screen.contains("canReload = false"))
         assertTrue("and so is its callback", screen.contains("onReload = onRefresh"))
         assertTrue("the integrated header receives the same pair", screen.contains("canRefresh = canRefresh"))
         assertTrue("and the same callback", screen.contains("onRefresh = onRefresh"))
