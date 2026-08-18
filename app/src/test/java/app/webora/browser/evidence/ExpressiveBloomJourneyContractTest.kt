@@ -89,22 +89,34 @@ class ExpressiveBloomJourneyContractTest {
         assertFalse(capturedFrames(unsafe) == CANONICAL_FRAMES)
     }
 
-    private fun source(path: Path): String = String(Files.readAllBytes(path))
+    /**
+     * The hosted source at [path], resolved from the root the build declares as an input.
+     *
+     * Not a relative path. `SiteSkinTopBarContractTest` records why — *"the working directory a test
+     * runs in is not a contract, and a scan that silently fails to find its subject is a scan that
+     * passes for the wrong reason"* — and `app/build.gradle.kts` records why the same property also
+     * has to be an `inputs.dir`: without it this whole file is `UP-TO-DATE` on exactly the change it
+     * exists to catch.
+     */
+    private fun source(path: Path): String {
+        val root = requireNotNull(System.getProperty(INSTRUMENTED_ROOT_PROPERTY)) {
+            "$INSTRUMENTED_ROOT_PROPERTY is unset; app/build.gradle.kts must pass the androidTest root"
+        }
+        val resolved = Path.of(root).resolve(path)
+        require(Files.exists(resolved)) { "hosted source not found: $resolved" }
+        return String(Files.readAllBytes(resolved))
+    }
 
     private fun capturedFrames(source: String): List<String> = CAPTURE.findAll(source)
         .map { match -> match.groupValues[1] }
         .toList()
 
     private companion object {
-        val SCREENSHOT_SOURCE = Path.of(
-            "src/androidTest/java/app/webora/browser/visual/LiveSiteScreenshotTest.kt",
-        )
-        val SMOKE_SOURCE = Path.of(
-            "src/androidTest/java/app/webora/browser/visual/LiveSiteNavigationSmokeTest.kt",
-        )
-        val SUITE_SOURCE = Path.of(
-            "src/androidTest/java/app/webora/browser/visual/LiveSiteHostedSuite.kt",
-        )
+        const val INSTRUMENTED_ROOT_PROPERTY = "webora.app.androidTest"
+
+        val SCREENSHOT_SOURCE = Path.of("app/webora/browser/visual/LiveSiteScreenshotTest.kt")
+        val SMOKE_SOURCE = Path.of("app/webora/browser/visual/LiveSiteNavigationSmokeTest.kt")
+        val SUITE_SOURCE = Path.of("app/webora/browser/visual/LiveSiteHostedSuite.kt")
 
         /** Frames whose subject is a full-window modal rather than the page behind it. */
         val MODAL_FRAMES = listOf("02-siteskin-consent.png", "04-bloom-actions.png")

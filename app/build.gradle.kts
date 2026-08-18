@@ -232,6 +232,26 @@ tasks.withType<Test>().configureEach {
     val resourceRoot = layout.projectDirectory.dir("src/main/res")
     inputs.dir(resourceRoot).withPropertyName("appResources")
     systemProperty("webora.app.res", resourceRoot.asFile.absolutePath)
+
+    // ExpressiveBloomJourneyContractTest reads the hosted journey's sources — the frame inventory,
+    // the per-frame checks, the showcase and smoke markers. `./gradlew detekt` does not analyse
+    // `androidTest` and no JUnit run compiles it, so this contract file is the *only* gate standing
+    // between an edited hosted journey and a silently reduced one.
+    //
+    // It was invisible to Gradle. `UX-024`'s review dropped a CI-008 prerequisite from the showcase
+    // and watched `:app:testDebugUnitTest` finish green with exit 0 and no test XML at all, because
+    // nothing here declared the files the test reads; `--rerun-tasks` failed it immediately. The
+    // hole survived several tickets only because every one of them edited this contract file in the
+    // same run, which invalidates the task for an unrelated reason.
+    //
+    // SPEC-001 records the same lesson and the same fix for the conformance corpus: declare it as an
+    // input, so editing a fixture reruns the tests instead of hitting an up-to-date check. The path
+    // is passed as a property for the second half of that lesson — the working directory a test runs
+    // in is not a contract, and a scan that silently fails to find its subject passes for the wrong
+    // reason.
+    val instrumentedRoot = layout.projectDirectory.dir("src/androidTest/java")
+    inputs.dir(instrumentedRoot).withPropertyName("appInstrumentedSources")
+    systemProperty("webora.app.androidTest", instrumentedRoot.asFile.absolutePath)
 }
 
 /**
