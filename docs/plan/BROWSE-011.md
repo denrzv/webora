@@ -95,10 +95,11 @@ in the semantics tree, which the control's tag and browser-authored description 
 
 ## File-by-file plan
 
-### New: `app/src/main/java/app/webora/browser/browser/PageRefresh.kt`
+### New: `app/src/main/java/app/webora/browser/browser/RefreshAction.kt`
 
 `RefreshAction` (sealed: `Reload`, `Retry(url)`, `None`) and `refreshAction(state)`. The one owner of
-what refreshing means, for both modes.
+what refreshing means, for both modes. Named for its type rather than for the ticket, because
+detekt's `MatchingDeclarationName` requires a file with one top-level type to carry its name.
 
 Why a function and not `controller::reload` at two call sites: `UX-021` records the cost of the
 alternative — regular chrome and the integrated chip each carried a verbatim copy of one `when`, and

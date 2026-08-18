@@ -24,8 +24,8 @@ a control that fails nothing is a finding, not a formality.
     - `CLAUDE.md`'s `BROWSE-010` note points at `BROWSE-012`.
   - Tests: `grep` both ids across the repo; `bash scripts/pre-commit-check.sh`.
 
-- [ ] TASK-2: one owner for what refreshing means
-  - New: `app/src/main/java/app/webora/browser/browser/PageRefresh.kt`
+- [x] TASK-2: one owner for what refreshing means
+  - New: `app/src/main/java/app/webora/browser/browser/RefreshAction.kt`
   - New: `app/src/test/java/app/webora/browser/browser/PageRefreshTest.kt`
   - `RefreshAction` (`Reload`, `Retry(url)`, `None`) and `refreshAction(BrowserState)`. Pure, closed,
     reading only `displayedUrl` and `loadFailure`. Not wired to anything yet.
@@ -38,8 +38,12 @@ a control that fails nothing is a finding, not a formality.
     - The hierarchy is sealed with no URL-carrying case other than `Retry`.
   - Tests: `PageRefreshTest`.
   - Negative controls:
-    - Re-point the failure row at `Reload` → the retry case must fail. Result: _to record_.
-    - Make `refreshAction` read `state.mode` → the manifest-parity case must fail. Result: _to record_.
+    - Re-point the failure row at `Reload` (delete the `loadFailure` line) → **2 of 6 failed**:
+      the retry case and the integrated-parity case, which asserts the retry target too. Both
+      name a URL the browser could not otherwise reach.
+    - Make `refreshAction` read `state.mode` (`Integrated → None`) → **1 of 6 failed**: the
+      parity case, and only it. A control that fails one targeted case is what separates a
+      guard from a broken file — `BROWSE-009` records the same discriminator requirement.
 
 - [ ] TASK-3: a browser-owned control row in the integrated header
   - Modified: `app/src/main/java/app/webora/browser/siteskin/SiteSkinTopBar.kt`
