@@ -13,7 +13,7 @@ a control that fails nothing is a finding, not a formality.
 
 ## Tasks
 
-- [ ] TASK-1: free the ticket id
+- [x] TASK-1: free the ticket id
   - Modified: `docs/BACKLOG.md`, `docs/ROADMAP.md`, `docs/tasklist/BROWSE-010.md`, `CLAUDE.md`
   - The backlog's reserved `BROWSE-011` (Back after a Home round trip) becomes `BROWSE-012`. Docs
     only, and first, so nothing later in this ticket is written against a colliding id.

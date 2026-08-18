@@ -171,7 +171,7 @@ browser navigation, tabs, history and the transition between regular and integra
   tab's committed target and the browser's own record of where its renderer is — written from
   requests *and* reports, never from a failure, and deliberately not from `WebView.getUrl()`. Its own
   review removed a synthetic completion the first implementation reported. Issue
-  [#106](https://github.com/denrzv/webora/issues/106); the Back exposure it uncovered is `BROWSE-011`
+  [#106](https://github.com/denrzv/webora/issues/106); the Back exposure it uncovered is `BROWSE-012`
 - [~] `CI-007` Canonical regular-browsing evidence — implementation landed, but hosted runs #30 and
   #31 stop after frames 01–03 because the first-page SiteSkin Back control cannot return to Home;
   acceptance resumes after `BROWSE-008`

@@ -1015,7 +1015,12 @@ happens when a change is justified by reasoning and then blessed by a run that n
 
 ---
 
-### `BROWSE-011` — Back after a Home round trip reaches a page the tab forgot
+### `BROWSE-012` — Back after a Home round trip reaches a page the tab forgot
+
+> Filed by `BROWSE-010` as `BROWSE-011` and renumbered when issue
+> [#116](https://github.com/denrzv/webora/issues/116) opened under that id. Ids are coined per
+> work theme and registered nowhere, so the tracked issue keeps it and the reservation moves.
+> Older records — `reports/qa/BROWSE-010.md`, `docs/tasklist/BROWSE-010.md` — cite the new id.
 
 **Priority:** P2
 **Depends on:** `BROWSE-008`, `BROWSE-010`

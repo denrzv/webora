@@ -1716,7 +1716,7 @@ told its still-loading page was complete. It also wrote Compose state from insid
 two cases, and `BROWSE-009`'s `EMITTED_EVENTS` inventory — which caught the extra emission — is back
 at 4.
 
-**The Back contract after a Home round trip is a second defect, filed as `BROWSE-011`.** `loadUrl`
+**The Back contract after a Home round trip is a second defect, filed as `BROWSE-012`.** `loadUrl`
 appends, so the renderer still holds the pre-Home entries while `onHome` reset the tab's state; Back
 from the new page can reach one the tab has forgotten. `BROWSE-010` exposes that rather than causing
 it — the page never loaded before — and every remedy depends on `clearHistory()`'s post-commit
