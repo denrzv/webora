@@ -85,7 +85,9 @@ import app.webora.browser.siteskin.SiteSkinTopBarModel
 import app.webora.browser.siteskin.brandMonogram
 import app.webora.browser.siteskin.BrowserMenuCommand
 import app.webora.browser.siteskin.browserMenuCommands
+import app.webora.browser.inspector.BrandAssetStage
 import app.webora.browser.siteskin.SiteSkinHubHost
+import app.webora.browser.siteskin.retriesBrandAsset
 import app.webora.browser.siteskin.dockArrangement
 import app.webora.browser.siteskin.SiteSkinHubIdentity
 import app.webora.browser.siteskin.actionBouquet
@@ -155,6 +157,12 @@ internal fun BrowserScreen(
     val context = LocalContext.current.applicationContext
     val assetLoader = remember { BrandAssetLoader(OkHttpBrandAssetSource(), BitmapBrandAssetDecoder()) }
     var brandAsset by remember { mutableStateOf<Pair<SiteSkinConfiguration, BrandAsset>?>(null) }
+    // What the last brand-asset load produced, and how many times the browser has been asked to try
+    // again. `NET-004` made a transient failure retryable within one burst; `UX-027` gives the burst
+    // a later chance, because the effect below keys on a configuration instance that deliberately
+    // never changes for the life of a visit. See `retriesBrandAsset`.
+    var brandAssetStage by remember { mutableStateOf<BrandAssetStage?>(null) }
+    var brandAssetGeneration by remember { mutableIntStateOf(0) }
     val consentStore = remember(context) { SiteConsentStore(context) }
     val privacyStore = remember(context) { PrivacySettingsStore(context) }
     val recordStore = remember(context) { BrowsingRecordStore(context) }
@@ -228,6 +236,10 @@ internal fun BrowserScreen(
                     if (effect.tabId == activeTabId) {
                         overlay = null
                         browserMenuVisible = false
+                        // A main-frame page start is the browser's natural chance to ask again for a
+                        // logo whose only failure was that no server answered. Nothing else retries,
+                        // and no page start means no retry — so this cannot spin.
+                        if (retriesBrandAsset(brandAssetStage)) brandAssetGeneration += 1
                     }
                     if (siteSkinEnabled) manifestDiscovery.onPageStarted(effect.url, effect.generation)
                 }
@@ -248,7 +260,7 @@ internal fun BrowserScreen(
         brandAsset?.takeIf { it.first === configuration }?.second
             ?: BrandAsset.Monogram(brandMonogram(configuration.site.shortName, configuration.site.name))
     }
-    LaunchedEffect(integrated?.configuration) {
+    LaunchedEffect(integrated?.configuration, brandAssetGeneration) {
         val configuration = integrated?.configuration
         brandAsset = configuration?.let {
             it to BrandAsset.Monogram(brandMonogram(it.site.shortName, it.site.name))
@@ -258,6 +270,7 @@ internal fun BrowserScreen(
             // Recorded whether or not it publishes: a load dropped for being superseded is one of
             // the things a developer needs to be able to see, and the guard is what would hide it.
             brandAssetSink.record(configuration.origin, loaded.trace)
+            brandAssetStage = loaded.trace.stage
             if (publishesBrandAsset(state.mode, configuration)) brandAsset = configuration to loaded.asset
         }
     }

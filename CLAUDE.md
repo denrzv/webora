@@ -1745,6 +1745,47 @@ not in the renderer host, and never by destroying the renderer on Home.
 so it proves the *decision* handles an in-page URL, while only the source scan can see that the
 wiring producing one still exists. Neither layer covers that row alone.
 
+### A burst is not the same as asking again (UX-027)
+
+`NET-004` found the reference integration's logo rendering as a `B` and diagnosed it exactly: a
+transient failure became permanent because **nothing ever asked again**. `BrowserScreen` keys the
+brand-asset load on the trusted configuration instance, and `forObservedOrigin` deliberately returns
+the *same* `Integrated` instance for every same-origin page start, so the effect never re-runs. Its
+fix added three attempts — and an inspector reading from the field shows what that bought:
+
+```
+Produced by  TRANSPORT_UNAVAILABLE      HTTP status  —
+Load took    32863 ms                   Attempts     3
+```
+
+`3 × CALL_TIMEOUT_SECONDS + 1 s + 2 s = 33 s`. **The boundary moved from 0 seconds to 33; it was
+never removed.** Past it the origin shows a monogram for the rest of the visit, in the words
+`NET-004` used about the bug it was fixing.
+
+**A later opportunity, not a bigger burst.** Raising `MAX_ATTEMPTS` moves the boundary a third time
+and lengthens a stall the user already waits through, since each attempt costs a full call timeout.
+`retriesBrandAsset` uses a trigger the browser already observes — a same-origin main-frame page start
+— which is user-driven, needs no timer, and cannot spin: no page start, no retry.
+
+**`CACHED / FRESH_HIT` is why this was confusing, and worth remembering.** SiteSkin activated while
+the network was unreachable, because `NET-002` served the manifest from memory without a request. A
+working integration is *not* evidence that the network was up when the asset was fetched — the two
+paths are independent and only one of them called out.
+
+**The reproduction passing was the finding.** `BrandAssetPipelineTest` drives Bloom's real manifest
+and real PNG through the real source, loader and publication guard, and it is green — which excluded
+resolution, transport policy, media validation, decode gating, publication and the
+configuration-identity association *by evidence*. The issue's own investigation section pointed at
+composition ("stale `remember`, incorrect `key`, non-observable mutable state"); without the
+reproduction this ticket would have shipped a composition fix for a transport defect. It also closed
+a real gap: nothing anywhere had driven *fallback → loaded*, which is how both halves stayed green
+while the transition was reported broken.
+
+`NET-004`'s exclusions are unchanged and now asserted by name rather than argued in prose — a
+rejection means the server answered and the browser declined, the same bytes decode the same way, an
+undeclared logo has nothing to request — beside a reflective sweep, because the sweep alone would let
+a newly added stage become retryable by omission.
+
 ### The dock projects ids the validator already trusted (UX-025)
 
 `presentation.dock` lets a site nominate up to three of its **already-validated** ids for the
