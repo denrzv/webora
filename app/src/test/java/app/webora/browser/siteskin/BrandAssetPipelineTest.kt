@@ -2,14 +2,14 @@ package app.webora.browser.siteskin
 
 import android.graphics.Bitmap
 import app.webora.browser.browser.BrowserMode
+import app.webora.browser.inspector.BrandAssetStage
 import dev.siteskin.core.SiteSkinValidationOutcome
 import dev.siteskin.core.SiteSkinValidator
 import dev.siteskin.core.model.SiteSkinConfiguration
 import dev.siteskin.core.origin.SiteOrigin
 import io.mockk.mockk
-import okhttp3.OkHttpClient
 import kotlinx.coroutines.runBlocking
-import app.webora.browser.inspector.BrandAssetStage
+import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import okio.Buffer
@@ -21,22 +21,25 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.io.File
+import java.util.Base64
 
 /**
- * The reference integration's logo, from its published manifest to the value a consumer reads.
+ * The reference integration's logo pipeline, from its published manifest to the value a consumer reads.
  *
  * `BrandAssetLoaderTest` proves the loader returns a decoded asset; nothing proved the decoded asset
  * ever *reaches* a reader. Both can be green while the transition is broken, which is the state
  * issue #128 reports — so this drives the whole chain with as little stubbed as a JVM allows:
  *
  * - the **real** checked-in Bloom manifest, through the **real** `SiteSkinValidator`;
- * - the **real** 512 × 512 PNG the reference repository serves, over a real socket;
+ * - a deterministic repository-local 512 x 512 PNG over a real socket, so the JVM gate is hermetic;
  * - the **real** `OkHttpBrandAssetSource`, so URL resolution, the exact-origin recheck, the redirect
  *   policy, the size cap and the signature match are all genuinely exercised;
  * - the **real** `publishesBrandAsset` guard, driven with the modes a session actually produces.
  *
- * Only `BitmapFactory` is stood in for, because a JVM has none — which is precisely why
- * `BrandAssetDecoder` is an interface rather than a call.
+ * Exact artwork is not relevant to this JVM transition test because `BitmapFactory` is the one Android
+ * dependency intentionally stood in for. Hosted visual acceptance remains the evidence for Bloom's
+ * actual deployed logo; this test owns transport, decode gating and publication without depending on
+ * a sibling repository checkout.
  */
 class BrandAssetPipelineTest {
     private lateinit var server: MockWebServer
@@ -66,7 +69,7 @@ class BrandAssetPipelineTest {
 
         val outcome = loader().load(configuration)
 
-        assertEquals("the real bytes must reach the decoder", BrandAssetStage.DECODED, outcome.trace.stage)
+        assertEquals("the PNG bytes must reach the decoder", BrandAssetStage.DECODED, outcome.trace.stage)
         assertEquals(200, outcome.trace.httpStatus)
         assertTrue("a decoded asset, not a monogram", outcome.asset is BrandAsset.BitmapAsset)
 
@@ -152,7 +155,7 @@ class BrandAssetPipelineTest {
         BrowserMode.Integrated(requireNotNull(SiteOrigin.parse(ORIGIN)), configuration)
 
     /**
-     * The real source, over a client that rewrites the HTTPS façade back to the local server.
+     * The real source, over a client that rewrites the HTTPS facade back to the local server.
      *
      * SiteSkin is HTTPS-only at both layers — `SiteSkinValidator` refuses a cleartext origin and
      * `OkHttpBrandAssetSource` refuses a non-HTTPS asset — so a test that wants the *real* policy
@@ -175,8 +178,6 @@ class BrandAssetPipelineTest {
         StubDecoder(),
     )
 
-
-
     private fun bloomConfiguration(): SiteSkinConfiguration = configuration(bloomManifest())
 
     private fun configuration(manifest: String): SiteSkinConfiguration =
@@ -188,10 +189,10 @@ class BrandAssetPipelineTest {
         .setBody(Buffer().write(bloomLogoBytes()))
 
     /**
-     * A decoder that reports what the real PNG is, without an Android framework to decode it.
+     * A decoder that reports the repository-local fixture's real dimensions without Android framework decode.
      *
-     * The bounds are the reference asset's genuine dimensions, so the loader's pixel caps are
-     * exercised against a real number rather than a convenient one.
+     * The fixture is genuinely 512 x 512, so the loader's pixel caps are exercised against the same
+     * dimensions as the deployed Bloom artwork while keeping the JVM test independent of another checkout.
      */
     private class StubDecoder : BrandAssetDecoder {
         override suspend fun probe(bytes: ByteArray) = BrandImageBounds(512, 512, BrandImageFormat.PNG)
@@ -199,15 +200,18 @@ class BrandAssetPipelineTest {
     }
 
     private companion object {
-        /**
-         * The reference integration's own manifest and artwork, read from the repository.
-         *
-         * Not a hand-written fixture: this ticket is about *that* logo failing to appear, so a
-         * simplified stand-in could pass while the real pair still fails.
-         */
+        /** The reference integration's real manifest stays repository-local and versioned with Webora. */
         fun bloomManifest(): String = repoFile("../spec/fixtures/valid/bloom-flowers.json").readText()
 
-        fun bloomLogoBytes(): ByteArray = repoFile("../../bloom-flowers/assets/siteskin/logo.png").readBytes()
+        /**
+         * The media body is a deterministic test fixture on this module's classpath.
+         * MIME decoding deliberately tolerates the final newline enforced by repository formatters.
+         */
+        fun bloomLogoBytes(): ByteArray = requireNotNull(
+            BrandAssetPipelineTest::class.java.getResourceAsStream(BLOOM_LOGO_RESOURCE),
+        ) { "expected classpath resource $BLOOM_LOGO_RESOURCE to exist" }
+            .bufferedReader()
+            .use { Base64.getMimeDecoder().decode(it.readText()) }
 
         fun repoFile(path: String): File = File(path).also {
             check(it.exists()) { "expected ${it.absolutePath} to exist" }
@@ -215,6 +219,7 @@ class BrandAssetPipelineTest {
 
         /** The origin Bloom's fixture is bound to; only the socket beneath it is local. */
         const val ORIGIN = "https://bloomflowers.example"
+        const val BLOOM_LOGO_RESOURCE = "/bloom-logo-reference.png.b64"
 
         const val MANIFEST_WITHOUT_LOGO =
             """{"schemaVersion":"1.0","site":{"id":"bloom","name":"Bloom Flowers"}}"""
