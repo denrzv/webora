@@ -427,6 +427,32 @@ It MUST match `^[a-z][a-z0-9_]{0,31}$`. The v1 vocabulary is:
 | `bouquet` | Prefer a compact radial arrangement of the site's quick actions. |
 | `drawer` | Prefer a start-side list presenting navigation, quick actions and the extended menu. |
 
+`presentation.dock` is an OPTIONAL array of ids, nominating items declared elsewhere in this manifest
+for the browser's persistent integrated surface:
+
+```json
+"presentation": { "hub": "drawer", "dock": ["catalog", "cart", "profile"] }
+```
+
+Each entry MUST match the `id` grammar and MUST name a `bottomNavigation`, `quickActions` or `menu`
+item **declared in the same manifest**. The field carries ids and nothing else: it MUST NOT be used
+to introduce an action, a URL, a label, an icon or an ordering of anything but itself. A browser
+therefore learns nothing new from it — every item it can name has already been validated — and this
+is what keeps a persistent native surface from becoming a site-defined one.
+
+At most three entries are honoured ([§8](#8-limits)). Over that, a browser MUST truncate with
+`SS-W-LIMIT-TRUNCATED` rather than reject, and MUST truncate **before** resolving ids, so a site
+cannot name six, have three fail, and receive its fourth choice. A repeated id MUST be dropped
+first-occurrence-wins with `SS-E-DUPLICATE-ID`. An id that names no declared item MUST be dropped
+with `SS-W-DOCK-UNRESOLVED`. None of these rejects the manifest, and none removes the *item* — only
+the reference to it, so the item remains available everywhere else the browser presents it.
+
+Resolution MUST run against the items that survived security validation. An item dropped for origin,
+scheme or action reasons MUST NOT become reachable by naming it here.
+
+A browser remains free to project fewer entries than requested, or none, when its viewport or
+accessibility configuration makes the projection unsuitable — `presentation` is a hint throughout.
+
 As with `icon`, the pattern rather than an enumeration is the structural requirement, and for the
 same reason: a hub value the browser does not recognise MUST fall back to `auto` with
 `SS-W-PRESENTATION-UNKNOWN`, and it MUST NOT drop an item or reject the manifest. The proportionality
@@ -522,6 +548,7 @@ catastrophic backtracking, and the mitigation for that costs more code than this
 | Navigation items | 5 | truncate + `SS-W-LIMIT-TRUNCATED` |
 | Menu items | 20 | truncate + `SS-W-LIMIT-TRUNCATED` |
 | Quick actions | 5 | truncate + `SS-W-LIMIT-TRUNCATED` |
+| Dock projection ids | 3 | truncate + `SS-W-LIMIT-TRUNCATED` |
 | Title | 64 characters | truncate + `SS-W-LIMIT-TRUNCATED` |
 | Subtitle | 128 characters | truncate + `SS-W-LIMIT-TRUNCATED` |
 | Label | 32 characters | truncate + `SS-W-LIMIT-TRUNCATED` |
@@ -631,6 +658,7 @@ machine-readable registry is [`diagnostics.json`](diagnostics.json); this table 
 | `SS-W-FIELD-UNKNOWN` | security | warn | field not in this schema version, ignored |
 | `SS-W-ICON-UNKNOWN` | security | warn | icon name not recognised, generic glyph substituted |
 | `SS-W-PRESENTATION-UNKNOWN` | security | warn | presentation hint not recognised, `auto` substituted |
+| `SS-W-DOCK-UNRESOLVED` | security | warn | dock projection named an id no declared item carries |
 
 The `E`/`W` prefix indicates severity to a reader; **the disposition, not the prefix, determines
 behaviour.** `SS-E-ACTION-UNKNOWN` is an error the site should fix, and it drops one item rather
@@ -668,7 +696,7 @@ The canonical result has this shape and this field order:
     "logoUrl": "https://…"
   },
   "toolbar": { "title": "…", "subtitle": "…" },
-  "presentation": { "hub": "drawer" },
+  "presentation": { "hub": "drawer", "dock": ["catalog", "cart"] },
   "bottomNavigation": [
     { "id": "…", "label": "…", "icon": "…",
       "action": { "type": "internal_url", "url": "https://…" },

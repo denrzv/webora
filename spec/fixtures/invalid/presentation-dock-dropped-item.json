@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "1.0",
+  "site": { "id": "shop", "name": "Shop", "homeUrl": "/" },
+  "presentation": { "dock": ["unsafe", "safe"] },
+  "bottomNavigation": [
+    { "id": "unsafe", "label": "Unsafe", "icon": "home",
+      "action": { "type": "external_url", "url": "javascript:alert(1)" } },
+    { "id": "safe", "label": "Safe", "icon": "catalog",
+      "action": { "type": "internal_url", "url": "/safe" } }
+  ]
+}

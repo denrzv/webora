@@ -1,0 +1,21 @@
+{
+  "origin": "https://bloomflowers.example",
+  "note": "The happy path for `presentation.dock`. Three ids the manifest already declares, nominated for the browser's persistent surface — and note what the canonical result does NOT contain: no second copy of the three items, no URL, no icon, no label. The field carries ids, so everything about those items still comes from `bottomNavigation`. `home` is deliberately not nominated, which is what makes de-duplication observable downstream: a browser that hides projected items from its hub must still show `home` there.",
+  "diagnostics": [],
+  "result": {
+    "schemaVersion": "1.0",
+    "origin": "https://bloomflowers.example",
+    "site": { "id": "bloom-flowers", "name": "Bloom Flowers", "homeUrl": "https://bloomflowers.example/" },
+    "presentation": { "hub": "drawer", "dock": ["catalog", "cart", "profile"] },
+    "bottomNavigation": [
+      { "id": "home", "label": "Home", "icon": "home",
+        "action": { "type": "internal_url", "url": "https://bloomflowers.example/" } },
+      { "id": "catalog", "label": "Catalog", "icon": "catalog",
+        "action": { "type": "internal_url", "url": "https://bloomflowers.example/catalog" } },
+      { "id": "cart", "label": "Cart", "icon": "shopping_cart",
+        "action": { "type": "internal_url", "url": "https://bloomflowers.example/cart" } },
+      { "id": "profile", "label": "Account", "icon": "person",
+        "action": { "type": "internal_url", "url": "https://bloomflowers.example/account" } }
+    ]
+  }
+}

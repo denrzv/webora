@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "1.0",
+  "site": { "id": "bloom-flowers", "name": "Bloom Flowers", "homeUrl": "/" },
+  "presentation": { "dock": ["catalog", "catalog", "wishlist", "cart"] },
+  "bottomNavigation": [
+    { "id": "catalog", "label": "Catalog", "icon": "catalog",
+      "action": { "type": "internal_url", "url": "/catalog" } },
+    { "id": "cart", "label": "Cart", "icon": "shopping_cart",
+      "action": { "type": "internal_url", "url": "/cart" } }
+  ]
+}

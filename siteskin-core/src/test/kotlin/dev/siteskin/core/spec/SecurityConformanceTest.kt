@@ -54,7 +54,20 @@ private fun SiteSkinConfiguration.canonicalJson(): JsonObject = buildJsonObject 
     // Silent when the manifest was silent. `presentation` is nullable precisely so this line
     // writes nothing for the fixtures that never mentioned it — including bloom-flowers, whose
     // expected body is pinned by SHA-256 in two repositories.
-    presentation?.let { put("presentation", buildJsonObject { put("hub", it.hub.name.lowercase()) }) }
+    presentation?.let { presentation ->
+        put(
+            "presentation",
+            buildJsonObject {
+                put("hub", presentation.hub.name.lowercase())
+                // Omitted when empty, like every other absent optional. A materialised `[]` would
+                // mean "the site asked for a dock and nothing survived", which is a different
+                // document from one that never asked — SPEC.md section 12's distinction.
+                if (presentation.dock.isNotEmpty()) {
+                    put("dock", buildJsonArray { presentation.dock.forEach { id -> add(JsonPrimitive(id)) } })
+                }
+            },
+        )
+    }
     bottomNavigation?.let { put("bottomNavigation", it.canonicalJson()) }
     menu?.let { put("menu", it.canonicalJson()) }
     quickActions?.let { put("quickActions", it.canonicalJson()) }
