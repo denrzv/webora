@@ -31,16 +31,19 @@ internal fun ComposeContentTestRule.scrollHomeToText(text: String) {
  * Walks integrated browser history back to native Home without assuming which surface wins a handoff race.
  *
  * The final Back can replace SiteSkin chrome with native Home asynchronously. Home identity is the
- * root `HOME_SCREEN_TAG`, not text in a lazily composed child: Recent/Favourites can legitimately push
- * Suggested integrations outside the composed viewport. Each iteration accepts exactly two legal
- * continuation states: native Home, which completes the traversal, or an integrated Navigation Hub,
- * which permits another Back.
+ * root `HOME_SCREEN_TAG`, not [homeText] in a lazily composed child: Recent/Favourites can legitimately
+ * push Suggested integrations outside the composed viewport. The text argument is retained only so
+ * existing hosted callers keep their human-readable Home label while the synchronization contract is
+ * rooted in screen identity. Each iteration accepts exactly two legal continuation states: native Home,
+ * which completes the traversal, or an integrated Navigation Hub, which permits another Back.
  */
 internal fun ComposeContentTestRule.returnIntegratedHistoryToHome(
+    homeText: String,
     maxReturns: Int,
     timeoutMillis: Long,
     settleMillis: Long,
 ) {
+    require(homeText.isNotBlank()) { "Home label must not be blank" }
     val home = hasTestTag(HOME_SCREEN_TAG)
     val navigationHub = hasTestTag(SITESKIN_NAV_HUB_TAG)
 
