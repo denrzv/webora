@@ -31,6 +31,7 @@ import app.webora.browser.inspector.BrandAssetTrace
 import app.webora.browser.inspector.inspectorRecorder
 import app.webora.browser.siteskin.EXPRESSIVE_HEADER_TAG
 import app.webora.browser.siteskin.SITESKIN_HUB_DRAWER_TAG
+import app.webora.browser.siteskin.SITESKIN_HUB_SCRIM_TAG
 import app.webora.browser.siteskin.SITESKIN_BACK_TAG
 import app.webora.browser.siteskin.SITESKIN_NAV_HUB_TAG
 import app.webora.browser.siteskin.SITESKIN_DOCK_HUB_TAG
@@ -101,19 +102,35 @@ class LiveSiteScreenshotTest {
         composeRule.onNodeWithTag(SITESKIN_DOCK_HUB_TAG).assertIsDisplayed().performClick()
         waitUntilNodeExists(hasTestTag(SITESKIN_HUB_DRAWER_TAG))
         composeRule.onNodeWithTag(SITESKIN_HUB_DRAWER_TAG).assertIsDisplayed()
-        BloomReferenceContract.ACTION_IDS.forEach { id ->
+        // `UX-025`: the drawer shows what the dock did not take. Asserting both halves is what
+        // makes de-duplication evidence rather than an absence nobody checked — a drawer that had
+        // simply lost its rows would satisfy a check for the projected three being gone.
+        BloomReferenceContract.DRAWER_ACTION_IDS.forEach { id ->
             composeRule.onNodeWithTag(BloomReferenceContract.actionTag(id)).assertIsDisplayed()
+        }
+        BloomReferenceContract.DOCK_ACTION_IDS.forEach { id ->
+            composeRule.onNodeWithTag(BloomReferenceContract.actionTag(id)).assertDoesNotExist()
+            composeRule.onNodeWithTag(BloomReferenceContract.dockTag(id)).assertIsDisplayed()
         }
         captureDeviceScreenshot("04-bloom-actions.png")
     }
 
+    /**
+     * `UX-025` moved this click from the drawer to the dock, and the dismissal with it.
+     *
+     * `profile` is nominated by `presentation.dock`, so it is a persistent dock slot and no longer a
+     * drawer row — the previous version's `actionTag` would now find nothing. The drawer is still
+     * open from frame 04 and must be dismissed first: a dock slot is behind the drawer's window
+     * while it is up, so clicking it without closing would land on the modal.
+     */
     private fun captureBloomProfile() {
+        composeRule.onNodeWithTag(SITESKIN_HUB_SCRIM_TAG).performClick()
+        waitUntilNodeAbsent(hasTestTag(SITESKIN_HUB_DRAWER_TAG))
         composeRule.onNodeWithTag(
-            BloomReferenceContract.actionTag(BloomReferenceContract.PROFILE_ACTION_ID),
+            BloomReferenceContract.dockTag(BloomReferenceContract.PROFILE_ACTION_ID),
         )
             .assertIsDisplayed()
             .performClick()
-        waitUntilNodeAbsent(hasTestTag(SITESKIN_HUB_DRAWER_TAG))
         require(
             uiDevice.wait(Until.hasObject(By.text(PROFILE_PAGE_HEADING)), LIVE_SITE_TIMEOUT_MILLIS),
         ) { "Bloom did not expose the $PROFILE_PAGE_HEADING profile page" }
