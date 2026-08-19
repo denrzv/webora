@@ -51,6 +51,7 @@ public data class ToolbarDto(
 @Serializable
 public data class PresentationDto(
     public val hub: String? = null,
+    public val dock: List<String>? = null,
 )
 
 /** Untrusted navigation, menu, or quick-action item. */

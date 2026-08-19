@@ -1,0 +1,18 @@
+{
+  "origin": "https://shop.example",
+  "note": "The dock cannot resurrect what security validation refused. `unsafe` is dropped for its denied scheme, and naming it in `presentation.dock` does not bring it back — the projection resolves against the items that SURVIVED normalization, not against the raw manifest. This is the fixture that makes that ordering testable: resolving against the DTO instead would leave `unsafe` in the dock with no item behind it, and a browser projecting an id it cannot render is one step from projecting an action nobody validated.",
+  "diagnostics": [
+    { "code": "SS-E-SCHEME-DENIED", "disposition": "drop-item", "pointer": "/bottomNavigation/0/action/url" },
+    { "code": "SS-W-DOCK-UNRESOLVED", "disposition": "warn", "pointer": "/presentation/dock/0" }
+  ],
+  "result": {
+    "schemaVersion": "1.0",
+    "origin": "https://shop.example",
+    "site": { "id": "shop", "name": "Shop", "homeUrl": "https://shop.example/" },
+    "presentation": { "hub": "auto", "dock": ["safe"] },
+    "bottomNavigation": [
+      { "id": "safe", "label": "Safe", "icon": "catalog",
+        "action": { "type": "internal_url", "url": "https://shop.example/safe" } }
+    ]
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "origin": "https://bloomflowers.example",
+  "note": "Every bounded failure this field has, in one document, and none of them rejects. Four ids exceed the limit of three, so the fourth (`cart`) is truncated away — note that truncation happens BEFORE resolution, so a site cannot name six, have three fail and quietly receive its fourth choice. Of the three that survive the cap, the repeated `catalog` is dropped first-wins and `wishlist` names no declared item. What remains is one id. `cart` therefore does not appear in the dock even though it is a perfectly valid item, which is the correct reading of a manifest that asked for four things: the site is over its budget, and the browser bounds rather than chooses.",
+  "diagnostics": [
+    { "code": "SS-W-LIMIT-TRUNCATED", "disposition": "warn", "pointer": "/presentation/dock" },
+    { "code": "SS-E-DUPLICATE-ID", "disposition": "drop-item", "pointer": "/presentation/dock/1" },
+    { "code": "SS-W-DOCK-UNRESOLVED", "disposition": "warn", "pointer": "/presentation/dock/2" }
+  ],
+  "result": {
+    "schemaVersion": "1.0",
+    "origin": "https://bloomflowers.example",
+    "site": { "id": "bloom-flowers", "name": "Bloom Flowers", "homeUrl": "https://bloomflowers.example/" },
+    "presentation": { "hub": "auto", "dock": ["catalog"] },
+    "bottomNavigation": [
+      { "id": "catalog", "label": "Catalog", "icon": "catalog",
+        "action": { "type": "internal_url", "url": "https://bloomflowers.example/catalog" } },
+      { "id": "cart", "label": "Cart", "icon": "shopping_cart",
+        "action": { "type": "internal_url", "url": "https://bloomflowers.example/cart" } }
+    ]
+  }
+}

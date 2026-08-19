@@ -52,7 +52,19 @@ public class SiteSkinConfiguration private constructor(
  * asked for the default" from "the site said nothing" — which the inspector's requested-versus-
  * effective row needs and a collapsed value cannot recover.
  */
-public class PresentationConfiguration internal constructor(public val hub: HubPresentation)
+public class PresentationConfiguration internal constructor(
+    public val hub: HubPresentation,
+    /**
+     * Ordered ids the site nominated for the browser's persistent integrated surface, already
+     * bounded, de-duplicated, and resolved against this configuration's own items.
+     *
+     * Ids, deliberately — not copies of the items. A second copy would be a second thing to keep in
+     * step with the first, and the point of the field is that it can only name what validation has
+     * already produced. Empty when the manifest declared none, so no consumer writes
+     * `?: emptyList()` twice and one of them eventually writes something else.
+     */
+    public val dock: List<String>,
+)
 
 /**
  * The closed set of hub presentations a manifest may ask for.

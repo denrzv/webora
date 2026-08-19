@@ -188,7 +188,7 @@ private object UnknownFieldScanner {
     // ManifestStructure. Nothing cross-checks the three, so a field added to the other two and
     // forgotten here emits SS-W-FIELD-UNKNOWN on `/presentation` for every conforming manifest —
     // a protocol diagnostic accusing a correct document.
-    private val presentationFields = setOf("hub")
+    private val presentationFields = setOf("hub", "dock")
     private val itemFields = setOf("id", "label", "icon", "action", "match")
     private val actionFields = setOf("type", "url", "value")
 

@@ -35,6 +35,15 @@ public object SiteSkinLimits {
     public const val MAX_NAVIGATION_ITEMS: Int = 5
     public const val MAX_MENU_ITEMS: Int = 20
     public const val MAX_QUICK_ACTIONS: Int = 5
+
+    /**
+     * Ids a manifest may nominate for the browser's persistent integrated surface.
+     *
+     * Three because the browser reserves the remaining two of its five slots for its own brand hub
+     * and overflow. This is a protocol limit rather than a layout constant: it bounds what a site
+     * may *ask for*, and the browser remains free to project fewer.
+     */
+    public const val MAX_DOCK_ITEMS: Int = 3
     public const val MAX_TITLE_LENGTH: Int = 64
     public const val MAX_SUBTITLE_LENGTH: Int = 128
     public const val MAX_LABEL_LENGTH: Int = 32

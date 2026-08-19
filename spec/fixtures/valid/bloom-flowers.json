@@ -17,6 +17,10 @@
     "title": "Bloom Flowers",
     "subtitle": "Fresh flowers delivered today"
   },
+  "presentation": {
+    "hub": "drawer",
+    "dock": ["catalog", "cart", "profile"]
+  },
   "bottomNavigation": [
     {
       "id": "home",

@@ -77,8 +77,15 @@ class LiveSiteNavigationSmokeTest {
 
         composeRule.onNodeWithTag(SITESKIN_DOCK_HUB_TAG).assertIsDisplayed().performClick()
         waitUntilNodeExists(hasTestTag(SITESKIN_HUB_DRAWER_TAG))
-        BloomReferenceContract.ACTION_IDS.forEach { id ->
+        // `UX-025`: the drawer shows what the dock did not take. Asserting both halves is what
+        // makes de-duplication evidence rather than an absence nobody checked — a drawer that had
+        // simply lost its rows would satisfy a check for the projected three being gone.
+        BloomReferenceContract.DRAWER_ACTION_IDS.forEach { id ->
             composeRule.onNodeWithTag(BloomReferenceContract.actionTag(id)).assertIsDisplayed()
+        }
+        BloomReferenceContract.DOCK_ACTION_IDS.forEach { id ->
+            composeRule.onNodeWithTag(BloomReferenceContract.actionTag(id)).assertDoesNotExist()
+            composeRule.onNodeWithTag(BloomReferenceContract.dockTag(id)).assertIsDisplayed()
         }
         composeRule.onNodeWithTag(
             BloomReferenceContract.actionTag(BloomReferenceContract.HOME_ACTION_ID),

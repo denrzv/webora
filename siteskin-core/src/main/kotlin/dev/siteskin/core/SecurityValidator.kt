@@ -48,7 +48,10 @@ private class Normalizer(private val root: JsonObject, private val origin: Trust
         val menu = normalizeCollection("menu", SiteSkinLimits.MAX_MENU_ITEMS)
         val quick = normalizeCollection("quickActions", SiteSkinLimits.MAX_QUICK_ACTIONS)
         val toolbar = root.objectValueOrNull("toolbar")?.let(::normalizeToolbar)
-        val presentation = root.objectValueOrNull("presentation")?.let(::normalizePresentation)
+        // Resolved against the normalized collections, not the raw manifest: an item security
+        // validation dropped must not be reachable through the dock.
+        val declaredIds = (bottom.orEmpty() + quick.orEmpty() + menu.orEmpty()).map { it.id }.toSet()
+        val presentation = root.objectValueOrNull("presentation")?.let { normalizePresentation(it, declaredIds) }
         val branding = preparedBranding?.let(::normalizeColors)
         val configuration = SiteSkinConfiguration.create(
             root.stringValue("schemaVersion"), origin.value, site, branding, toolbar, presentation,
@@ -104,8 +107,47 @@ private class Normalizer(private val root: JsonObject, private val origin: Trust
     // diagnostic, never a drop and never a rejection. A site experimenting with a 1.1 presentation
     // must not lose its whole integration, and the hint decides nothing a failure could be unsafe
     // about — the browser was always free to choose.
-    private fun normalizePresentation(value: JsonObject): PresentationConfiguration =
-        PresentationConfiguration(normalizeHub(value))
+    private fun normalizePresentation(
+        value: JsonObject,
+        declared: Set<String>,
+    ): PresentationConfiguration = PresentationConfiguration(normalizeHub(value), normalizeDock(value, declared))
+
+    /**
+     * Ids the site nominated, reduced to the ones this manifest actually declares.
+     *
+     * Four bounded failures and not one of them rejects: over the cap is truncated, a duplicate is
+     * dropped first-wins, an id naming nothing is dropped, and an absent field is an empty list.
+     * Resolution runs against [declared] — the ids of the *normalized* collections — so an item that
+     * security validation already dropped cannot be projected, and the dock can never name something
+     * the rest of the pipeline refused.
+     *
+     * Truncation is applied before resolution so the cap counts what the site asked for rather than
+     * what survived; otherwise a manifest could name six ids, have three fail, and quietly get its
+     * fourth choice.
+     */
+    private fun normalizeDock(value: JsonObject, declared: Set<String>): List<String> {
+        val requested = (value["dock"] as? JsonArray)
+            ?.mapNotNull { (it as? JsonPrimitive)?.takeIf(JsonPrimitive::isString)?.content }
+            ?: return emptyList()
+        val bounded = requested.take(SiteSkinLimits.MAX_DOCK_ITEMS)
+        if (requested.size > SiteSkinLimits.MAX_DOCK_ITEMS) {
+            diagnostic(DiagnosticCode.LIMIT_TRUNCATED, "/presentation/dock")
+        }
+        val seen = mutableSetOf<String>()
+        return bounded.filterIndexed { index, id ->
+            when {
+                !seen.add(id) -> {
+                    diagnostic(DiagnosticCode.DUPLICATE_ID, "/presentation/dock/$index")
+                    false
+                }
+                id !in declared -> {
+                    diagnostic(DiagnosticCode.DOCK_UNRESOLVED, "/presentation/dock/$index")
+                    false
+                }
+                else -> true
+            }
+        }
+    }
 
     private fun normalizeHub(value: JsonObject): HubPresentation {
         val hub = value.stringValueOrNull("hub") ?: return HubPresentation.AUTO

@@ -48,6 +48,9 @@ public enum class DiagnosticCode(public val value: String) {
 
     /** An unrecognized hub presentation hint was replaced with `auto`. */
     PRESENTATION_UNKNOWN("SS-W-PRESENTATION-UNKNOWN"),
+
+    /** A dock projection named an id that no declared item carries. */
+    DOCK_UNRESOLVED("SS-W-DOCK-UNRESOLVED"),
 }
 
 /** One diagnostic produced while validating an untrusted manifest. */
@@ -143,7 +146,14 @@ private object ManifestStructure {
     // Listing the three tokens here would make a typo'd value SS-E-SCHEMA-INVALID and discard a
     // working integration over a presentation preference.
     private fun validPresentation(presentation: JsonObject): Boolean =
-        presentation.optionalString("hub", hubPattern)
+        presentation.optionalString("hub", hubPattern) &&
+            presentation.optionalArray("dock", ::validDock)
+
+    // Ids only, and the same grammar the items themselves use — so a dock entry structurally cannot
+    // be a URL. Whether an id *resolves* is a security-layer question, exactly as an unknown icon
+    // is: an id naming nothing is dropped, never a whole-manifest rejection.
+    private fun validDock(dock: JsonArray): Boolean =
+        dock.all { (it as? JsonPrimitive)?.takeIf { p -> p.isString }?.content?.matches(identifierPattern) == true }
 
     private fun validNavigation(items: JsonArray): Boolean = items.all { item ->
         val navigation = item as? JsonObject ?: return@all false

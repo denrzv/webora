@@ -114,11 +114,39 @@ class SiteSkinNavigationContractTest {
             !source.contains("SiteSkinSecurityChip(model.security, presentation") &&
             !source.contains("if (model.security")
 
+    /**
+     * The dock's browser ownership, **re-stated** for the surface `UX-025` made it.
+     *
+     * `UX-024` recorded why this predicate is rewritten rather than edited: deleting names from an
+     * ordered list is indistinguishable from weakening it. The same applies now that the reason has
+     * changed shape. The old rule asserted three commands in source order, and source order stopped
+     * being render order the moment the dock rendered a `DockArrangement` — so an unedited version
+     * would keep passing while asserting something that is no longer the mechanism.
+     *
+     * What guarantees ownership now:
+     *
+     * - the slot `when` is **exhaustive over a sealed hierarchy with no `else`**, so a site item can
+     *   never fall into a browser command's branch;
+     * - the browser branches are matched on objects that carry no data, so nothing site-supplied can
+     *   parameterise them;
+     * - the brand hub still receives the browser-held asset, and no dock command reads a manifest
+     *   colour or a raw item field.
+     *
+     * `DockArrangementTest` owns the complementary half — that Brand and More are present in every
+     * arrangement and that the site cannot obtain a fourth slot — because that is a property of the
+     * decision rather than of this file.
+     */
     private fun fixedDock(source: String): Boolean {
-        val order = listOf("BrandHubCommand", "ic_tabs", "ic_more")
-        val positions = order.map(source::indexOf)
+        val branches = listOf("DockSlot.Brand ->", "DockSlot.Tabs ->", "DockSlot.More ->", "is DockSlot.Site ->")
+        // Scoped to the slot loop, not the file. `actionLift`'s lift table legitimately ends in an
+        // `else ->`, and a whole-file ban on the token fails honest code — `UX-024`'s rule about
+        // scoping a scan to the thing it describes, arriving from the other direction.
+        val slotLoop = source.substringAfter("arrangement.slots.forEach", "")
+            .substringBefore("private fun RowScope.SiteDockCommand", "")
         return source.contains("ExpressiveSiteSkinDock(") &&
-            positions.all { it >= 0 } && positions == positions.sorted() &&
+            slotLoop.isNotEmpty() &&
+            branches.all(slotLoop::contains) &&
+            !slotLoop.contains("else ->") &&
             source.contains("asset = brandAsset") &&
             source.contains("BrandAsset.BitmapAsset") &&
             !source.contains("MaterialTheme.colorScheme.surfaceContainer") &&

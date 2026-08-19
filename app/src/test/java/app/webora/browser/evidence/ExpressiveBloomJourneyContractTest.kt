@@ -131,7 +131,11 @@ class ExpressiveBloomJourneyContractTest {
         val MODAL_FRAME_ASSERTIONS = listOf(
             "onNodeWithText(consentTitle).assertIsDisplayed()",
             "onNodeWithTag(SITESKIN_HUB_DRAWER_TAG).assertIsDisplayed()",
-            "BloomReferenceContract.ACTION_IDS.forEach",
+            // `UX-025` split this in two, and the pair is stricter than the single loop it
+            // replaces: the drawer must still *show* what the dock did not take, and must *not*
+            // show what it did. A drawer that had simply lost all its rows satisfied neither.
+            "BloomReferenceContract.DRAWER_ACTION_IDS.forEach",
+            "BloomReferenceContract.DOCK_ACTION_IDS.forEach",
         )
 
         val SHOWCASE_MARKERS = listOf(
@@ -148,6 +152,7 @@ class ExpressiveBloomJourneyContractTest {
             // The markers follow the mechanism rather than the spelling: the showcase must still
             // address site actions by tag, and must still select the profile action specifically.
             "BloomReferenceContract.actionTag(",
+            "BloomReferenceContract.dockTag(",
             "PROFILE_PAGE_HEADING = \"Account\"",
             "BloomReferenceContract.PROFILE_ACTION_ID",
             "REGULAR_ADDRESS = \"https://www.google.com/ncr\"",

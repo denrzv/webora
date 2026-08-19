@@ -1,6 +1,9 @@
 package app.webora.browser.siteskin
 
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.Modifier
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -9,6 +12,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertWidthIsEqualTo
+import androidx.compose.ui.test.assertWidthIsAtLeast
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
@@ -32,6 +36,7 @@ class SiteSkinDockTest {
             CompositionLocalProvider(LocalDensity provides Density(density.density, 2f)) {
                 SiteSkinDock(
                     presentation(false, true),
+                    arrangement = DockArrangement.BrowserOnly,
                     siteActions = emptyList(),
                     hubSurface = HubSurface.BOUQUET,
                     siteActionsExpanded = false,
@@ -66,6 +71,7 @@ class SiteSkinDockTest {
         compose.setContent {
             SiteSkinDock(
                 presentation = presentation(false, false),
+                arrangement = DockArrangement.BrowserOnly,
                 siteActions = model.actionBouquet(),
                 // These cases are about the bouquet, so they name it. `UX-022` made the surface a
                 // decision, and a dock test that let the default choose would be testing whichever
@@ -105,7 +111,7 @@ class SiteSkinDockTest {
         var dismissals = 0
         compose.setContent {
             SiteSkinDock(
-                presentation(false, false), model().actionBouquet(),
+                presentation(false, false), DockArrangement.BrowserOnly, model().actionBouquet(),
                 HubSurface.BOUQUET, expanded, {},
                 onSiteActionsDismiss = {
                     dismissals += 1
@@ -125,14 +131,58 @@ class SiteSkinDockTest {
         val bitmap = Bitmap.createBitmap(8, 8, Bitmap.Config.ARGB_8888)
         compose.setContent {
             SiteSkinDock(
-                presentation(false, false), emptyList(), HubSurface.BOUQUET,
-                false, {}, {}, {}, {}, {}, BrandAsset.BitmapAsset(bitmap),
+                presentation(false, false), DockArrangement.BrowserOnly, emptyList(),
+                HubSurface.BOUQUET, false, {}, {}, {}, {}, {}, BrandAsset.BitmapAsset(bitmap),
             )
         }
 
         compose.onNodeWithTag(SITESKIN_DOCK_HUB_TAG)
             .assertIsDisplayed().assertHeightIsAtLeast(48.dp).assertWidthIsEqualTo(BRAND_HUB_TARGET_SIZE)
         compose.onNodeWithTag(BRAND_HUB_IDENTITY_TAG, useUnmergedTree = true).assertIsDisplayed()
+    }
+
+    /**
+     * The issue's target shape, rendered: `Catalog / Cart / Brand / Account / More`.
+     *
+     * Five slots at the 320 dp floor give 56.0 dp each — the measurement `UX-015` shipped and
+     * `UX-024` recorded when it went the other way — so every slot must still clear the one 48 dp
+     * browser target contract. Tabs is deliberately absent: it moved to the More menu, which has
+     * offered it since `DEVX-003`.
+     */
+    @Test fun projectedSiteActionsFillTheNonCentralSlotsAndKeepBrowserTargets() {
+        val model = model()
+        val arrangement = dockArrangement(model, listOf("catalog", "cart", "profile"))
+        var selected = ""
+        compose.setContent {
+            Box(Modifier.width(320.dp)) {
+                SiteSkinDock(
+                    presentation = presentation(false, false),
+                    arrangement = arrangement,
+                    siteActions = model.actionBouquet(),
+                    hubSurface = HubSurface.DRAWER,
+                    siteActionsExpanded = false,
+                    onSiteActionsToggle = {},
+                    onSiteActionsDismiss = {},
+                    onSiteSelect = { selected = it.id },
+                    onTabs = {},
+                    onMore = {},
+                    brandAsset = BrandAsset.Monogram("B"),
+                )
+            }
+        }
+
+        listOf("catalog", "cart", "profile").forEach { id ->
+            compose.onNodeWithTag("$SITESKIN_DOCK_SITE_TAG_PREFIX$id")
+                .assertIsDisplayed()
+                .assertHeightIsAtLeast(48.dp)
+                .assertWidthIsAtLeast(48.dp)
+        }
+        compose.onNodeWithTag(SITESKIN_DOCK_HUB_TAG).assertIsDisplayed()
+        compose.onNodeWithTag(SITESKIN_DOCK_MORE_TAG).assertIsDisplayed()
+        compose.onNodeWithTag(SITESKIN_DOCK_TABS_TAG).assertDoesNotExist()
+
+        compose.onNodeWithTag("${SITESKIN_DOCK_SITE_TAG_PREFIX}cart").performClick()
+        assertEquals("the trusted item is what reaches the dispatcher", "cart", selected)
     }
 
     private fun presentation(dark: Boolean, reduced: Boolean) =

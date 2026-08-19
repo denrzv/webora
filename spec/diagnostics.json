@@ -100,6 +100,12 @@
       "layer": "security",
       "disposition": "warn",
       "summary": "A presentation hint the browser does not recognise; the field falls back to auto and the browser chooses. Not a schema enum, for the reason SS-W-ICON-UNKNOWN gives: a hint selects among components the browser already compiles, so refusing a whole integration over a typo'd presentation preference is out of all proportion to what the field decides."
+    },
+    {
+      "code": "SS-W-DOCK-UNRESOLVED",
+      "layer": "security",
+      "disposition": "warn",
+      "summary": "A dock projection named an id no declared item carries, so nothing is projected for it. Resolution runs against the normalized collections, so an item the security layer already dropped cannot reappear through the dock. A warning rather than a drop-item code because the item is not what was dropped — the reference to it was."
     }
   ]
 }

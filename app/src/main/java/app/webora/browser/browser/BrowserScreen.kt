@@ -86,6 +86,7 @@ import app.webora.browser.siteskin.brandMonogram
 import app.webora.browser.siteskin.BrowserMenuCommand
 import app.webora.browser.siteskin.browserMenuCommands
 import app.webora.browser.siteskin.SiteSkinHubHost
+import app.webora.browser.siteskin.dockArrangement
 import app.webora.browser.siteskin.SiteSkinHubIdentity
 import app.webora.browser.siteskin.actionBouquet
 import app.webora.browser.siteskin.hubSurface
@@ -843,11 +844,17 @@ internal fun RegularBrowser(
             // within the origin re-projects the active route with no separate invalidation. The
             // surface is the browser's decision over the site's hint, taken in one place.
             val hubSurface = integrated.configuration.hubSurface()
+            // Ids the site nominated, resolved against the already-bounded chrome model. The dock
+            // renders what this returns; the drawer subtracts what the dock rendered, so anything
+            // that failed to project is still listed there rather than disappearing from every
+            // surface.
+            val arrangement = dockArrangement(chrome, integrated.configuration.presentation?.dock.orEmpty())
             val hubAsset = brandAsset ?: BrandAsset.Monogram(
                 brandMonogram(integrated.configuration.site.shortName, integrated.configuration.site.name),
             )
             SiteSkinDock(
                 presentation = presentation,
+                arrangement = arrangement,
                 siteActions = chrome.actionBouquet(),
                 hubSurface = hubSurface,
                 siteActionsExpanded = overlay == IntegratedOverlay.SITE_HUB,
@@ -864,6 +871,7 @@ internal fun RegularBrowser(
                 visible = overlay == IntegratedOverlay.SITE_HUB,
                 surface = hubSurface,
                 model = chrome,
+                projectedIds = arrangement.projectedIds,
                 identity = SiteSkinHubIdentity.from(integrated.configuration.site.name, hubAsset),
                 colors = presentation.colors,
                 onSelect = onSiteSelect,
