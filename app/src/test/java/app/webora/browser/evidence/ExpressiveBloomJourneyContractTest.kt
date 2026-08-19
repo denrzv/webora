@@ -59,6 +59,15 @@ class ExpressiveBloomJourneyContractTest {
     }
 
     @Test
+    fun `integrated history handoff accepts native Home or another browser Back`() {
+        val source = source(HOME_NAVIGATION_SOURCE)
+
+        HOME_HANDOFF_MARKERS.forEach { marker ->
+            assertTrue("missing Home handoff marker: $marker", source.contains(marker))
+        }
+    }
+
+    @Test
     fun `hosted suite runs showcase before smoke`() {
         val source = source(SUITE_SOURCE)
         val screenshot = source.indexOf("LiveSiteScreenshotTest::class")
@@ -120,6 +129,7 @@ class ExpressiveBloomJourneyContractTest {
 
         val SCREENSHOT_SOURCE = Path.of("app/webora/browser/visual/LiveSiteScreenshotTest.kt")
         val SMOKE_SOURCE = Path.of("app/webora/browser/visual/LiveSiteNavigationSmokeTest.kt")
+        val HOME_NAVIGATION_SOURCE = Path.of("app/webora/browser/visual/HomeTestNavigation.kt")
         val SUITE_SOURCE = Path.of("app/webora/browser/visual/LiveSiteHostedSuite.kt")
 
         /** Frames whose subject is a full-window modal rather than the page behind it. */
@@ -143,12 +153,10 @@ class ExpressiveBloomJourneyContractTest {
         )
 
         val SHOWCASE_MARKERS = listOf(
-            // `UX-024`/`/review` FINDING-2: two browser-owned controls now stand between the user
-            // and integrated Back, and `CI-008` binds on both. One helper per file rather than an
-            // inlined copy, because the showcase's copy and the smoke test's had already drifted —
-            // one asserted the hub's prerequisite and the other did not.
-            "private fun openNavigationHub()",
-            ".onNodeWithTag(SITESKIN_NAV_HUB_TAG).assertIsDisplayed().assertIsEnabled().performClick()",
+            // `CI-010` run #51 proved the final integrated -> native Home boundary is asynchronous.
+            // Both hosted tests delegate that boundary to the same race-aware helper rather than
+            // duplicating a loop that waits only for SiteSkin chrome.
+            "returnIntegratedHistoryToHome(",
             "SITESKIN_DOCK_HUB_TAG",
             "SITESKIN_HUB_DRAWER_TAG",
             "BloomReferenceContract.actionTag(",
@@ -175,14 +183,25 @@ class ExpressiveBloomJourneyContractTest {
             "waitForCatalogSelection(expected = true)",
             "waitForCatalogSelection(expected = false)",
             "CATALOG_ACTION_ID = \"catalog\"",
-            // `UX-024`: the dock no longer offers Back or Forward, so the smoke traversal reaches
-            // them through the header's navigation hub.
+            // `UX-024`: product Back/Forward still travel through the header navigation hub.
             "private fun openNavigationHub()",
             ".onNodeWithTag(SITESKIN_NAV_HUB_TAG).assertIsDisplayed().assertIsEnabled().performClick()",
             "SITESKIN_BACK_TAG",
             "SITESKIN_FORWARD_TAG",
             "SITESKIN_DOCK_HUB_TAG",
+            "returnIntegratedHistoryToHome(",
             "REGULAR_SMOKE_ADDRESS = \"example.com\"",
+        )
+
+        val HOME_HANDOFF_MARKERS = listOf(
+            "internal fun ComposeContentTestRule.returnIntegratedHistoryToHome(",
+            "onAllNodes(home).fetchSemanticsNodes().isNotEmpty()",
+            "onAllNodes(navigationHub).fetchSemanticsNodes().isNotEmpty()",
+            "SITESKIN_NAV_HUB_TAG",
+            "SITESKIN_BACK_TAG",
+            ".assertIsDisplayed()",
+            ".assertIsEnabled()",
+            ".performClick()",
         )
 
         val CANONICAL_FRAMES = listOf(
