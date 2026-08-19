@@ -23,6 +23,7 @@ import app.webora.browser.MainActivity
 import app.webora.browser.R
 import app.webora.browser.browser.BROWSER_NAVIGATION_SHELL_TAG
 import app.webora.browser.browser.BROWSER_SECURITY_TAG
+import app.webora.browser.browser.HOME_SCREEN_TAG
 import app.webora.browser.siteskin.EXPRESSIVE_HEADER_TAG
 import app.webora.browser.siteskin.SITESKIN_HUB_DRAWER_TAG
 import app.webora.browser.siteskin.SITESKIN_BACK_TAG
@@ -123,7 +124,7 @@ class LiveSiteNavigationSmokeTest {
             SystemClock.sleep(NAVIGATION_SETTLE_MILLIS)
             if (isHome()) return
         }
-        waitUntilNodeExists(hasText(string(R.string.home_suggested_title)))
+        waitUntilNodeExists(hasTestTag(HOME_SCREEN_TAG))
     }
 
     private fun openBloomIntegrated() {
@@ -240,7 +241,7 @@ class LiveSiteNavigationSmokeTest {
     }
 
     private fun isHome(): Boolean =
-        composeRule.onAllNodes(hasText(string(R.string.home_suggested_title)))
+        composeRule.onAllNodes(hasTestTag(HOME_SCREEN_TAG))
             .fetchSemanticsNodes()
             .isNotEmpty()
 
