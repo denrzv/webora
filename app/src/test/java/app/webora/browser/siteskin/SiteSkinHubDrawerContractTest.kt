@@ -136,7 +136,12 @@ class SiteSkinHubDrawerContractTest {
         assertTrue("the available height is measured", "BoxWithConstraints(" in window)
         assertTrue("and handed to the rule", "hubDrawerHeight(maxHeight)" in window)
         assertTrue("whose bounds are what the panel takes", "heightIn(min = height.min, max = height.max)" in window)
-        assertFalse("a literal dp bound would be a second height policy", ".dp)" in window)
+        assertEquals("one height chain, or there are two height policies", 1, window.split("heightIn(").size - 1)
+        assertFalse(
+            "every dimension in this composable is a named constant or the height rule; a literal " +
+                "here is a measurement nothing has justified",
+            ".dp)" in window,
+        )
     }
 
     /**
