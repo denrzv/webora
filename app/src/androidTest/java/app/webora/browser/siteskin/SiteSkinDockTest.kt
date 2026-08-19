@@ -15,6 +15,7 @@ import androidx.compose.ui.test.assertWidthIsEqualTo
 import androidx.compose.ui.test.assertWidthIsAtLeast
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
@@ -183,6 +184,43 @@ class SiteSkinDockTest {
 
         compose.onNodeWithTag("${SITESKIN_DOCK_SITE_TAG_PREFIX}cart").performClick()
         assertEquals("the trusted item is what reaches the dispatcher", "cart", selected)
+    }
+
+    /**
+     * The hub follows a late-arriving asset instead of keeping the fallback it first drew.
+     *
+     * `UX-027`'s composed half. The pipeline test proves the loader publishes; this proves a hub
+     * already on screen with a monogram picks up the bitmap when it arrives — which is the user-
+     * visible symptom of issue #128 and the one thing no JVM test can reach.
+     *
+     * Asserted as a *change*: the monogram's text must be present first and gone after, because a
+     * hub handed the bitmap from the start would satisfy an end-state check while proving nothing.
+     */
+    @Test fun brandHubFollowsAnAssetThatArrivesAfterFirstComposition() {
+        var asset by mutableStateOf<BrandAsset>(BrandAsset.Monogram("B"))
+        compose.setContent {
+            SiteSkinDock(
+                presentation = presentation(false, false),
+                arrangement = DockArrangement.BrowserOnly,
+                siteActions = emptyList(),
+                hubSurface = HubSurface.DRAWER,
+                siteActionsExpanded = false,
+                onSiteActionsToggle = {},
+                onSiteActionsDismiss = {},
+                onSiteSelect = {},
+                onTabs = {},
+                onMore = {},
+                brandAsset = asset,
+            )
+        }
+
+        compose.onNodeWithText("B").assertIsDisplayed()
+
+        asset = BrandAsset.BitmapAsset(Bitmap.createBitmap(8, 8, Bitmap.Config.ARGB_8888))
+        compose.waitForIdle()
+
+        compose.onNodeWithText("B").assertDoesNotExist()
+        compose.onNodeWithTag(BRAND_HUB_IDENTITY_TAG, useUnmergedTree = true).assertIsDisplayed()
     }
 
     private fun presentation(dark: Boolean, reduced: Boolean) =
