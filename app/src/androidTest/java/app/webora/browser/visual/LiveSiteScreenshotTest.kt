@@ -5,6 +5,7 @@ import android.graphics.Rect
 import android.os.SystemClock
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
@@ -16,6 +17,7 @@ import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTouchInput
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.platform.io.PlatformTestStorageRegistry
 import androidx.test.uiautomator.By
@@ -122,9 +124,19 @@ class LiveSiteScreenshotTest {
      * drawer row — the previous version's `actionTag` would now find nothing. The drawer is still
      * open from frame 04 and must be dismissed first: a dock slot is behind the drawer's window
      * while it is up, so clicking it without closing would land on the modal.
+     *
+     * **`UX-026` gave that dismissal a mechanism and this step a deterministic target.** `UX-025`
+     * wrote `performClick()`, which taps the node's *centre* — and the scrim node is the whole
+     * window, so its centre is the screen's centre. With `UX-026`'s content-sized panel that is
+     * scrim for a two-row menu and *panel* for a menu taller than half the viewport: a step that
+     * works for Bloom today and silently stops exercising dismissal for a site with a real menu.
+     * `bottomCenter` is scrim at every permitted content height, because the panel is top-aligned
+     * and `HUB_DRAWER_MAX_FRACTION` keeps a strip below it.
+     *
+     * The step is unchanged in what it proves. Frame 04's own acceptance checks are untouched.
      */
     private fun captureBloomProfile() {
-        composeRule.onNodeWithTag(SITESKIN_HUB_SCRIM_TAG).performClick()
+        composeRule.onNodeWithTag(SITESKIN_HUB_SCRIM_TAG).performTouchInput { click(bottomCenter) }
         waitUntilNodeAbsent(hasTestTag(SITESKIN_HUB_DRAWER_TAG))
         composeRule.onNodeWithTag(
             BloomReferenceContract.dockTag(BloomReferenceContract.PROFILE_ACTION_ID),
