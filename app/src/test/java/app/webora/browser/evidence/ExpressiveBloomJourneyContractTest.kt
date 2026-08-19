@@ -43,7 +43,7 @@ class ExpressiveBloomJourneyContractTest {
 
         assertFalse(source.contains("PRODUCT_LINK_TEXT"))
         assertFalse(source.contains("SITESKIN_FORWARD_TAG"))
-        assertFalse(source.contains("waitForProductLink"))
+        assertFalse(source.contains("waitForCatalogSelection"))
     }
 
     @Test
@@ -52,6 +52,10 @@ class ExpressiveBloomJourneyContractTest {
 
         SMOKE_MARKERS.forEach { marker -> assertTrue("missing smoke marker: $marker", source.contains(marker)) }
         assertFalse("smoke coverage must not publish visual evidence", source.contains("captureDeviceScreenshot("))
+        assertFalse(
+            "after entry the smoke must not infer route identity from DOM link visibility",
+            source.contains("waitForProductLink("),
+        )
     }
 
     @Test
@@ -147,10 +151,6 @@ class ExpressiveBloomJourneyContractTest {
             ".onNodeWithTag(SITESKIN_NAV_HUB_TAG).assertIsDisplayed().assertIsEnabled().performClick()",
             "SITESKIN_DOCK_HUB_TAG",
             "SITESKIN_HUB_DRAWER_TAG",
-            // `CI-009`'s #110 moved the tag prefix behind `BloomReferenceContract`, and this list
-            // still required the literal it replaced — so `main` was red before `BROWSE-010` began.
-            // The markers follow the mechanism rather than the spelling: the showcase must still
-            // address site actions by tag, and must still select the profile action specifically.
             "BloomReferenceContract.actionTag(",
             "BloomReferenceContract.dockTag(",
             "PROFILE_PAGE_HEADING = \"Account\"",
@@ -167,16 +167,21 @@ class ExpressiveBloomJourneyContractTest {
             "findStorefrontProductLink()",
             "scrollStorefrontTowardsProduct()",
             "By.text(PRODUCT_LINK_TEXT).clickable(true)",
+            // `CI-010` run #46 proved DOM-link visibility is not a route contract after Back.
+            // The projected Catalog slot is driven by NavMatcher over `/catalog/**`, so the smoke
+            // now waits on browser-owned selection state for product -> storefront -> product.
+            "private fun waitForCatalogSelection(expected: Boolean)",
+            "SemanticsProperties.Selected",
+            "waitForCatalogSelection(expected = true)",
+            "waitForCatalogSelection(expected = false)",
+            "CATALOG_ACTION_ID = \"catalog\"",
             // `UX-024`: the dock no longer offers Back or Forward, so the smoke traversal reaches
-            // them through the header's navigation hub. Re-stated rather than dropped — losing the
-            // history half of this journey is exactly what a shortened marker list would hide.
+            // them through the header's navigation hub.
             "private fun openNavigationHub()",
             ".onNodeWithTag(SITESKIN_NAV_HUB_TAG).assertIsDisplayed().assertIsEnabled().performClick()",
             "SITESKIN_BACK_TAG",
             "SITESKIN_FORWARD_TAG",
             "SITESKIN_DOCK_HUB_TAG",
-            "waitForProductLink(isPresent = false)",
-            "waitForProductLink(isPresent = true)",
             "REGULAR_SMOKE_ADDRESS = \"example.com\"",
         )
 
