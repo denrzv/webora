@@ -37,18 +37,141 @@ class SiteSkinHubDrawerContractTest {
     /**
      * Start-side by layout direction, never by a physical edge.
      *
-     * `Alignment.CenterStart` resolves against `LayoutDirection`, so the drawer is correct under RTL
-     * with no separate code path. A `CenterEnd`, an `absolute` alignment or a negative offset would
-     * each pin it to a physical side and silently be wrong in half the world's locales.
+     * `Alignment.TopStart` resolves its horizontal half against `LayoutDirection`, so the drawer is
+     * correct under RTL with no separate code path. A `CenterEnd`, an `absolute` alignment or a
+     * negative offset would each pin it to a physical side and silently be wrong in half the world's
+     * locales.
+     *
+     * **`UX-026` moved the vertical anchor and this assertion is restated rather than relaxed.** It
+     * read `Alignment.CenterStart` while the panel filled the height, where the vertical half meant
+     * nothing; a content-sized panel has to sit at the top so the scrim a short menu leaves behind is
+     * *below* it, where a tap can land. The property under assertion is unchanged — the horizontal
+     * anchor is direction-aware — and the forbidden list grew rather than shrank, because deleting
+     * names from it would be indistinguishable from weakening the predicate.
      */
     @Test
     fun `the panel is placed by a direction-aware alignment`() {
         val source = drawerSource()
 
-        assertTrue("Alignment.CenterStart" in source)
-        listOf("Alignment.CenterEnd", "AbsoluteAlignment", "Alignment.Absolute").forEach {
+        assertTrue("Alignment.TopStart" in source)
+        listOf(
+            "Alignment.CenterEnd", "Alignment.TopEnd", "Alignment.BottomEnd",
+            "AbsoluteAlignment", "Alignment.Absolute",
+        ).forEach {
             assertFalse("$it pins the drawer to a physical edge", it in source)
         }
+    }
+
+    /**
+     * The scrim closes the drawer, and it does so by a gesture the browser owns.
+     *
+     * **The framework's own path cannot do this, which research F1 establishes by decompiling it.**
+     * `DialogWrapper.onTouchEvent` dismisses only when `DialogLayout.isInsideContent` says the touch
+     * fell outside the composed content's bounds, and this content fills the window — so
+     * `dismissOnClickOutside` is true, honoured, and unreachable. `SITESKIN_HUB_SCRIM_TAG` named a
+     * rectangle that absorbed the tap and did nothing with it, which is why the only reliable way to
+     * close the drawer was to select a row and navigate.
+     *
+     * **A gesture and not `clickable`.** A full-screen `clickable` publishes a semantics node with a
+     * click role and an accessible name, so assistive technology would meet a screen-sized button in
+     * front of the menu and have to traverse past it. `pointerInput` contributes no semantics at all,
+     * and Back remains the accessible dismissal path — which is why the issue's requirement that the
+     * scrim not be the *only* accessible route is met by construction.
+     */
+    @Test
+    fun `the scrim dismisses by a browser-owned gesture`() {
+        val source = drawerSource()
+
+        val window = drawerWindowSource()
+
+        assertTrue("the gesture is applied to the tagged scrim", ".testTag(SITESKIN_HUB_SCRIM_TAG)" in window)
+        assertTrue("and it is this modifier that carries it", ".hubScrim(onDismiss)" in window)
+        assertTrue("which is a tap gesture", "detectTapGestures" in declaration("private fun Modifier.hubScrim("))
+        assertFalse(
+            "a clickable scrim would be a screen-sized control in front of the menu",
+            "clickable" in source,
+        )
+        assertFalse("and a role would be the same claim by another spelling", "Role." in source)
+    }
+
+    /**
+     * A tap that lands on the panel never reaches the scrim's detector.
+     *
+     * The scrim is the panel's **ancestor**, so it is on the hit path for a tap on the panel too, and
+     * Compose runs the Main pass children-first. Without a consuming node on the panel, a tap on
+     * empty panel space — beside a heading, below the last row — would fall through and close the
+     * drawer under the user's finger. `detectTapGestures` awaits an *unconsumed* down, so consuming
+     * what the rows and the scroll did not is the whole mechanism.
+     *
+     * This is the half a reviewer would leave out, because the scrim works without it.
+     */
+    @Test
+    fun `the panel consumes what its children did not`() {
+        assertTrue("the panel is the node that consumes", ".consumesPanelTaps()" in drawerWindowSource())
+        val consumer = declaration("private fun Modifier.consumesPanelTaps(")
+        assertTrue("by consuming pointer changes", "consume()" in consumer)
+    }
+
+    /**
+     * The panel is the size of its menu, between bounds the browser owns.
+     *
+     * Before `UX-026` it was `fillMaxHeight()`, so the reference integration drew ~272 dp of content
+     * — two rows and a header, after `UX-025` moved three ids into the dock — in an ~800 dp box, with
+     * two thirds of it blank. `heightIn` plus the content column's existing `verticalScroll` wraps a
+     * short menu and bounds-and-scrolls a long one, so nothing is capped to stay compact.
+     *
+     * **The bounds come from the rule and never from a literal.** A `heightIn(max = 600.dp)` here
+     * would be a second, unmeasured height policy sitting where nobody would look for one, and it
+     * would escape `HubDrawerHeightTest`'s assertion that the decision reads a dimension and nothing
+     * else — which is this ticket's security assertion.
+     */
+    @Test
+    fun `the panel is bounded by the rule, not by the viewport`() {
+        val window = drawerWindowSource()
+
+        assertFalse(
+            "a full-height panel is the defect UX-026 removes",
+            "fillMaxHeight()" in window,
+        )
+        assertTrue("the available height is measured", "BoxWithConstraints(" in window)
+        assertTrue("and handed to the rule", "hubDrawerHeight(maxHeight)" in window)
+        assertTrue("whose bounds are what the panel takes", "heightIn(min = height.min, max = height.max)" in window)
+        assertEquals("one height chain, or there are two height policies", 1, window.split("heightIn(").size - 1)
+        assertFalse(
+            "every dimension in this composable is a named constant or the height rule; a literal " +
+                "here is a measurement nothing has justified",
+            ".dp)" in window,
+        )
+    }
+
+    /**
+     * One inset read, on the box that measures the space the panel is sized against.
+     *
+     * `BrowserScreen` consumes `safeDrawing` once for the browser's own window and the drawer is a
+     * different window, so these do not compound — but *within* this window the placement stopped
+     * being cosmetic once the panel became content-sized. Inside the panel the padding inflates the
+     * panel's own height; on the measuring box it reduces the space the maximum is a fraction of,
+     * which is what the maximum should mean.
+     */
+    @Test
+    fun `the safe area is read exactly once, by the box that measures`() {
+        val window = drawerWindowSource()
+
+        assertEquals(
+            "one read, or the panel is padded twice",
+            1,
+            drawerSource().split("WindowInsets.safeDrawing").size - 1,
+        )
+        // Presence in this composable is not enough — the previous placement was inside it too, on
+        // the content. What separates them is *order*: the padding has to be in the chain whose
+        // constraints the rule then reads, so it must precede that read.
+        val padded = window.indexOf("windowInsetsPadding")
+        val measured = window.indexOf("hubDrawerHeight(maxHeight)")
+        assertTrue("the inset must be applied before the height it reduces is measured", padded in 0..<measured)
+        assertFalse(
+            "the content takes no modifier at all now, which is what keeps the read on the box",
+            "HubDrawerContent(\n" in window && "modifier = " in window.substringAfter("HubDrawerContent(\n"),
+        )
     }
 
     /**
@@ -243,6 +366,17 @@ class SiteSkinHubDrawerContractTest {
     }
 
     private companion object {
+        /**
+         * `SiteSkinHubDrawer`'s body alone — the composable that wires the window, and nothing else.
+         *
+         * **Scoped because `UX-020`'s rule bit this file during its own negative control.** A
+         * whole-file `".consumesPanelTaps()" in source` is satisfied by the *declaration*
+         * `private fun Modifier.consumesPanelTaps(): Modifier`, so deleting the modifier from the
+         * panel left the assertion green — a check that would have passed over exactly the
+         * regression it exists to catch. Assert the application, not the constant.
+         */
+        fun drawerWindowSource(): String = declaration("internal fun SiteSkinHubDrawer(")
+
         fun browserScreenSource(): String =
             stripComments(File("src/main/java/app/webora/browser/browser/BrowserScreen.kt"))
 
@@ -259,12 +393,15 @@ class SiteSkinHubDrawerContractTest {
 
         fun groupSource(): String = declaration("private fun HubGroup(")
 
+        /** One top-level declaration's body, ending at whatever declaration follows it. */
         fun declaration(header: String): String {
             val source = drawerSource()
             val start = source.indexOf(header)
             check(start >= 0) { "$header not found" }
-            val next = source.indexOf("\nprivate fun ", start + 1)
-            return source.substring(start, if (next >= 0) next else source.length)
+            val next = listOf("\nprivate fun ", "\ninternal fun ", "\n@Composable")
+                .mapNotNull { marker -> source.indexOf(marker, start + 1).takeIf { it >= 0 } }
+                .minOrNull()
+            return source.substring(start, next ?: source.length)
         }
 
         fun drawerSource(): String =

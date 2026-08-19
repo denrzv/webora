@@ -10,11 +10,13 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.test.espresso.Espresso.pressBack
@@ -115,6 +117,154 @@ class SiteSkinHubDrawerTest {
 
         compose.onNodeWithTag(SITESKIN_HUB_DRAWER_TAG).assertDoesNotExist()
         assertEquals(1, dismissals)
+    }
+
+    /**
+     * Tapping the scrim closes the drawer and dispatches nothing.
+     *
+     * **The framework could not do this, which is the whole of `UX-026`.**
+     * `DialogProperties.dismissOnClickOutside` is true and honoured, but `DialogWrapper` consults
+     * `DialogLayout.isInsideContent`, whose rectangle is the composed content's first child — and
+     * that child fills the window. So the branch was unreachable and the only reliable way out of
+     * the menu was to select a row, which navigates. Deleting `hubScrim` must fail this case; if it
+     * ever passes without it, the tap is landing on something else.
+     *
+     * The tap is placed at the bottom of the scrim rather than its centre: the panel is top-aligned
+     * and bounded below the full height, so the bottom strip is scrim at every content height, where
+     * the centre is only scrim for a short enough menu.
+     */
+    @Test fun tappingTheScrimClosesTheDrawerWithoutDispatching() {
+        var visible by mutableStateOf(true)
+        var selections = 0
+        compose.setContent {
+            SiteSkinHubHost(
+                visible = visible,
+                surface = HubSurface.DRAWER,
+                model = model(BLOOM_MANIFEST),
+                projectedIds = emptySet(),
+                identity = SiteSkinHubIdentity.from("Bloom", BrandAsset.Monogram("B")),
+                colors = colors(),
+                onSelect = { selections += 1 },
+                onDismiss = { visible = false },
+            )
+        }
+
+        compose.onNodeWithTag(SITESKIN_HUB_SCRIM_TAG).performTouchInput { click(bottomCenter) }
+
+        compose.onNodeWithTag(SITESKIN_HUB_DRAWER_TAG).assertDoesNotExist()
+        assertEquals("a dismissal is not a selection", 0, selections)
+    }
+
+    /**
+     * A tap that lands on the panel does not close it.
+     *
+     * The scrim is the panel's ancestor, so it is on the hit path for panel taps too. Without
+     * `consumesPanelTaps` a tap on empty panel space — beside a heading, below the last row — falls
+     * through to the ancestor's detector and closes the drawer under the user's finger. The tap here
+     * is on the panel's own top-centre, which is header space rather than a row, so a pass would mean
+     * the fall-through and not a selection.
+     */
+    @Test fun tappingThePanelDoesNotCloseIt() {
+        var visible by mutableStateOf(true)
+        compose.setContent {
+            SiteSkinHubHost(
+                visible = visible,
+                surface = HubSurface.DRAWER,
+                model = model(BLOOM_MANIFEST),
+                projectedIds = emptySet(),
+                identity = SiteSkinHubIdentity.from("Bloom", BrandAsset.Monogram("B")),
+                colors = colors(),
+                onSelect = {},
+                onDismiss = { visible = false },
+            )
+        }
+
+        compose.onNodeWithTag(SITESKIN_HUB_DRAWER_TAG).performTouchInput { click(topCenter) }
+
+        compose.onNodeWithTag(SITESKIN_HUB_DRAWER_TAG).assertIsDisplayed()
+    }
+
+    /**
+     * A short menu does not occupy the viewport, and the assertion is bounds rather than presence.
+     *
+     * `UX-009` and `UX-023` both record that semantics keep a node's full text and unclipped bounds,
+     * so `assertIsDisplayed()` cannot see a sizing defect — it passed over a heading clipped to two
+     * characters. Bloom's drawer is a header and two rows; against the emulator's viewport that is
+     * well under half, and `HUB_DRAWER_MAX_FRACTION` alone would not produce it, so a panel that
+     * still filled the height fails here.
+     */
+    @Test fun aShortMenuDoesNotOccupyTheViewport() {
+        compose.setContent {
+            SiteSkinHubHost(
+                visible = true,
+                surface = HubSurface.DRAWER,
+                model = model(BLOOM_MANIFEST),
+                projectedIds = emptySet(),
+                identity = SiteSkinHubIdentity.from("Bloom", BrandAsset.Monogram("B")),
+                colors = colors(),
+                onSelect = {},
+                onDismiss = {},
+            )
+        }
+
+        val available = compose.onNodeWithTag(SITESKIN_HUB_SCRIM_TAG).fetchSemanticsNode().size.height
+        val panel = compose.onNodeWithTag(SITESKIN_HUB_DRAWER_TAG).fetchSemanticsNode().size.height
+
+        assertTrue("the panel measured nothing at all", panel > 0)
+        assertTrue(
+            "a two-row menu occupied $panel of $available available",
+            panel < available / 2,
+        )
+    }
+
+    /**
+     * A long menu is bounded and still reaches its last row.
+     *
+     * The other half of the same rule: compact height may never be bought by dropping entries.
+     * Twenty `menu` entries cannot fit any phone, so the panel must stop at the browser's maximum —
+     * strictly under the available height, because a panel with no scrim below it leaves Back as the
+     * only way out — and the last row must still be reachable by scrolling.
+     */
+    @Test fun aLongMenuIsBoundedAndStillScrollsToItsLastRow() {
+        val model = model(MENU_MANIFEST)
+        compose.setContent {
+            SiteSkinHubHost(
+                visible = true,
+                surface = HubSurface.DRAWER,
+                model = model,
+                projectedIds = emptySet(),
+                identity = SiteSkinHubIdentity.from("Bloom", BrandAsset.Monogram("B")),
+                colors = colors(),
+                onSelect = {},
+                onDismiss = {},
+            )
+        }
+
+        val available = compose.onNodeWithTag(SITESKIN_HUB_SCRIM_TAG).fetchSemanticsNode().size.height
+        val panel = compose.onNodeWithTag(SITESKIN_HUB_DRAWER_TAG).fetchSemanticsNode().size.height
+
+        assertTrue("the panel must leave scrim below it at every content height", panel < available)
+        compose.onNodeWithTag(row("m$MAX_MENU_ENTRIES")).performScrollTo().assertIsDisplayed()
+    }
+
+    /**
+     * An empty group reserves nothing — no heading, no spacing, no height.
+     *
+     * `UX-022` wrote the early return and nothing asserted it, in either suite. That was tolerable
+     * while the criterion was about tidiness; `UX-026` makes it **load-bearing for the compactness
+     * claim**, because a group that reserved a heading and its spacing for an empty collection adds
+     * ~28 dp per empty group to a panel whose whole point is now to be the size of its menu.
+     *
+     * The reference integration draws exactly this case: Bloom's `menu` is empty, so a regression
+     * would read as "the compact drawer is not very compact" with nothing failing anywhere.
+     */
+    @Test fun anEmptyGroupPublishesNoHeading() {
+        val model = model(BLOOM_MANIFEST)
+        compose.setContent { content(model) {} }
+
+        assertTrue("the fixture must actually have an empty group", model.siteMenu.isEmpty())
+        compose.onNodeWithTag(SITESKIN_HUB_MENU_TAG).assertDoesNotExist()
+        compose.onNodeWithTag(SITESKIN_HUB_NAV_TAG).assertIsDisplayed()
     }
 
     /**
