@@ -23,6 +23,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import app.webora.browser.R
@@ -39,7 +40,9 @@ internal fun HomeScreen(
 ) {
     var address by rememberSaveable { mutableStateOf("") }
     LazyColumn(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier
+            .fillMaxSize()
+            .testTag(HOME_SCREEN_TAG),
         contentPadding = PaddingValues(WeboraSpacing.GUTTER),
         verticalArrangement = Arrangement.spacedBy(WeboraSpacing.LARGE),
     ) {
@@ -176,3 +179,5 @@ private fun EmptyHomeSection(messageRes: Int) {
         }
     }
 }
+
+internal const val HOME_SCREEN_TAG = "browser_home"
