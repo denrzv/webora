@@ -2280,3 +2280,77 @@ extractions, each recorded at its declaration.
 `CI-009`/`CI-010` hosted acceptance must be re-taken: the integrated frames photograph a header one
 row shorter and a three-slot dock. No canonical frame was added — the inventory stays at six, and a
 seventh is a `CI-*` ticket's decision.
+
+### A scrim that absorbed the tap and did nothing with it (UX-026)
+
+`UX-022` chose a `Dialog(usePlatformDefaultWidth = false)` for the hub drawer, and chose it for a
+structural reason that still holds: the dialog is its own window, so Back is consumed there before
+`BrowserBackHandler` sees it. What that shape did not buy is the *other* half of modal dismissal, and
+the gap is provable rather than suspected — read out of the resolved artifact, not from the API
+surface:
+
+```
+DialogWrapper.onTouchEvent          # ui-android 1.10.6, javap -c
+  getDismissOnClickOutside() -> if false, skip
+  DialogLayout.isInsideContent(ev) -> if true, skip     # rectangle = getChildAt(0)'s bounds
+  ACTION_UP && isPressOutside -> onDismissRequest()
+```
+
+The drawer's content was a `Box(fillMaxSize())`, so that first child **is** the window and every
+touch is "inside". `dismissOnClickOutside` was true, honoured and unreachable, and
+`SITESKIN_HUB_SCRIM_TAG` named a rectangle that absorbed the tap and did nothing with it. **A modal
+whose documented dismissal gesture is wired to nothing is worse than one with no scrim**, because the
+affordance is there and the user's correct action produces no result — leaving "select a row", which
+navigates, as the only reliable way out of a menu somebody opened to look at.
+
+**A gesture, never `clickable`, and that is an accessibility decision rather than a style one.** A
+full-screen `clickable` publishes a semantics node with a click role and an accessible name, so
+assistive technology meets a screen-sized button in front of the menu and traverses past it to reach
+the rows. `pointerInput { detectTapGestures { onDismiss() } }` contributes no semantics node at all,
+and Back — already structural — remains the accessible path, so the scrim is never the only route out.
+
+**The panel must consume, and that is the half a reviewer leaves out because the scrim works without
+it.** The scrim is the panel's *ancestor*, so it is on the hit path for taps on the panel too. Compose
+runs the Main pass children-first and `detectTapGestures` awaits an **unconsumed** down, so consuming
+what the rows and the scroll did not is precisely "the panel handled it". Without it a tap on empty
+panel space closes the drawer under the user's finger.
+
+**`hubDrawerHeight(available: Dp)` is where a site-controlled dimension would have entered.** The
+tempting implementation reads `model.siteMenu.size` — a website deciding how much of Webora's window
+it occupies, arriving as a count that reads like a layout detail and producing a result that looks
+right for Bloom. The rule takes a `Dp` and returns two, `headerIdentityPlacement`'s shape for
+`headerIdentityPlacement`'s reason, and the assertion is **two-sided** because erasure alone cannot
+say it: `Dp` is a value class, so an added `fontScale: Float` is a `float` at the JVM boundary and
+indistinguishable from a dimension. Arity and erasure come from the compiled method; the declared
+types from the declaration line. `kotlin-reflect` would answer it in one assertion and is deliberately
+not on the test classpath.
+
+**`HUB_DRAWER_MAX_FRACTION` is a dismissal guarantee, not a proportion someone liked.** A panel
+permitted to fill the viewport leaves no scrim to tap, so outside-tap dismissal would hold for Bloom's
+two rows and quietly stop holding for the twenty `menu` entries `SPEC.md` §8 permits. It is a
+*fraction* because a fixed inset is either too tall on a small device or wasteful on a large one.
+Font scale is deliberately **not** an input: large text makes the content taller and the response to
+taller content is already scrolling at the maximum; how much of its own window the browser yields is
+not a function of the user's text size.
+
+**Top-start, not centre-start, and the vertical anchor is doing work.** A content-sized panel has to
+leave its scrim somewhere a tap can land. It also fixes the hosted step: `performClick()` taps a
+node's *centre*, and the scrim node is the whole window, so the centre is scrim for a short menu and
+**panel** for a menu taller than half the viewport. The journey taps `bottomCenter`, which is scrim at
+every permitted content height.
+
+**Two negative controls passed on their first run, and both were presence checks over a scope that
+contained the defect as well as the fix.** `".consumesPanelTaps()" in source` is satisfied by the
+*declaration* `private fun Modifier.consumesPanelTaps(): Modifier`, so deleting the modifier from the
+panel left it green — `UX-020`'s "assert the application, not the constant", walked into again by a
+file that had read the rule. And the inset check required `windowInsetsPadding` somewhere in the
+composable, where the *old* placement was too; what separates them is **order** — the padding has to
+precede the constraint read it reduces. A third control failed to compile, which reads exactly like a
+control that bit nothing, `UX-024`'s trap for the second time in one ticket.
+
+**The evidence the hosted runs do and do not carry.** Run 44 (`90b5d7f`) captured six frames and
+reached the dock by clicking a **drawer row** — dismiss-by-navigating, the complaint the issue filed.
+`UX-025` replaced that with the scrim click, and run 45 (`4d8a3f0`), the first run ever to reach that
+step, failed. So the mechanism this ticket builds was never demonstrated by a green run, and the
+decompiled `isInsideContent` path is the authority for why it could not have been. `CI-009`/`CI-010`
+acceptance must be re-taken: frame 04 photographs a compact panel.
