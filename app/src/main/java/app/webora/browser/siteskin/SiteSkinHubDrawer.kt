@@ -2,6 +2,7 @@ package app.webora.browser.siteskin
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -82,20 +84,22 @@ internal fun SiteSkinHubDrawer(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
-        // The panel occupies the start edge and the remainder is scrim. `Alignment.CenterStart` is
-        // resolved against the layout direction, so this is start-side under RTL without a physical
-        // left/right constant anywhere in the file.
+        // The panel occupies the start edge and the remainder is scrim. `Alignment.TopStart` resolves
+        // its horizontal half against the layout direction, so this is start-side under RTL without
+        // a physical left/right constant anywhere in the file.
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .testTag(SITESKIN_HUB_SCRIM_TAG),
-            contentAlignment = Alignment.CenterStart,
+                .testTag(SITESKIN_HUB_SCRIM_TAG)
+                .hubScrim(onDismiss),
+            contentAlignment = Alignment.TopStart,
         ) {
             Surface(
                 modifier = Modifier
                     .fillMaxHeight()
                     .widthIn(max = HUB_DRAWER_MAX_WIDTH)
                     .fillMaxWidth(HUB_DRAWER_WIDTH_FRACTION)
+                    .consumesPanelTaps()
                     .testTag(SITESKIN_HUB_DRAWER_TAG),
                 color = colors.background,
                 contentColor = colors.onBackground,
@@ -358,6 +362,49 @@ internal data class SiteSkinHubIdentity private constructor(val name: String, va
          */
         fun from(name: String, asset: BrandAsset): SiteSkinHubIdentity =
             SiteSkinHubIdentity(accessibleLabel(name), asset)
+    }
+}
+
+/**
+ * The scrim's dismissal, which the browser owns because the framework's cannot reach it.
+ *
+ * `DialogProperties.dismissOnClickOutside` is true here and is *honoured* — it simply never fires.
+ * `DialogWrapper.onTouchEvent` consults `DialogLayout.isInsideContent`, which resolves its rectangle
+ * from the composed content's first child; this drawer's content fills the window, so every touch
+ * the window receives is "inside" and the dismissal branch is unreachable. Before `UX-026` that made
+ * [SITESKIN_HUB_SCRIM_TAG] a rectangle which looked like a scrim, absorbed the tap and did nothing
+ * with it, leaving "select a row and navigate" as the only reliable way out of the menu.
+ *
+ * **A gesture rather than `clickable`, and that is an accessibility decision.** A full-screen
+ * `clickable` publishes a semantics node with a click role and an accessible name, so assistive
+ * technology would meet a screen-sized button in front of the menu and have to traverse past it to
+ * reach the rows. `pointerInput` contributes no semantics node at all — and Back, which `UX-022`'s
+ * dialog window already consumes, remains the accessible dismissal path, so the scrim is never the
+ * only route out.
+ *
+ * Pairs with [consumesPanelTaps]: this node is the panel's ancestor, so it is on the hit path for
+ * taps on the panel too.
+ */
+private fun Modifier.hubScrim(onDismiss: () -> Unit): Modifier =
+    pointerInput(onDismiss) { detectTapGestures { onDismiss() } }
+
+/**
+ * Everything the panel's own children did not take, so a tap on it cannot reach [hubScrim].
+ *
+ * Compose runs the Main pass children-first, so rows, headings and the scroll all see a tap before
+ * this node does, and `detectTapGestures` on the ancestor awaits an **unconsumed** down. Consuming
+ * the remainder here is therefore precisely "the panel handled it", and without it a tap on empty
+ * panel space — beside a heading, below the last row — would fall through and close the drawer under
+ * the user's finger.
+ *
+ * Consuming an already-consumed change is a no-op, so this neither competes with the rows nor
+ * interferes with scrolling.
+ */
+private fun Modifier.consumesPanelTaps(): Modifier = pointerInput(Unit) {
+    awaitPointerEventScope {
+        while (true) {
+            awaitPointerEvent().changes.forEach { change -> change.consume() }
+        }
     }
 }
 

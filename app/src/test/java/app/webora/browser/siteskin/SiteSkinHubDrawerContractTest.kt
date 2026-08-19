@@ -37,18 +37,79 @@ class SiteSkinHubDrawerContractTest {
     /**
      * Start-side by layout direction, never by a physical edge.
      *
-     * `Alignment.CenterStart` resolves against `LayoutDirection`, so the drawer is correct under RTL
-     * with no separate code path. A `CenterEnd`, an `absolute` alignment or a negative offset would
-     * each pin it to a physical side and silently be wrong in half the world's locales.
+     * `Alignment.TopStart` resolves its horizontal half against `LayoutDirection`, so the drawer is
+     * correct under RTL with no separate code path. A `CenterEnd`, an `absolute` alignment or a
+     * negative offset would each pin it to a physical side and silently be wrong in half the world's
+     * locales.
+     *
+     * **`UX-026` moved the vertical anchor and this assertion is restated rather than relaxed.** It
+     * read `Alignment.CenterStart` while the panel filled the height, where the vertical half meant
+     * nothing; a content-sized panel has to sit at the top so the scrim a short menu leaves behind is
+     * *below* it, where a tap can land. The property under assertion is unchanged — the horizontal
+     * anchor is direction-aware — and the forbidden list grew rather than shrank, because deleting
+     * names from it would be indistinguishable from weakening the predicate.
      */
     @Test
     fun `the panel is placed by a direction-aware alignment`() {
         val source = drawerSource()
 
-        assertTrue("Alignment.CenterStart" in source)
-        listOf("Alignment.CenterEnd", "AbsoluteAlignment", "Alignment.Absolute").forEach {
+        assertTrue("Alignment.TopStart" in source)
+        listOf(
+            "Alignment.CenterEnd", "Alignment.TopEnd", "Alignment.BottomEnd",
+            "AbsoluteAlignment", "Alignment.Absolute",
+        ).forEach {
             assertFalse("$it pins the drawer to a physical edge", it in source)
         }
+    }
+
+    /**
+     * The scrim closes the drawer, and it does so by a gesture the browser owns.
+     *
+     * **The framework's own path cannot do this, which research F1 establishes by decompiling it.**
+     * `DialogWrapper.onTouchEvent` dismisses only when `DialogLayout.isInsideContent` says the touch
+     * fell outside the composed content's bounds, and this content fills the window — so
+     * `dismissOnClickOutside` is true, honoured, and unreachable. `SITESKIN_HUB_SCRIM_TAG` named a
+     * rectangle that absorbed the tap and did nothing with it, which is why the only reliable way to
+     * close the drawer was to select a row and navigate.
+     *
+     * **A gesture and not `clickable`.** A full-screen `clickable` publishes a semantics node with a
+     * click role and an accessible name, so assistive technology would meet a screen-sized button in
+     * front of the menu and have to traverse past it. `pointerInput` contributes no semantics at all,
+     * and Back remains the accessible dismissal path — which is why the issue's requirement that the
+     * scrim not be the *only* accessible route is met by construction.
+     */
+    @Test
+    fun `the scrim dismisses by a browser-owned gesture`() {
+        val source = drawerSource()
+
+        val window = drawerWindowSource()
+
+        assertTrue("the gesture is applied to the tagged scrim", ".testTag(SITESKIN_HUB_SCRIM_TAG)" in window)
+        assertTrue("and it is this modifier that carries it", ".hubScrim(onDismiss)" in window)
+        assertTrue("which is a tap gesture", "detectTapGestures" in declaration("private fun Modifier.hubScrim("))
+        assertFalse(
+            "a clickable scrim would be a screen-sized control in front of the menu",
+            "clickable" in source,
+        )
+        assertFalse("and a role would be the same claim by another spelling", "Role." in source)
+    }
+
+    /**
+     * A tap that lands on the panel never reaches the scrim's detector.
+     *
+     * The scrim is the panel's **ancestor**, so it is on the hit path for a tap on the panel too, and
+     * Compose runs the Main pass children-first. Without a consuming node on the panel, a tap on
+     * empty panel space — beside a heading, below the last row — would fall through and close the
+     * drawer under the user's finger. `detectTapGestures` awaits an *unconsumed* down, so consuming
+     * what the rows and the scroll did not is the whole mechanism.
+     *
+     * This is the half a reviewer would leave out, because the scrim works without it.
+     */
+    @Test
+    fun `the panel consumes what its children did not`() {
+        assertTrue("the panel is the node that consumes", ".consumesPanelTaps()" in drawerWindowSource())
+        val consumer = declaration("private fun Modifier.consumesPanelTaps(")
+        assertTrue("by consuming pointer changes", "consume()" in consumer)
     }
 
     /**
@@ -243,6 +304,17 @@ class SiteSkinHubDrawerContractTest {
     }
 
     private companion object {
+        /**
+         * `SiteSkinHubDrawer`'s body alone — the composable that wires the window, and nothing else.
+         *
+         * **Scoped because `UX-020`'s rule bit this file during its own negative control.** A
+         * whole-file `".consumesPanelTaps()" in source` is satisfied by the *declaration*
+         * `private fun Modifier.consumesPanelTaps(): Modifier`, so deleting the modifier from the
+         * panel left the assertion green — a check that would have passed over exactly the
+         * regression it exists to catch. Assert the application, not the constant.
+         */
+        fun drawerWindowSource(): String = declaration("internal fun SiteSkinHubDrawer(")
+
         fun browserScreenSource(): String =
             stripComments(File("src/main/java/app/webora/browser/browser/BrowserScreen.kt"))
 
@@ -259,12 +331,15 @@ class SiteSkinHubDrawerContractTest {
 
         fun groupSource(): String = declaration("private fun HubGroup(")
 
+        /** One top-level declaration's body, ending at whatever declaration follows it. */
         fun declaration(header: String): String {
             val source = drawerSource()
             val start = source.indexOf(header)
             check(start >= 0) { "$header not found" }
-            val next = source.indexOf("\nprivate fun ", start + 1)
-            return source.substring(start, if (next >= 0) next else source.length)
+            val next = listOf("\nprivate fun ", "\ninternal fun ", "\n@Composable")
+                .mapNotNull { marker -> source.indexOf(marker, start + 1).takeIf { it >= 0 } }
+                .minOrNull()
+            return source.substring(start, next ?: source.length)
         }
 
         fun drawerSource(): String =
