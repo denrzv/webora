@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -54,7 +55,13 @@ internal fun SiteSkinInspectorPanel(snapshot: InspectorSnapshot, onClose: () -> 
         modifier = Modifier.testTag(INSPECTOR_PANEL_TAG),
         title = { InspectorTitle(copied) },
         text = { InspectorBody(snapshot) },
-        dismissButton = { InspectorCopyControl(snapshot) { copied = true } },
+        dismissButton = {
+            InspectorCopyControl(
+                snapshot = snapshot,
+                onCopyStarted = { copied = false },
+                onCopied = { copied = true },
+            )
+        },
         confirmButton = { WeboraButton(stringResource(R.string.inspector_close), onClose) },
     )
 }
@@ -74,10 +81,14 @@ internal fun SiteSkinInspectorPanel(snapshot: InspectorSnapshot, onClose: () -> 
  * nameless node.
  *
  * Polite, not assertive. A successful copy is not an interruption.
+ *
+ * The gap sits on the message rather than on the column, because `Arrangement.spacedBy` pays its
+ * spacing for a zero-height child too — the persistent node has to be free when it has nothing to
+ * say, or every dialog opens 8 dp taller for a confirmation that has not happened.
  */
 @Composable
 private fun InspectorTitle(copied: Boolean) {
-    Column(verticalArrangement = Arrangement.spacedBy(ROW_SPACING)) {
+    Column {
         Text(stringResource(R.string.inspector_title))
         val message = stringResource(R.string.inspector_copied).takeIf { copied }
         Box(
@@ -90,7 +101,9 @@ private fun InspectorTitle(copied: Boolean) {
                 }
             },
         ) {
-            message?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+            message?.let {
+                Text(it, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = ROW_SPACING))
+            }
         }
     }
 }
@@ -107,13 +120,23 @@ private fun InspectorTitle(copied: Boolean) {
  * confirmation that appears whether or not the write happened is worse than none, and a platform
  * failure should surface as a thrown exception in a debug build rather than as a false `Copied`.
  *
+ * [onCopyStarted] runs before it, and is not symmetry for its own sake. A confirmation flag that only
+ * ever goes `false → true` announces the **first** tap and nothing after it, because a live region
+ * speaks when its content *changes* — so a second copy would replace the clipboard in silence, which
+ * to a screen-reader user is indistinguishable from a control that did nothing. Clearing first also
+ * stops the panel claiming a previous `Copied` for a write still in flight.
+ *
  * Outlined rather than filled — `Close` stays the panel's primary action — and the pair reflows onto
  * two lines through Material's own `AlertDialogFlowRow` when the labels do not fit. `UX-007`'s
  * explicit full-width vertical stack is *consent* policy, written so a security decision's three
  * options cannot become a split row, and is deliberately not copied to a developer tool's two.
  */
 @Composable
-private fun InspectorCopyControl(snapshot: InspectorSnapshot, onCopied: () -> Unit) {
+private fun InspectorCopyControl(
+    snapshot: InspectorSnapshot,
+    onCopyStarted: () -> Unit,
+    onCopied: () -> Unit,
+) {
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
     val document = remember(snapshot) { inspectorJson(snapshot) }
@@ -122,6 +145,7 @@ private fun InspectorCopyControl(snapshot: InspectorSnapshot, onCopied: () -> Un
     WeboraOutlinedButton(
         onClick = {
             scope.launch {
+                onCopyStarted()
                 clipboard.setClipEntry(ClipEntry(ClipData.newPlainText(clipLabel, document)))
                 onCopied()
             }

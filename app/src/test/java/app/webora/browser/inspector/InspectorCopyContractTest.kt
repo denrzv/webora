@@ -94,6 +94,20 @@ class InspectorCopyContractTest {
         assertTrue("the confirmation must follow the write, not precede it", confirm > write)
     }
 
+    @Test fun `the confirmation is cleared before the write`() {
+        // A flag that only ever goes false to true announces the *first* tap and nothing after it,
+        // because a live region speaks when its content changes — so a second copy would replace the
+        // clipboard in silence, which to a screen-reader user is a control that did nothing. Paired
+        // with the ordering rule above and not merged into it: this one alone permits a confirmation
+        // that fires before the write, and that one alone permits a latch that never resets.
+        val slice = copyControl()
+        val start = slice.indexOfFirst { it.contains("onCopyStarted()") }
+        val write = slice.indexOfFirst { it.contains("setClipEntry(") }
+
+        assertTrue("expected the copy control to clear its confirmation before writing", start >= 0)
+        assertTrue("the confirmation must be cleared before the write, not after it", start < write)
+    }
+
     @Test fun `the panel reads no browser state of its own`() {
         // The snapshot parameter is the panel's only input, and that is what stops one origin's
         // transport joining another's applied chrome in a document someone pastes into an issue.
