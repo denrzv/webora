@@ -10,6 +10,10 @@
     <string name="inspector_title">SiteSkin inspector</string>
     <string name="inspector_read_only">Read-only. Nothing here changes what the browser does.</string>
     <string name="inspector_close">Close</string>
+    <string name="inspector_copy">Copy JSON</string>
+    <string name="inspector_copy_description">Copy inspector diagnostics as JSON</string>
+    <string name="inspector_copy_clip_label">Webora SiteSkin inspector</string>
+    <string name="inspector_copied">Diagnostics copied to clipboard</string>
 
     <string name="inspector_section_origin">Origin</string>
     <string name="inspector_section_transport">Transport</string>
