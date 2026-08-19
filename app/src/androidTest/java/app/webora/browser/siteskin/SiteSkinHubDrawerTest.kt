@@ -248,6 +248,26 @@ class SiteSkinHubDrawerTest {
     }
 
     /**
+     * An empty group reserves nothing — no heading, no spacing, no height.
+     *
+     * `UX-022` wrote the early return and nothing asserted it, in either suite. That was tolerable
+     * while the criterion was about tidiness; `UX-026` makes it **load-bearing for the compactness
+     * claim**, because a group that reserved a heading and its spacing for an empty collection adds
+     * ~28 dp per empty group to a panel whose whole point is now to be the size of its menu.
+     *
+     * The reference integration draws exactly this case: Bloom's `menu` is empty, so a regression
+     * would read as "the compact drawer is not very compact" with nothing failing anywhere.
+     */
+    @Test fun anEmptyGroupPublishesNoHeading() {
+        val model = model(BLOOM_MANIFEST)
+        compose.setContent { content(model) {} }
+
+        assertTrue("the fixture must actually have an empty group", model.siteMenu.isEmpty())
+        compose.onNodeWithTag(SITESKIN_HUB_MENU_TAG).assertDoesNotExist()
+        compose.onNodeWithTag(SITESKIN_HUB_NAV_TAG).assertIsDisplayed()
+    }
+
+    /**
      * Only navigation rows publish selection, and the active one is the route `NavMatcher` chose.
      *
      * `UX-015`'s split, driven rather than scanned: a quick action is an action, not a route, so its
