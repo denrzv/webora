@@ -45,6 +45,68 @@ jobs:
           printf 'commit=%s\nrun_id=%s\n' "$GITHUB_SHA" "$GITHUB_RUN_ID" \
             > artifacts/run.txt
 
+      - name: Verify deployed Bloom SiteSkin contract
+        env:
+          SITESKIN_MANIFEST_URL: https://denrzv.github.io/.well-known/siteskin.json
+        run: |
+          set -euo pipefail
+          manifest=artifacts/hosted-siteskin.json
+          summary=artifacts/hosted-siteskin-validation.txt
+
+          curl --fail --silent --show-error --location \
+            --retry 3 --retry-delay 2 \
+            "$SITESKIN_MANIFEST_URL" \
+            -o "$manifest"
+
+          python3 - "$manifest" "$summary" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          manifest_path = Path(sys.argv[1])
+          summary_path = Path(sys.argv[2])
+          data = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+          expected_dock = ["catalog", "cart", "profile"]
+          expected_bottom = ["home", "catalog", "cart", "profile"]
+          expected_quick = ["call-shop"]
+
+          presentation = data.get("presentation") or {}
+          actual_hub = presentation.get("hub")
+          actual_dock = presentation.get("dock")
+          bottom_ids = [item.get("id") for item in data.get("bottomNavigation", [])]
+          quick_ids = [item.get("id") for item in data.get("quickActions", [])]
+
+          errors = []
+          if actual_hub != "drawer":
+              errors.append(f"presentation.hub expected 'drawer', got {actual_hub!r}")
+          if actual_dock != expected_dock:
+              errors.append(f"presentation.dock expected {expected_dock!r}, got {actual_dock!r}")
+          missing_bottom = [item for item in expected_bottom if item not in bottom_ids]
+          if missing_bottom:
+              errors.append(f"bottomNavigation missing ids {missing_bottom!r}; actual={bottom_ids!r}")
+          missing_quick = [item for item in expected_quick if item not in quick_ids]
+          if missing_quick:
+              errors.append(f"quickActions missing ids {missing_quick!r}; actual={quick_ids!r}")
+
+          lines = [
+              "origin=https://denrzv.github.io",
+              f"presentation.hub={actual_hub!r}",
+              f"presentation.dock={actual_dock!r}",
+              f"bottomNavigation={bottom_ids!r}",
+              f"quickActions={quick_ids!r}",
+              f"verdict={'PASS' if not errors else 'FAIL'}",
+          ]
+          if errors:
+              lines.extend(f"error={error}" for error in errors)
+          summary_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+          print(summary_path.read_text(encoding="utf-8"), end="")
+
+          if errors:
+              print("Hosted SiteSkin fixture is stale or incompatible with CI-010.", file=sys.stderr)
+              raise SystemExit(1)
+          PY
+
       - name: Enable KVM access
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
@@ -148,17 +210,25 @@ jobs:
             echo '## Webora live-site screenshots'
             echo
             echo "Origin: \`https://denrzv.github.io\`"
-            echo 'SiteSkin presentation: **drawer** (default for a manifest without an explicit bouquet request)'
+            echo 'SiteSkin presentation: **explicit drawer** with projected dock actions `catalog`, `cart`, `profile`'
+            echo 'Drawer actions expected after projection: `home`, `call-shop`'
             echo 'Device: Pixel 6 profile, Android API 33'
             echo "Commit: \`$GITHUB_SHA\`"
             echo "Run: \`$GITHUB_RUN_ID\`"
             echo "Screenshots captured: **${png_count:-0}**"
+            if [[ -f artifacts/hosted-siteskin-validation.txt ]]; then
+              echo
+              echo '### Hosted SiteSkin contract preflight'
+              echo '```text'
+              cat artifacts/hosted-siteskin-validation.txt
+              echo '```'
+            fi
             echo
             if [[ "${png_count:-0}" -gt 0 ]]; then
               echo "| Artifact | Contents |"
               echo "|---|---|"
               echo "| \`webora-screenshots-$GITHUB_SHA\` | \`preview.png\` plus each full-resolution frame |"
-              echo "| \`webora-screenshot-diagnostics-$GITHUB_SHA\` | logcat, instrumentation, readiness, test output |"
+              echo "| \`webora-screenshot-diagnostics-$GITHUB_SHA\` | hosted manifest, validation summary, logcat, instrumentation, readiness, test output |"
               echo
               echo 'Open `preview.png` first — it shows the whole journey in order.'
             else
