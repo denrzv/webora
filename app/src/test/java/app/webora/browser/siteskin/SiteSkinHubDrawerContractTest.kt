@@ -113,6 +113,63 @@ class SiteSkinHubDrawerContractTest {
     }
 
     /**
+     * The panel is the size of its menu, between bounds the browser owns.
+     *
+     * Before `UX-026` it was `fillMaxHeight()`, so the reference integration drew ~272 dp of content
+     * — two rows and a header, after `UX-025` moved three ids into the dock — in an ~800 dp box, with
+     * two thirds of it blank. `heightIn` plus the content column's existing `verticalScroll` wraps a
+     * short menu and bounds-and-scrolls a long one, so nothing is capped to stay compact.
+     *
+     * **The bounds come from the rule and never from a literal.** A `heightIn(max = 600.dp)` here
+     * would be a second, unmeasured height policy sitting where nobody would look for one, and it
+     * would escape `HubDrawerHeightTest`'s assertion that the decision reads a dimension and nothing
+     * else — which is this ticket's security assertion.
+     */
+    @Test
+    fun `the panel is bounded by the rule, not by the viewport`() {
+        val window = drawerWindowSource()
+
+        assertFalse(
+            "a full-height panel is the defect UX-026 removes",
+            "fillMaxHeight()" in window,
+        )
+        assertTrue("the available height is measured", "BoxWithConstraints(" in window)
+        assertTrue("and handed to the rule", "hubDrawerHeight(maxHeight)" in window)
+        assertTrue("whose bounds are what the panel takes", "heightIn(min = height.min, max = height.max)" in window)
+        assertFalse("a literal dp bound would be a second height policy", ".dp)" in window)
+    }
+
+    /**
+     * One inset read, on the box that measures the space the panel is sized against.
+     *
+     * `BrowserScreen` consumes `safeDrawing` once for the browser's own window and the drawer is a
+     * different window, so these do not compound — but *within* this window the placement stopped
+     * being cosmetic once the panel became content-sized. Inside the panel the padding inflates the
+     * panel's own height; on the measuring box it reduces the space the maximum is a fraction of,
+     * which is what the maximum should mean.
+     */
+    @Test
+    fun `the safe area is read exactly once, by the box that measures`() {
+        val window = drawerWindowSource()
+
+        assertEquals(
+            "one read, or the panel is padded twice",
+            1,
+            drawerSource().split("WindowInsets.safeDrawing").size - 1,
+        )
+        // Presence in this composable is not enough — the previous placement was inside it too, on
+        // the content. What separates them is *order*: the padding has to be in the chain whose
+        // constraints the rule then reads, so it must precede that read.
+        val padded = window.indexOf("windowInsetsPadding")
+        val measured = window.indexOf("hubDrawerHeight(maxHeight)")
+        assertTrue("the inset must be applied before the height it reduces is measured", padded in 0..<measured)
+        assertFalse(
+            "the content takes no modifier at all now, which is what keeps the read on the box",
+            "HubDrawerContent(\n" in window && "modifier = " in window.substringAfter("HubDrawerContent(\n"),
+        )
+    }
+
+    /**
      * No second brand-asset loader, and no raw resource lookup.
      *
      * `NET-003`'s same-origin recheck and `NET-004`'s publication guard both live in one place, and

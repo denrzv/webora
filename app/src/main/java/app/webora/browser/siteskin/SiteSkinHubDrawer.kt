@@ -5,12 +5,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
@@ -86,17 +87,25 @@ internal fun SiteSkinHubDrawer(
     ) {
         // The panel occupies the start edge and the remainder is scrim. `Alignment.TopStart` resolves
         // its horizontal half against the layout direction, so this is start-side under RTL without
-        // a physical left/right constant anywhere in the file.
-        Box(
+        // a physical left/right constant anywhere in the file. Top rather than centre because a
+        // content-sized panel has to leave its scrim somewhere a tap can land.
+        //
+        // The inset is consumed here, on the box whose constraints the maximum is a fraction of.
+        // Inside the panel it would inflate the panel's own height instead of reducing the space it
+        // is measured against. `BrowserScreen` consumes `safeDrawing` once for the browser's window;
+        // this is a different window, so the two do not compound.
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
                 .testTag(SITESKIN_HUB_SCRIM_TAG)
-                .hubScrim(onDismiss),
+                .hubScrim(onDismiss)
+                .windowInsetsPadding(WindowInsets.safeDrawing),
             contentAlignment = Alignment.TopStart,
         ) {
+            val height = hubDrawerHeight(maxHeight)
             Surface(
                 modifier = Modifier
-                    .fillMaxHeight()
+                    .heightIn(min = height.min, max = height.max)
                     .widthIn(max = HUB_DRAWER_MAX_WIDTH)
                     .fillMaxWidth(HUB_DRAWER_WIDTH_FRACTION)
                     .consumesPanelTaps()
@@ -112,7 +121,6 @@ internal fun SiteSkinHubDrawer(
                     colors = colors,
                     onSelect = onSelect,
                     onDismiss = onDismiss,
-                    modifier = Modifier.windowInsetsPadding(WindowInsets.safeDrawing),
                 )
             }
         }
