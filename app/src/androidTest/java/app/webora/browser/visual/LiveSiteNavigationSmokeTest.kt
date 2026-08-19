@@ -213,14 +213,12 @@ class LiveSiteNavigationSmokeTest {
     }
 
     private fun returnFromBloomHistoryToHome() {
-        repeat(MAX_HISTORY_RETURNS) {
-            if (isHome()) return
-            openNavigationHub()
-            composeRule.onNodeWithTag(SITESKIN_BACK_TAG).performClick()
-            composeRule.waitForIdle()
-            SystemClock.sleep(NAVIGATION_SETTLE_MILLIS)
-        }
-        waitUntilNodeExists(hasText(string(R.string.home_suggested_title)))
+        composeRule.returnIntegratedHistoryToHome(
+            homeText = string(R.string.home_suggested_title),
+            maxReturns = MAX_HISTORY_RETURNS,
+            timeoutMillis = LIVE_SITE_TIMEOUT_MILLIS,
+            settleMillis = NAVIGATION_SETTLE_MILLIS,
+        )
     }
 
     private fun openRegularSmokeOrigin() {
