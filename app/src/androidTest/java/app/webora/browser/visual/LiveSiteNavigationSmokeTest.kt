@@ -1,6 +1,7 @@
 package app.webora.browser.visual
 
 import android.os.SystemClock
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.hasContentDescription
@@ -38,7 +39,7 @@ import org.junit.Test
  * Deep live-site regression coverage that deliberately publishes no screenshots.
  *
  * The canonical screenshot test is a concise product showcase. This test retains the more diagnostic
- * M9 traversal — product navigation, browser Back/Forward, the native action bouquet and exact-origin
+ * M9 traversal — product navigation, browser Back/Forward, the native action hub and exact-origin
  * teardown — so making the visual artifact easier to review does not reduce runtime coverage.
  */
 class LiveSiteNavigationSmokeTest {
@@ -56,7 +57,11 @@ class LiveSiteNavigationSmokeTest {
         }
         product.click()
 
-        waitForProductLink(isPresent = false)
+        // `Happy Days` remains the deterministic entry target only. Once navigation has started,
+        // the smoke observes the browser-owned route model through the projected Catalog slot instead
+        // of asking UiAutomator whether one DOM link happens to be inside the current accessibility
+        // viewport. `/catalog/**` selects Catalog on the product detail page; `/` does not.
+        waitForCatalogSelection(expected = true)
         requireIntegratedChrome()
         openNavigationHub()
         composeRule.onNodeWithTag(SITESKIN_BACK_TAG)
@@ -64,7 +69,7 @@ class LiveSiteNavigationSmokeTest {
             .assertIsEnabled()
             .performClick()
 
-        waitForProductLink(isPresent = true)
+        waitForCatalogSelection(expected = false)
         requireIntegratedChrome()
         openNavigationHub()
         composeRule.onNodeWithTag(SITESKIN_FORWARD_TAG)
@@ -72,7 +77,7 @@ class LiveSiteNavigationSmokeTest {
             .assertIsEnabled()
             .performClick()
 
-        waitForProductLink(isPresent = false)
+        waitForCatalogSelection(expected = true)
         requireIntegratedChrome()
 
         composeRule.onNodeWithTag(SITESKIN_DOCK_HUB_TAG).assertIsDisplayed().performClick()
@@ -168,14 +173,19 @@ class LiveSiteNavigationSmokeTest {
         SystemClock.sleep(PRODUCT_SCROLL_SETTLE_MILLIS)
     }
 
-    private fun waitForProductLink(isPresent: Boolean) {
-        val selector = productLinkSelector()
-        val reached = if (isPresent) {
-            uiDevice.wait(Until.hasObject(selector), LIVE_SITE_TIMEOUT_MILLIS)
-        } else {
-            uiDevice.wait(Until.gone(selector), LIVE_SITE_TIMEOUT_MILLIS)
+    /**
+     * Route identity is read from Webora's validated navigation model, not from page viewport state.
+     * Bloom projects `catalog` into the persistent dock and its manifest matches `/catalog/**`, so
+     * selection is true on Happy Days and false on the storefront root. This is the same browser-
+     * observed route signal that renders the active dock state for the user.
+     */
+    private fun waitForCatalogSelection(expected: Boolean) {
+        val tag = BloomReferenceContract.dockTag(CATALOG_ACTION_ID)
+        composeRule.waitUntil(LIVE_SITE_TIMEOUT_MILLIS) {
+            composeRule.onAllNodes(hasTestTag(tag)).fetchSemanticsNodes().singleOrNull()
+                ?.config
+                ?.getOrElse(SemanticsProperties.Selected) { false } == expected
         }
-        require(reached) { "Bloom product link presence did not become $isPresent" }
     }
 
     private fun productLinkSelector() = By.text(PRODUCT_LINK_TEXT).clickable(true)
@@ -263,6 +273,7 @@ class LiveSiteNavigationSmokeTest {
     private companion object {
         const val LIVE_ORIGIN = "https://denrzv.github.io"
         const val REGULAR_SMOKE_ADDRESS = "example.com"
+        const val CATALOG_ACTION_ID = "catalog"
         const val PRODUCT_NAME = "Happy Days Bouquet"
         const val PRODUCT_LINK_TEXT = "Happy Days"
         const val MAX_HISTORY_RETURNS = 8
