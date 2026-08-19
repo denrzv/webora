@@ -72,6 +72,7 @@ import dev.siteskin.core.model.NavigationItem
 @Composable
 internal fun SiteSkinHubDrawer(
     model: SiteSkinChromeModel,
+    projectedIds: Set<String>,
     identity: SiteSkinHubIdentity,
     colors: SiteSkinColorScheme,
     onSelect: (NavigationItem) -> Unit,
@@ -102,6 +103,7 @@ internal fun SiteSkinHubDrawer(
             ) {
                 HubDrawerContent(
                     model = model,
+                    projectedIds = projectedIds,
                     identity = identity,
                     colors = colors,
                     onSelect = onSelect,
@@ -127,13 +129,14 @@ internal fun SiteSkinHubHost(
     visible: Boolean,
     surface: HubSurface,
     model: SiteSkinChromeModel,
+    projectedIds: Set<String>,
     identity: SiteSkinHubIdentity,
     colors: SiteSkinColorScheme,
     onSelect: (NavigationItem) -> Unit,
     onDismiss: () -> Unit,
 ) {
     if (!visible || surface != HubSurface.DRAWER) return
-    SiteSkinHubDrawer(model, identity, colors, onSelect, onDismiss)
+    SiteSkinHubDrawer(model, projectedIds, identity, colors, onSelect, onDismiss)
 }
 
 /**
@@ -147,6 +150,7 @@ internal fun SiteSkinHubHost(
 @Composable
 internal fun HubDrawerContent(
     model: SiteSkinChromeModel,
+    projectedIds: Set<String>,
     identity: SiteSkinHubIdentity,
     colors: SiteSkinColorScheme,
     onSelect: (NavigationItem) -> Unit,
@@ -164,9 +168,25 @@ internal fun HubDrawerContent(
         verticalArrangement = Arrangement.spacedBy(WeboraSpacing.LARGE),
     ) {
         HubHeader(identity, colors)
-        HubGroup(R.string.siteskin_quick_actions, model.quickActions, colors, SITESKIN_HUB_ACTIONS_TAG, select)
-        HubGroup(R.string.siteskin_site_menu_heading, model.bottomNavigation, colors, SITESKIN_HUB_NAV_TAG, select)
-        HubGroup(R.string.siteskin_more_from_site, model.siteMenu, colors, SITESKIN_HUB_MENU_TAG, select)
+        // `UX-025`: an item the dock already shows is not repeated here.
+        //
+        // **Subtraction, not deletion.** `SiteSkinChromeModel` still carries every item, so
+        // `NavMatcher` still resolves the active route and dispatch still reaches everything. Only
+        // this projection hides what the dock rendered — which is also what makes the fallback
+        // automatic: an id that failed to project is not in `projectedIds`, so it is still listed
+        // here rather than gone from every surface.
+        HubGroup(
+            R.string.siteskin_quick_actions, model.quickActions - projectedIds,
+            colors, SITESKIN_HUB_ACTIONS_TAG, select,
+        )
+        HubGroup(
+            R.string.siteskin_site_menu_heading, model.bottomNavigation - projectedIds,
+            colors, SITESKIN_HUB_NAV_TAG, select,
+        )
+        HubGroup(
+            R.string.siteskin_more_from_site, model.siteMenu - projectedIds,
+            colors, SITESKIN_HUB_MENU_TAG, select,
+        )
     }
 }
 
@@ -340,6 +360,10 @@ internal data class SiteSkinHubIdentity private constructor(val name: String, va
             SiteSkinHubIdentity(accessibleLabel(name), asset)
     }
 }
+
+/** Hides the ids the dock already renders, without touching the model they came from. */
+private operator fun List<SiteSkinItemModel>.minus(projected: Set<String>): List<SiteSkinItemModel> =
+    filterNot { it.id in projected }
 
 internal const val SITESKIN_HUB_DRAWER_TAG = "siteskin_hub_drawer"
 internal const val SITESKIN_HUB_SCRIM_TAG = "siteskin_hub_scrim"

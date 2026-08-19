@@ -28,6 +28,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
@@ -59,6 +60,7 @@ import dev.siteskin.core.model.NavigationItem
 @Suppress("LongParameterList")
 internal fun SiteSkinDock(
     presentation: ExpressiveSiteSkinPresentation,
+    arrangement: DockArrangement,
     siteActions: List<SiteSkinItemModel>,
     hubSurface: HubSurface,
     siteActionsExpanded: Boolean,
@@ -71,28 +73,81 @@ internal fun SiteSkinDock(
     modifier: Modifier = Modifier,
 ) {
     ExpressiveSiteSkinDock(presentation, modifier.testTag(SITESKIN_DOCK_TAG)) {
-        BrandHubCommand(
-            asset = brandAsset,
-            label = stringResource(R.string.siteskin_open_hub),
-            actions = siteActions,
-            // The bouquet is a `Popup` anchored to this button, so it can only be composed here.
-            // The drawer is a `Dialog` in its own window and is composed beside the dock by
-            // `SiteSkinHubHost`. Both read the same single hub state with its three existing
-            // resets; only one is ever composed, because `hubSurface` is a total decision.
-            expanded = siteActionsExpanded && hubSurface == HubSurface.BOUQUET,
-            onToggle = onSiteActionsToggle,
-            onDismiss = onSiteActionsDismiss,
-            onSelect = onSiteSelect,
-            colors = presentation.colors,
-        )
-        DockCommand(
-            R.drawable.ic_tabs, stringResource(R.string.tabs), true, onTabs,
-            SITESKIN_DOCK_TABS_TAG, presentation.colors.onSecondary,
-        )
-        DockCommand(
-            R.drawable.ic_more, stringResource(R.string.more), true, onMore,
-            SITESKIN_DOCK_MORE_TAG, presentation.colors.onSecondary,
-        )
+        // The slot list is decided by `dockArrangement` and rendered here in the order it gives.
+        // The `when` is exhaustive over a sealed hierarchy, so a new slot kind is a compile error
+        // rather than a position that silently renders nothing — and there is no `else` through
+        // which site data could reach a browser command's branch.
+        arrangement.slots.forEach { slot ->
+            when (slot) {
+                DockSlot.Brand -> BrandHubCommand(
+                    asset = brandAsset,
+                    label = stringResource(R.string.siteskin_open_hub),
+                    actions = siteActions,
+                    // The bouquet is a `Popup` anchored to this button, so it can only be composed
+                    // here. The drawer is a `Dialog` in its own window and is composed beside the
+                    // dock by `SiteSkinHubHost`. Both read the same single hub state with its three
+                    // existing resets; only one is ever composed, because `hubSurface` is a total
+                    // decision.
+                    expanded = siteActionsExpanded && hubSurface == HubSurface.BOUQUET,
+                    onToggle = onSiteActionsToggle,
+                    onDismiss = onSiteActionsDismiss,
+                    onSelect = onSiteSelect,
+                    colors = presentation.colors,
+                )
+                DockSlot.Tabs -> DockCommand(
+                    R.drawable.ic_tabs, stringResource(R.string.tabs), true, onTabs,
+                    SITESKIN_DOCK_TABS_TAG, presentation.colors.onSecondary,
+                )
+                DockSlot.More -> DockCommand(
+                    R.drawable.ic_more, stringResource(R.string.more), true, onMore,
+                    SITESKIN_DOCK_MORE_TAG, presentation.colors.onSecondary,
+                )
+                is DockSlot.Site -> SiteDockCommand(slot.item, presentation.colors, onSiteSelect)
+            }
+        }
+    }
+}
+
+/**
+ * One validated site item in a browser-owned slot.
+ *
+ * Everything visible comes from a closed browser mapping over trusted data: the icon through
+ * `UX-005`'s semantic map, the label already re-bounded by `accessibleLabel`, the colours from the
+ * contrast-guarded scheme. The manifest supplies an id, a semantic token and bounded text — never a
+ * drawable, a colour or a callback.
+ *
+ * **Selection is published only here and only for navigation.** `UX-015`'s rule: a quick action or a
+ * menu entry promoted into the dock is still an action, not a route, so it must not claim a selected
+ * state it cannot be in. Tabs and More never publish one either, for the same reason.
+ */
+@Composable
+private fun RowScope.SiteDockCommand(
+    item: SiteSkinItemModel,
+    colors: SiteSkinColorScheme,
+    onSelect: (NavigationItem) -> Unit,
+) {
+    val selected = stringResource(R.string.siteskin_nav_selected)
+    val notSelected = stringResource(R.string.siteskin_nav_not_selected)
+    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+        CompositionLocalProvider(
+            LocalContentColor provides if (item.isActive) colors.onPrimary else colors.onSecondary,
+        ) {
+            WeboraIconButton(
+                contentDescription = item.label,
+                onClick = { onSelect(item.item) },
+                modifier = Modifier
+                    .activeSurface(item.isActive, colors)
+                    .testTag("$SITESKIN_DOCK_SITE_TAG_PREFIX${item.id}")
+                    .semantics {
+                        if (item.isNavigation) {
+                            this.selected = item.isActive
+                            stateDescription = if (item.isActive) selected else notSelected
+                        }
+                    },
+            ) {
+                SiteSkinIcon(item.icon)
+            }
+        }
     }
 }
 
@@ -216,6 +271,17 @@ private fun ActionPetal(
     }
 }
 
+/**
+ * The selected treatment for a projected site slot.
+ *
+ * `primary`/`onPrimary` against the dock's `secondary` ground — the pair `ActionPetal` and the hub
+ * drawer already use, and one `SKIN-001` already guards. Never an alpha multiplier (`UX-003`), and
+ * never colour alone: the caller's `stateDescription` carries the state in the channel a screen
+ * reader reads.
+ */
+private fun Modifier.activeSurface(active: Boolean, colors: SiteSkinColorScheme): Modifier =
+    if (active) clip(CircleShape).background(colors.primary) else this
+
 private fun actionLift(index: Int, count: Int) = when (count) {
     1 -> 20.dp
     2 -> 12.dp
@@ -262,6 +328,7 @@ internal const val SITESKIN_DOCK_TAG = "siteskin_browser_dock"
 internal const val SITESKIN_DOCK_HUB_TAG = "siteskin_dock_hub"
 internal const val SITESKIN_DOCK_TABS_TAG = "siteskin_dock_tabs"
 internal const val SITESKIN_DOCK_MORE_TAG = "siteskin_dock_more"
+internal const val SITESKIN_DOCK_SITE_TAG_PREFIX = "siteskin_dock_site_"
 internal val BRAND_HUB_TARGET_SIZE = 52.dp
 internal val BRAND_HUB_ASSET_SIZE = 40.dp
 internal const val BRAND_HUB_IDENTITY_TAG = "siteskin_dock_hub_identity"

@@ -68,6 +68,7 @@ class SiteSkinHubDrawerTest {
         compose.setContent {
             HubDrawerContent(
                 model = model(BLOOM_MANIFEST),
+                projectedIds = emptySet(),
                 identity = SiteSkinHubIdentity.from("Bloom", BrandAsset.Monogram("B")),
                 colors = colors(),
                 onSelect = { item ->
@@ -99,6 +100,7 @@ class SiteSkinHubDrawerTest {
                 visible = visible,
                 surface = HubSurface.DRAWER,
                 model = model(BLOOM_MANIFEST),
+                projectedIds = emptySet(),
                 identity = SiteSkinHubIdentity.from("Bloom", BrandAsset.Monogram("B")),
                 colors = colors(),
                 onSelect = {},
@@ -154,6 +156,7 @@ class SiteSkinHubDrawerTest {
     private fun content(model: SiteSkinChromeModel, onDismiss: () -> Unit) {
         HubDrawerContent(
             model = model,
+            projectedIds = emptySet(),
             identity = SiteSkinHubIdentity.from("Bloom", BrandAsset.Monogram("B")),
             colors = colors(),
             onSelect = {},
