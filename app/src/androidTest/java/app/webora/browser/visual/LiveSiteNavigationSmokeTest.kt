@@ -12,7 +12,6 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performImeAction
-import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.test.platform.app.InstrumentationRegistry
@@ -129,9 +128,9 @@ class LiveSiteNavigationSmokeTest {
 
     private fun openBloomIntegrated() {
         val bloomName = string(R.string.suggested_bloom_name)
-        composeRule.onNodeWithText(string(R.string.home_open_site, bloomName))
-            .performScrollTo()
-            .performClick()
+        val openBloom = string(R.string.home_open_site, bloomName)
+        composeRule.scrollHomeToText(openBloom)
+        composeRule.onNodeWithText(openBloom).performClick()
 
         val consentTitle = string(R.string.siteskin_consent_title, LIVE_ORIGIN)
         composeRule.waitUntil(LIVE_SITE_TIMEOUT_MILLIS) {
