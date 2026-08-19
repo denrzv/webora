@@ -60,7 +60,7 @@ class LiveSiteNavigationSmokeTest {
         // `Happy Days` remains the deterministic entry target only. Once navigation has started,
         // the smoke observes the browser-owned route model through the projected Catalog slot instead
         // of asking UiAutomator whether one DOM link happens to be inside the current accessibility
-        // viewport. `/catalog/**` selects Catalog on the product detail page; `/` does not.
+        // viewport. Catalog descendant routes select Catalog on the product detail page; `/` does not.
         waitForCatalogSelection(expected = true)
         requireIntegratedChrome()
         openNavigationHub()
@@ -175,8 +175,8 @@ class LiveSiteNavigationSmokeTest {
 
     /**
      * Route identity is read from Webora's validated navigation model, not from page viewport state.
-     * Bloom projects `catalog` into the persistent dock and its manifest matches `/catalog/**`, so
-     * selection is true on Happy Days and false on the storefront root. This is the same browser-
+     * Bloom projects `catalog` into the persistent dock and matches descendant routes under `/catalog/`,
+     * so selection is true on Happy Days and false on the storefront root. This is the same browser-
      * observed route signal that renders the active dock state for the user.
      */
     private fun waitForCatalogSelection(expected: Boolean) {
