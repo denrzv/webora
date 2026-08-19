@@ -148,6 +148,33 @@ class DockArrangementTest {
         }
     }
 
+    /**
+     * When the dock gives up its Tabs slot, the More menu still offers Tabs.
+     *
+     * The issue's hardest invariant — *"a SiteSkin manifest cannot make tab management
+     * inaccessible"* — and it was unasserted until this review looked for it. The dock dropping Tabs
+     * is safe **only** because `browserMenuCommands()` has carried it since `DEVX-003`, and nothing
+     * connected the two facts. A change to that list would silently remove the browser's tab
+     * switcher from integrated mode altogether.
+     *
+     * Both halves are needed. The membership check alone would pass if projection stopped dropping
+     * Tabs; the drop check alone would pass if the menu lost it.
+     */
+    @Test
+    fun `a projection may take the Tabs slot only because the menu still offers Tabs`() {
+        val projected = dockArrangement(model(BLOOM), listOf("catalog", "cart", "profile"))
+
+        assertFalse("projection takes the dock's Tabs slot", DockSlot.Tabs in projected.slots)
+        assertTrue(
+            "so the browser menu must still reach the tab switcher",
+            BrowserMenuCommand.TABS in browserMenuCommands(),
+        )
+        assertTrue(
+            "and the un-projected dock keeps its own Tabs slot",
+            DockSlot.Tabs in DockArrangement.BrowserOnly.slots,
+        )
+    }
+
     private fun describe(slot: DockSlot): String = when (slot) {
         DockSlot.Brand -> "BRAND"
         DockSlot.Tabs -> "TABS"

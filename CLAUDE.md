@@ -1745,6 +1745,68 @@ not in the renderer host, and never by destroying the renderer on Home.
 so it proves the *decision* handles an in-page URL, while only the source scan can see that the
 wiring producing one still exists. Neither layer covers that row alone.
 
+### The dock projects ids the validator already trusted (UX-025)
+
+`presentation.dock` lets a site nominate up to three of its **already-validated** ids for the
+integrated dock's non-central slots. It nominates; it does not define. Every id it can carry denotes
+an item that has passed origin binding, the scheme allow-list, the action allow-list and label
+clamping, so the field introduces no action, URL, icon, label or callback — a browser learns nothing
+new from it.
+
+**The strong form of that is a fixture, not a claim.** `presentation-dock-dropped-item.json` names an
+item security validation refused for its scheme; it must resolve to nothing. Resolution runs against
+the *normalized* collections, so the dock cannot resurrect what the pipeline rejected — and the
+negative control for that rule **passed** until the fixture existed, four layers after `SPEC.md`
+stated it normatively.
+
+**Truncation runs before resolution.** Four ids bound to three *first*, so a site cannot name six,
+have three fail, and quietly receive its fourth choice. Resolving first would make the cap count
+survivors instead of requests.
+
+**Browser and site slots share a row for the first time, and must not share a type.** `UX-024`
+recorded that the moment they did, a manifest could publish something rendering identically to a
+browser command; `UX-025` is where that pressure actually arrives. `DockSlot.Brand`, `.Tabs` and
+`.More` are objects with no fields at all; `.Site` carries the trusted item and nothing else. The
+tempting refactor — one `DockSlot(icon, label, onClick)` — is the violation the shape exists to
+prevent, and it fails two reflective cases. Brand and More are produced unconditionally, so
+"unreplaceable" is a property of the type rather than of a `when` branch.
+
+**De-duplication hides; it never deletes.** `SiteSkinChromeModel` keeps every item, so `NavMatcher`
+still resolves a projected item's active route and dispatch still reaches everything. The *drawer*
+subtracts the ids the dock actually **rendered** — which makes the unresolvable-item fallback
+automatic rather than a branch anyone has to remember: an id that failed to project is not in
+`projectedIds`, so it is still listed.
+
+**The issue's hardest invariant was unasserted, and the review is what found it.** *"A SiteSkin
+manifest cannot make tab management inaccessible"* — a projection takes the dock's Tabs slot, and
+that is safe **only** because `browserMenuCommands()` has carried `TABS` since `DEVX-003`. Nothing
+connected the two facts, so an edit to that list would have removed the tab switcher from integrated
+mode with a manifest as the proximate cause and nothing failing. Both halves are asserted now, and
+both are needed: the membership check alone passes if projection stops dropping Tabs.
+
+**Three things in issue #123 the code had overtaken, and two errors not to follow.** It describes a
+five-slot `Back / Forward / Hub / Tabs / More` dock that `UX-024` had already reduced to three with
+the hub leading; it asks to move Tabs into More, which `DEVX-003` had already done. Its example ids
+name `account`, which does not exist — Bloom's item is `profile`, routing to `/account`, and the
+issue itself forbids creating a duplicate definition for projection. And it names
+`denrzv.github.io/apps/bloom/`, a path that does not exist and could not: `DEMO-001` records that
+discovery is origin-rooted, so a project path cannot host an integration at all.
+
+**`fixedDock` was re-stated, not edited — for a new reason.** `UX-024` rewrote it because deleting
+names from an ordered list is indistinguishable from weakening a predicate. Here the *premise*
+changed: it asserted three commands in **source** order, and source order stopped being render order
+the moment the dock rendered a `DockArrangement`. Left alone it would have kept passing while
+asserting something that is no longer the mechanism.
+
+Two scans needed scoping rather than loosening: a whole-file ban on `else ->` matched `actionLift`'s
+unrelated lift table, and a de-duplication anchor of `HubGroup(R.string` was split in two by a
+line-wrap for detekt. Scope a scan to its subject; anchor it on something a reformat cannot break.
+
+Bloom's manifest now moves in **five** pinned places across two repositories, every checksum
+recomputed with `sha256sum` and never transcribed. `home` and `call-shop` are deliberately left
+un-nominated — a projection covering everything would make the drawer's de-duplication assertion
+vacuous.
+
 ### The trust chip takes its own row rather than rationing one (UX-023)
 
 `UX-021` left the integrated brand row holding four things — browser Back, the site's logo, the
