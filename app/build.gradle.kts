@@ -156,20 +156,30 @@ abstract class AssertInspectorAbsent : DefaultTask() {
 
     @get:Input abstract val variantName: Property<String>
 
-    @get:Input abstract val forbiddenClassPrefix: Property<String>
+    /**
+     * Every inspector class name that must not reach a non-debug variant.
+     *
+     * A list rather than one prefix, because the check's name promises the *inspector* is absent
+     * while a single `"SiteSkinInspectorPanel"` promised only that the panel was. `UX-028` added a
+     * diagnostics serializer and a JSON writer beside it; both compile to differently named classes
+     * and would have walked straight through, which is a capability shipping past the check whose
+     * whole job is to stop it.
+     */
+    @get:Input abstract val forbiddenClassPrefixes: ListProperty<String>
 
     @get:Input abstract val requiredClass: Property<String>
 
     @TaskAction
     fun verify() {
         val names = compiledClasses.asFileTree.files.map { it.name }
-        val forbidden = forbiddenClassPrefix.get()
-        val offenders = names.filter { it.contains(forbidden) }.sorted()
+        val offenders = forbiddenClassPrefixes.get()
+            .flatMap { forbidden -> names.filter { it.contains(forbidden) }.map { "$it (matched $forbidden)" } }
+            .sorted()
         if (offenders.isNotEmpty()) {
             error(
                 "The SiteSkin inspector must not compile into the ${variantName.get()} variant, " +
                     "but found:\n  " + offenders.joinToString("\n  ") +
-                    "\nKeep the panel in app/src/debug/java; the release stub is app/src/release/java."
+                    "\nKeep the inspector in app/src/debug/java; the release stub is app/src/release/java."
             )
         }
         val required = requiredClass.get()
@@ -193,7 +203,7 @@ val inspectorAbsenceChecks = mapOf(
         description = "Fails if the SiteSkin inspector panel compiles into the $variant variant."
         compiledClasses.from(tasks.named(compileTask))
         variantName.set(variant)
-        forbiddenClassPrefix.set("SiteSkinInspectorPanel")
+        forbiddenClassPrefixes.set(listOf("SiteSkinInspectorPanel", "InspectorJson", "JsonDocument"))
         requiredClass.set("SiteSkinInspectorHostKt.class")
     }
 }

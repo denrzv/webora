@@ -2395,3 +2395,81 @@ reached the dock by clicking a **drawer row** — dismiss-by-navigating, the com
 step, failed. So the mechanism this ticket builds was never demonstrated by a green run, and the
 decompiled `isInsideContent` path is the authority for why it could not have been. `CI-009`/`CI-010`
 acceptance must be re-taken: frame 04 photographs a compact panel.
+
+### The clipboard narrows the model it mirrors (UX-028)
+
+`DEVX-001` built the inspector because the browser computed everything a site owner needs and then
+discarded it. It then answered those questions **only to a pair of eyes**: a scrolling grid of
+browser-authored labels beside bounded values, in a dialog, on a phone. Getting it anywhere else
+meant transcribing it or photographing it — the position the inspector exists to end, one layer out.
+
+**The issue's mock-up shows JSON in the modal, and the modal does not render JSON.** It renders
+`InspectorRow(label, value)` pairs, and redesigning it is an explicit non-goal. So the
+single-source-of-truth requirement does not mean sharing a renderer: the clipboard document and the
+visible rows are two projections of one already-assembled `InspectorSnapshot`.
+
+**The security half is that the bounding lives at the render site and the model holds raw values.**
+`SiteSkinInspectorPanel` applies `inspectorValue` — `untrustedText` at
+`SiteSkinLimits.MAX_SUBTITLE_LENGTH` — at fifteen call sites; `InspectorSnapshot` does not. A
+serializer written against the model's fields would therefore export **more** than the surface it
+claims to mirror: a widening of the export achieved without adding a single field, which is exactly
+what the issue's privacy section forbids and is invisible in a diff that only adds a new file.
+
+So **`InspectorJson.kt` constructs `JsonString(` on exactly one line**, inside
+`bounded(raw: String?)`. An unbounded value is not something an edit can forget; it is something an
+edit has to add a second construction site to do, and the contract test counts them. Enum names go
+through the same helper — the walk is a no-op on a compiled identifier, and routing them elsewhere
+would create the second site. Counting alone is not enough: a separate case asserts the one site
+*applies* `inspectorValue`, per `UX-020`'s assert-the-application rule.
+
+**`inspectorJson(snapshot)` takes exactly one parameter, and that signature is the anti-mixing
+control.** The issue's tab-change requirement needs no new machinery — `rememberInspectorSnapshot`
+already assembles one immutable value per canonical origin — what it needs is *preventing* a copy
+handler that reaches past its parameter for the recorder, the mode or the active tab. Asserted
+two-sidedly (arity and erasure from the compiled method, declared types from the declaration line),
+which is `hubDrawerHeight`'s shape for `hubDrawerHeight`'s reason.
+
+**Keys mirror property names one for one, and not because it reads nicely.** It is what lets the
+totality sweep be a reflective walk rather than a hand-written table — `NET-004`'s rule, one consumer
+along. A second reflective sweep closes the reachable type graph over numbers, booleans, strings,
+enums, lists and inspector records, which is how *no cookies, no authorization headers, no WebView
+storage, no DOM* becomes a property of the model rather than an assertion about today's fields: a
+`Map<String, String>` of response headers cannot be added to `InspectorSnapshot` — with or without
+this serializer — without turning the build red. Both sweeps filter **static** fields, not only
+synthetic ones, because the Compose compiler's `$stable` is static and not synthetic.
+
+**No JSON library was added, and that is a boundary decision rather than a size one.**
+`kotlinx.serialization` is an `implementation` dependency of `:siteskin-core` precisely so it stays
+off the browser's classpath; pulling it up would put a parser in every release artifact to serve a
+tool that cannot run there. `JsonValue` is six shapes with an ordered `List<Pair<…>>` for objects, so
+deterministic field order is a property of the type instead of a habit, and `Long` only, so `NaN` is
+not representable.
+
+**`—` is a display convention and does not reach the clipboard.** An absent value is `null`.
+Exporting the em-dash would fail type preservation while looking like it passed, and would make a
+glyph a sentinel every consumer has to know about.
+
+**Confirmation lives under the title because the body scrolls.** `InspectorBody` is a
+`verticalScroll` column, so feedback composed into it can be off screen at the moment it is
+published — confirmation the user does not get. The `Box` is persistent and the semantics are
+conditional, which is `BrowserStatusRegion`'s shape and `A11Y-001`'s rule: a live region announces
+when its content *changes*, so the node has to outlive the change. Polite, not assertive. The
+confirmation flag is set **after** `setClipEntry` returns; a `Copied` that appears whether or not the
+write happened is worse than none.
+
+**`AssertInspectorAbsent` took a list of prefixes, and until it did its name was wrong.** It promised
+the *inspector* was absent from `release` and `debugRelease` while its single
+`"SiteSkinInspectorPanel"` prefix only ever proved the *panel* was — two new files compiling to
+differently named classes walk straight through. Both mechanisms are kept, neither leaning on the
+other: the files are in `src/debug/java`, and the compiled output is checked for their absence.
+
+**Two traps this ticket paid for.** A `remember(` regex matches a *wrongly keyed* remember and walks
+straight past an **unkeyed** one, which is the likelier mistake and the exact shape of the
+tab-change requirement — `\bremember\s*[({]` catches both and still misses `rememberCoroutineScope()`.
+And **Kotlin block comments nest**: a KDoc quoting a comment opener, while explaining that comment
+openers are stripped, opened a second comment and swallowed the rest of the file. `BROWSE-009`'s "a
+comment participating in the rule it describes", arriving through the compiler instead of a scan.
+
+Nothing in discovery, validation, activation, consent, the renderer or the protocol was edited, and
+no `spec/` artifact moved. `CI-009`/`CI-010`'s canonical frames are unaffected: the inspector is in
+none of them, because `DEVX-003` moved its affordance into the menus so it would not be.

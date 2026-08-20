@@ -1,24 +1,39 @@
 package app.webora.browser.inspector
 
+import android.content.ClipData
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.webora.browser.R
 import app.webora.browser.browser.WeboraButton
+import app.webora.browser.browser.WeboraOutlinedButton
+import kotlinx.coroutines.launch
 
 /**
  * What the browser decided about this origin, and why.
@@ -34,13 +49,113 @@ import app.webora.browser.browser.WeboraButton
  */
 @Composable
 internal fun SiteSkinInspectorPanel(snapshot: InspectorSnapshot, onClose: () -> Unit) {
+    var copied by remember(snapshot) { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = onClose,
         modifier = Modifier.testTag(INSPECTOR_PANEL_TAG),
-        title = { Text(stringResource(R.string.inspector_title)) },
+        title = { InspectorTitle(copied) },
         text = { InspectorBody(snapshot) },
+        dismissButton = {
+            InspectorCopyControl(
+                snapshot = snapshot,
+                onCopyStarted = { copied = false },
+                onCopied = { copied = true },
+            )
+        },
         confirmButton = { WeboraButton(stringResource(R.string.inspector_close), onClose) },
     )
+}
+
+/**
+ * The heading, and beneath it the one place the panel says anything about itself.
+ *
+ * Feedback lives here rather than in the body because the body scrolls: `InspectorBody` is a
+ * `verticalScroll` column, so a confirmation composed into it can be off screen at the moment it is
+ * published, which is confirmation the user does not get. The action row is the other always-visible
+ * region and is already carrying two controls that reflow at 200% font scale.
+ *
+ * The `Box` is **persistent** and the semantics are conditional, which is `BrowserStatusRegion`'s
+ * shape and `A11Y-001`'s rule: a live region announces when its content changes, so the node has to
+ * outlive the change. Hanging the region on the message itself would create and destroy it around
+ * the very announcement it exists to make. No announcement means no semantics at all rather than a
+ * nameless node.
+ *
+ * Polite, not assertive. A successful copy is not an interruption.
+ *
+ * The gap sits on the message rather than on the column, because `Arrangement.spacedBy` pays its
+ * spacing for a zero-height child too — the persistent node has to be free when it has nothing to
+ * say, or every dialog opens 8 dp taller for a confirmation that has not happened.
+ */
+@Composable
+private fun InspectorTitle(copied: Boolean) {
+    Column {
+        Text(stringResource(R.string.inspector_title))
+        val message = stringResource(R.string.inspector_copied).takeIf { copied }
+        Box(
+            if (message == null) {
+                Modifier.testTag(INSPECTOR_COPY_STATUS_TAG)
+            } else {
+                Modifier.testTag(INSPECTOR_COPY_STATUS_TAG).semantics {
+                    liveRegion = LiveRegionMode.Polite
+                    contentDescription = message
+                }
+            },
+        ) {
+            message?.let {
+                Text(it, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = ROW_SPACING))
+            }
+        }
+    }
+}
+
+/**
+ * Copies the diagnostics the panel is displaying, and nothing else.
+ *
+ * The document is `remember(snapshot)`, keyed on the value this composable was handed, so what
+ * reaches the clipboard is what is on screen even as the browser moves under an open panel. There is
+ * no path from here to the recorder, the browser's mode or the active tab — [inspectorJson] takes one
+ * snapshot and the key is the same snapshot, so a stale or foreign record cannot join the document.
+ *
+ * `Clipboard.setClipEntry` suspends, hence the scope. [onCopied] runs **after** it returns:
+ * confirmation that appears whether or not the write happened is worse than none, and a platform
+ * failure should surface as a thrown exception in a debug build rather than as a false `Copied`.
+ *
+ * [onCopyStarted] runs before it, and is not symmetry for its own sake. A confirmation flag that only
+ * ever goes `false → true` announces the **first** tap and nothing after it, because a live region
+ * speaks when its content *changes* — so a second copy would replace the clipboard in silence, which
+ * to a screen-reader user is indistinguishable from a control that did nothing. Clearing first also
+ * stops the panel claiming a previous `Copied` for a write still in flight.
+ *
+ * Outlined rather than filled — `Close` stays the panel's primary action — and the pair reflows onto
+ * two lines through Material's own `AlertDialogFlowRow` when the labels do not fit. `UX-007`'s
+ * explicit full-width vertical stack is *consent* policy, written so a security decision's three
+ * options cannot become a split row, and is deliberately not copied to a developer tool's two.
+ */
+@Composable
+private fun InspectorCopyControl(
+    snapshot: InspectorSnapshot,
+    onCopyStarted: () -> Unit,
+    onCopied: () -> Unit,
+) {
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
+    val document = remember(snapshot) { inspectorJson(snapshot) }
+    val clipLabel = stringResource(R.string.inspector_copy_clip_label)
+    val description = stringResource(R.string.inspector_copy_description)
+    WeboraOutlinedButton(
+        onClick = {
+            scope.launch {
+                onCopyStarted()
+                clipboard.setClipEntry(ClipEntry(ClipData.newPlainText(clipLabel, document)))
+                onCopied()
+            }
+        },
+        modifier = Modifier
+            .testTag(INSPECTOR_COPY_TAG)
+            .semantics { contentDescription = description },
+    ) {
+        Text(stringResource(R.string.inspector_copy))
+    }
 }
 
 @Composable
@@ -218,4 +333,6 @@ private fun InspectorRow(label: String, value: String) {
 private fun String?.orAbsent(): String = this ?: stringResource(R.string.inspector_absent)
 
 internal const val INSPECTOR_PANEL_TAG = "inspector_panel"
+internal const val INSPECTOR_COPY_TAG = "inspector_copy"
+internal const val INSPECTOR_COPY_STATUS_TAG = "inspector_copy_status"
 private val ROW_SPACING = 8.dp
