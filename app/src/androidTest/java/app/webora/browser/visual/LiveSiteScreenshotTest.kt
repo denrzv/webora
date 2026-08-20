@@ -4,7 +4,6 @@ import android.graphics.Bitmap
 import android.graphics.Rect
 import android.os.SystemClock
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasTestTag
@@ -14,7 +13,6 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performImeAction
-import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
@@ -34,8 +32,6 @@ import app.webora.browser.inspector.inspectorRecorder
 import app.webora.browser.siteskin.EXPRESSIVE_HEADER_TAG
 import app.webora.browser.siteskin.SITESKIN_HUB_DRAWER_TAG
 import app.webora.browser.siteskin.SITESKIN_HUB_SCRIM_TAG
-import app.webora.browser.siteskin.SITESKIN_BACK_TAG
-import app.webora.browser.siteskin.SITESKIN_NAV_HUB_TAG
 import app.webora.browser.siteskin.SITESKIN_DOCK_HUB_TAG
 import app.webora.browser.siteskin.SITESKIN_DOCK_TAG
 import app.webora.browser.siteskin.SITESKIN_QUICK_ACTIONS_TAG
@@ -59,9 +55,9 @@ class LiveSiteScreenshotTest {
         captureDeviceScreenshot("01-home.png")
 
         val bloomName = string(R.string.suggested_bloom_name)
-        composeRule.onNodeWithText(string(R.string.home_open_site, bloomName))
-            .performScrollTo()
-            .performClick()
+        val openBloom = string(R.string.home_open_site, bloomName)
+        composeRule.scrollHomeToText(openBloom)
+        composeRule.onNodeWithText(openBloom).performClick()
 
         val consentTitle = string(R.string.siteskin_consent_title, LIVE_ORIGIN)
         waitUntilNodeExists(hasText(consentTitle))
@@ -191,38 +187,13 @@ class LiveSiteScreenshotTest {
         composeRule.onNodeWithTag(SITESKIN_DOCK_TAG).assertIsDisplayed()
     }
 
-    /**
-     * `UX-024`: integrated Back lives behind the browser navigation hub, so the traversal opens it
-     * first. `CI-008`'s prerequisite is asserted on the bubble, immediately before the click, and no
-     * frame is captured while the bouquet is open — its `Popup` overhangs `BROWSER_CONTENT_TAG`, and
-     * `CI-005` records what measuring a modal as page content costs.
-     */
-    /**
-     * Opens the browser-owned navigation hub, asserting its prerequisite before invoking it.
-     *
-     * `CI-008` requires a transition control's displayed and enabled semantics immediately before the
-     * click, because a click followed by a destination timeout cannot say whether the action was
-     * unavailable or whether the transition failed. `UX-024` put a **second** control between the
-     * user and integrated Back, so the rule now applies twice: without this, a hub that composed but
-     * never opened would fail at the bubble's wait and name the bubble.
-     *
-     * This can only make the evidence refuse earlier, which is `CI-008`'s own constraint on itself.
-     */
-    private fun openNavigationHub() {
-        waitUntilNodeExists(hasTestTag(SITESKIN_NAV_HUB_TAG))
-        composeRule.onNodeWithTag(SITESKIN_NAV_HUB_TAG).assertIsDisplayed().assertIsEnabled().performClick()
-        waitUntilNodeExists(hasTestTag(SITESKIN_BACK_TAG))
-    }
-
     private fun returnFromBloomHistoryToHome() {
-        repeat(MAX_HISTORY_RETURNS) {
-            if (isHome()) return
-            openNavigationHub()
-            composeRule.onNodeWithTag(SITESKIN_BACK_TAG).assertIsDisplayed().assertIsEnabled().performClick()
-            composeRule.waitForIdle()
-            SystemClock.sleep(NAVIGATION_SETTLE_MILLIS)
-        }
-        waitUntilNodeExists(hasText(string(R.string.home_suggested_title)))
+        composeRule.returnIntegratedHistoryToHome(
+            homeText = string(R.string.home_suggested_title),
+            maxReturns = MAX_HISTORY_RETURNS,
+            timeoutMillis = LIVE_SITE_TIMEOUT_MILLIS,
+            settleMillis = NAVIGATION_SETTLE_MILLIS,
+        )
     }
 
     private fun isHome(): Boolean =

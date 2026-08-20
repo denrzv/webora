@@ -12,7 +12,6 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performImeAction
-import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.test.platform.app.InstrumentationRegistry
@@ -24,6 +23,7 @@ import app.webora.browser.MainActivity
 import app.webora.browser.R
 import app.webora.browser.browser.BROWSER_NAVIGATION_SHELL_TAG
 import app.webora.browser.browser.BROWSER_SECURITY_TAG
+import app.webora.browser.browser.HOME_SCREEN_TAG
 import app.webora.browser.siteskin.EXPRESSIVE_HEADER_TAG
 import app.webora.browser.siteskin.SITESKIN_HUB_DRAWER_TAG
 import app.webora.browser.siteskin.SITESKIN_BACK_TAG
@@ -124,14 +124,14 @@ class LiveSiteNavigationSmokeTest {
             SystemClock.sleep(NAVIGATION_SETTLE_MILLIS)
             if (isHome()) return
         }
-        waitUntilNodeExists(hasText(string(R.string.home_suggested_title)))
+        waitUntilNodeExists(hasTestTag(HOME_SCREEN_TAG))
     }
 
     private fun openBloomIntegrated() {
         val bloomName = string(R.string.suggested_bloom_name)
-        composeRule.onNodeWithText(string(R.string.home_open_site, bloomName))
-            .performScrollTo()
-            .performClick()
+        val openBloom = string(R.string.home_open_site, bloomName)
+        composeRule.scrollHomeToText(openBloom)
+        composeRule.onNodeWithText(openBloom).performClick()
 
         val consentTitle = string(R.string.siteskin_consent_title, LIVE_ORIGIN)
         composeRule.waitUntil(LIVE_SITE_TIMEOUT_MILLIS) {
@@ -214,14 +214,12 @@ class LiveSiteNavigationSmokeTest {
     }
 
     private fun returnFromBloomHistoryToHome() {
-        repeat(MAX_HISTORY_RETURNS) {
-            if (isHome()) return
-            openNavigationHub()
-            composeRule.onNodeWithTag(SITESKIN_BACK_TAG).performClick()
-            composeRule.waitForIdle()
-            SystemClock.sleep(NAVIGATION_SETTLE_MILLIS)
-        }
-        waitUntilNodeExists(hasText(string(R.string.home_suggested_title)))
+        composeRule.returnIntegratedHistoryToHome(
+            homeText = string(R.string.home_suggested_title),
+            maxReturns = MAX_HISTORY_RETURNS,
+            timeoutMillis = LIVE_SITE_TIMEOUT_MILLIS,
+            settleMillis = NAVIGATION_SETTLE_MILLIS,
+        )
     }
 
     private fun openRegularSmokeOrigin() {
@@ -243,7 +241,7 @@ class LiveSiteNavigationSmokeTest {
     }
 
     private fun isHome(): Boolean =
-        composeRule.onAllNodes(hasText(string(R.string.home_suggested_title)))
+        composeRule.onAllNodes(hasTestTag(HOME_SCREEN_TAG))
             .fetchSemanticsNodes()
             .isNotEmpty()
 
